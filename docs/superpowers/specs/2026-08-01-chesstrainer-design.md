@@ -118,7 +118,7 @@ interface TreeNode {
   childIds: NodeId[];
   eval?: EvalResult;                     // memoised; survives navigation
   origin: 'authored' | 'explored';       // authored nodes are never evicted
-  annotationRef?: string;                // → content/
+  annotationRef?: string;                // "<lessonId>#<segmentIndex>.<moveIndex>"
 }
 
 interface EvalResult { depth: number; lines: PvLine[]; }   // MultiPV, best first
@@ -135,7 +135,9 @@ interface Progress {
   version: 1;
   lessons: Record<LessonId, {
     completedAt?: string;
-    checkpoints: Record<string, { attempts: number; hintsUsed: number; solved: boolean }>;
+    // keyed by the checkpoint's authored `id` (see §6), NOT by position index,
+    // so inserting a move into a lesson does not silently reassign past results
+    checkpoints: Record<CheckpointId, { attempts: number; hintsUsed: number; solved: boolean }>;
   }>;
   savedLines: { id: string; name: string; pgn: string; createdAt: string }[];
 }
@@ -163,7 +165,10 @@ segments:
       - san: Nf3
         note: "Develops *and* attacks e5. A developing move that also makes a threat is a free tempo."
       - san: Nc6
-      - checkpoint:
+      - san: Bc4
+        note: "The bishop takes aim at f7, the square only the king defends."
+        checkpoint:
+          id: italian-bishop-to-c4        # stable; progress is keyed by this
           prompt: "Develop the light-squared bishop to its most aggressive square."
           accept: [Bc4]
           hints:
@@ -172,8 +177,6 @@ segments:
             - "The bishop belongs on c4."
           nearMiss:
             Bb5: "Also strong — that's the Ruy Lopez. But we're on the Italian, where c4 hits f7 directly."
-        san: Bc4
-        note: "The bishop takes aim at f7, the square only the king defends."
         alternatives:
           - san: d4
             name: Scotch Game
@@ -187,11 +190,15 @@ test suite rather than blanking the board at runtime.
 
 ### 6.1 v1 content list
 
-**Openings** (~8–10 moves deep, main branches annotated):
+**Openings** — 8–10 **full moves** deep (16–20 plies), main branches annotated:
 
-1. **Italian Game** — as White
-2. **A Black answer to 1.e4** — the `1…e5` setup, reaching the same structures from the other side
-3. **London System** — as White, a low-theory system opening
+1. **Italian Game** — as White: `1.e4 e5 2.Nf3 Nc6 3.Bc4`, with the Scotch
+   (`3.d4`) and Ruy Lopez (`3.Bb5`) as annotated alternatives at move 3
+2. **Black against 1.e4** — the `1…e5` defence: how to meet the Italian with
+   `…Bc5` and `…Nf6`, and how to answer the Scotch. Deliberately mirrors opening
+   1 so the player sees the same structures from both sides
+3. **London System** — as White: `1.d4` with `Bf4`, `e3`, `Nf3`, `c3`, `Bd3`.
+   A low-theory setup that can be played against almost anything
 
 **Theme lessons**, each anchored in positions drawn from the openings above so
 the ideas reinforce each other:
