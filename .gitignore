@@ -1,0 +1,18 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# Brainstorming visual companion working files
+.superpowers/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
