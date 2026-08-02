@@ -38,10 +38,12 @@ export interface PositionFeatures {
   /** Summed piece values, kings excluded. */
   material: Record<Color, number>;
   /**
-   * Legal move count per side. `null` when the count cannot be determined —
-   * flipping the side to move can produce an illegal position (for example
-   * when the other king is already in check). Rules that read mobility must
-   * skip when it is null.
+   * Legal move count per side. Obtained by rebuilding the FEN with the side to
+   * move flipped (because chess.js only generates moves for the current mover).
+   * `null` when the FEN is structurally invalid and `new Chess(fen)` throws.
+   * Note that chess.js 1.4.0 does not reject a flipped position merely because
+   * the other king is in check, so in practice this fallback is defensive rather
+   * than routinely exercised. Consumers must still handle the `null` case.
    */
   mobility: Record<Color, number | null>;
   /** Squares holding a piece that is attacked and undefended. */
