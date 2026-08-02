@@ -116,3 +116,124 @@ describe('Engine', () => {
     expect(result.lines[0].pv).toEqual(['e4', 'e5']);
   });
 });
+
+/** Flushes pending microtasks (and one macrotask tick) without a real delay. */
+function flush(): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+describe('Engine lifecycle', () => {
+  it('rejects the in-flight analyze() promise when disposed mid-search (Finding 1)', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promise = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    expect(engine.isBusy).toBe(true);
+
+    let settled = false;
+    promise.then(
+      () => {
+        settled = true;
+      },
+      () => {
+        settled = true;
+      },
+    );
+
+    engine.dispose();
+    await flush();
+
+    // Without the fix, dispose() only terminates the transport (which clears
+    // listeners), so the bestmove that would have resolved this promise can
+    // never arrive and the promise is left pending forever.
+    expect(settled).toBe(true);
+    await expect(promise).rejects.toThrow(/aborted/i);
+    expect(engine.isBusy).toBe(false);
+  });
+
+  it("does not let a stopped search's bestmove resolve the next search (Finding 2)", async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+    const controllerA = new AbortController();
+
+    // Step 1: search A is in flight; the caller aborts it. The abort handler
+    // sends `stop`, unsubscribes A's listener, and rejects A's promise.
+    const promiseA = engine.analyze({
+      fen: START,
+      depth: 12,
+      multiPV: 1,
+      signal: controllerA.signal,
+    });
+    controllerA.abort();
+    await expect(promiseA).rejects.toThrow(/aborted/i);
+
+    // Step 2: the caller immediately starts search B.
+    const promiseB = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+
+    // Step 3: the engine, responding to step 1's `stop`, now emits a
+    // `bestmove` belonging to search A.
+    fake.emit('bestmove e2e4');
+
+    // Step 4 (the bug): B's listener would receive it and resolve B
+    // immediately with an empty result, before B has produced anything.
+    let bSettled = false;
+    promiseB.then(() => {
+      bSettled = true;
+    });
+    await flush();
+    expect(bSettled).toBe(false);
+
+    // B's own search now genuinely completes.
+    fake.emit('info depth 12 multipv 1 score cp 40 pv d2d4 d7d5');
+    fake.emit('bestmove d2d4');
+    const resultB = await promiseB;
+
+    expect(resultB.lines[0].san).toBe('d4');
+  });
+
+  it('rejects a search aborted before it ever sends commands, without deadlocking a later search', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+    const controllerA = new AbortController();
+    const controllerB = new AbortController();
+
+    // A starts a real engine search, then gets aborted (drains later).
+    const promiseA = engine.analyze({
+      fen: START,
+      depth: 12,
+      multiPV: 1,
+      signal: controllerA.signal,
+    });
+    controllerA.abort();
+
+    // B is queued behind A's drain, then aborted before it ever sends its
+    // own `position`/`go` — it must still reject, not hang.
+    const promiseB = engine.analyze({
+      fen: START,
+      depth: 12,
+      multiPV: 1,
+      signal: controllerB.signal,
+    });
+    controllerB.abort();
+
+    await expect(promiseA).rejects.toThrow(/aborted/i);
+    await expect(promiseB).rejects.toThrow(/aborted/i);
+
+    // C must still wait for A's real (belated) bestmove to drain, not
+    // resolve early just because B short-circuited.
+    const promiseC = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    fake.emit('bestmove e2e4'); // A's belated bestmove
+
+    let cSettled = false;
+    promiseC.then(() => {
+      cSettled = true;
+    });
+    await flush();
+    expect(cSettled).toBe(false);
+
+    fake.emit('info depth 12 multipv 1 score cp 5 pv g1f3');
+    fake.emit('bestmove g1f3');
+    const resultC = await promiseC;
+    expect(resultC.lines[0].san).toBe('Nf3');
+  });
+});
