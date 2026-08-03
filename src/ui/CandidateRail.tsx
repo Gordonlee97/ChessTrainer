@@ -119,7 +119,6 @@ export function CandidateRail() {
               color: 'var(--ink)',
               border: `2px solid ${index === 0 ? 'var(--primary)' : 'var(--border)'}`,
               borderRadius: 'var(--radius)',
-              boxShadow: `0 3px 0 ${index === 0 ? 'var(--primary)' : 'var(--border)'}`,
               '--btn-shadow': index === 0 ? 'var(--primary)' : 'var(--border)',
             } as CSSProperties
           }

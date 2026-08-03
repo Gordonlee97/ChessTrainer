@@ -128,6 +128,21 @@ describe('CandidateRail', () => {
     expect(screen.getByRole('button', { name: /e4/ })).toHaveClass('btn');
   });
 
+  it('does not set an inline boxShadow on candidate rows, so :active can collapse the shared --btn-shadow lip on press', () => {
+    // An inline boxShadow style outranks both .btn's base rule and its
+    // :active rule, so --btn-shadow is never actually read and the press
+    // reads as a slide (row moves down, shadow stays put) instead of a
+    // collapse. --btn-shadow itself must still drive the shadow.
+    analysis.value = {
+      status: 'idle',
+      result: { depth: 16, lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4'] }] },
+    } as never;
+    render(<CandidateRail />);
+    const button = screen.getByRole('button', { name: /e4/ });
+    expect(button.style.boxShadow).toBe('');
+    expect(button.style.getPropertyValue('--btn-shadow')).toBe('var(--primary)');
+  });
+
   it('shows a thinking state while analysing with no result yet', () => {
     analysis.value = { result: null, status: 'analyzing' } as never;
     render(<CandidateRail />);
