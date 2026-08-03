@@ -166,4 +166,18 @@ describe('CandidateRail', () => {
     render(<CandidateRail />);
     expect(screen.getByRole('status')).toHaveTextContent(/thinking/i);
   });
+
+  it('shows a neutral "no candidates" message, not a false checkmate/stalemate claim, when a finished analysis has zero lines on a position that still has legal moves', () => {
+    // The start position plainly has legal moves — a finished analysis with
+    // zero lines here means every PV was filtered as illegal (or bestmove
+    // arrived before any pv-bearing info), not that the game is over.
+    analysis.value = { status: 'idle', result: { depth: 12, lines: [] }, retry: () => {} } as never;
+    render(<CandidateRail />);
+
+    const status = screen.getByRole('status');
+    expect(status).not.toHaveTextContent(/checkmate/i);
+    expect(status).not.toHaveTextContent(/stalemate/i);
+    expect(status).not.toHaveTextContent(/thinking/i);
+    expect(status).toHaveTextContent(/no candidate moves available/i);
+  });
 });

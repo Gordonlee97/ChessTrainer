@@ -7,12 +7,18 @@ import { Button } from './Button';
 import { EvalBar } from './EvalBar';
 import { formatScore, useAnalysis } from './useAnalysis';
 
-/** Describes a position where analysis has finished with no legal moves. */
-function terminalPositionMessage(fen: string): string {
+/**
+ * Describes a position where a finished analysis has zero usable lines. Only
+ * checkmate/stalemate genuinely means the position has no legal moves — a
+ * finished analysis can also land at zero lines when every PV was filtered
+ * as illegal, or a `bestmove` arrived before any pv-bearing `info`, so those
+ * cases get a neutral message rather than a false terminal-position claim.
+ */
+function noCandidatesMessage(fen: string): string {
   const chess = new Chess(fen);
   if (chess.isCheckmate()) return 'Checkmate.';
   if (chess.isStalemate()) return 'Stalemate — the game is drawn.';
-  return 'No legal moves in this position.';
+  return 'No candidate moves available.';
 }
 
 export function CandidateRail() {
@@ -74,7 +80,7 @@ export function CandidateRail() {
     if (status === 'idle' && result) {
       return (
         <div role="status" style={{ padding: 12, color: 'var(--ink-soft)', fontSize: 13 }}>
-          {terminalPositionMessage(node.fen)}
+          {noCandidatesMessage(node.fen)}
         </div>
       );
     }
