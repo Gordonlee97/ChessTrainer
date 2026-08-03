@@ -3,19 +3,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   play: vi.fn(),
   rate: vi.fn(),
-  once: vi.fn(),
 }));
 
 vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate, once: mocks.once })),
+  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
 }));
 
+import { Howl } from 'howler';
 import { SoundManager } from './SoundManager';
+
+const HowlMock = vi.mocked(Howl);
 
 describe('SoundManager', () => {
   beforeEach(() => {
     mocks.play.mockClear();
     mocks.rate.mockClear();
+    HowlMock.mockClear();
   });
 
   it('plays the requested sound', () => {
@@ -50,5 +53,31 @@ describe('SoundManager', () => {
     manager.play('move');
     expect(mocks.play).not.toHaveBeenCalled();
     expect(manager.muted).toBe(true);
+  });
+
+  it('does not construct a Howl at all while muted', () => {
+    const manager = new SoundManager();
+    manager.setMuted(true);
+    manager.play('move');
+    expect(HowlMock).not.toHaveBeenCalled();
+  });
+
+  it('stops calling play/rate on a sound whose file permanently failed to load', () => {
+    const manager = new SoundManager();
+    manager.play('buttonPress');
+    expect(mocks.play).toHaveBeenCalledTimes(1);
+
+    const onloaderror = HowlMock.mock.calls[0][0]?.onloaderror as () => void;
+    expect(typeof onloaderror).toBe('function');
+    onloaderror();
+
+    mocks.play.mockClear();
+    mocks.rate.mockClear();
+
+    manager.play('buttonPress');
+    manager.play('buttonPress');
+
+    expect(mocks.play).not.toHaveBeenCalled();
+    expect(mocks.rate).not.toHaveBeenCalled();
   });
 });
