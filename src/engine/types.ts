@@ -1,6 +1,13 @@
 export interface UciTransport {
   send(cmd: string): void;
   onLine(cb: (line: string) => void): () => void;
+  /**
+   * Registers a callback for a fatal transport failure — e.g. the engine
+   * script 404s or the wasm fails to instantiate, surfaced as the worker's
+   * `error` event. May fire at most once per transport instance; there is no
+   * recovery from it besides replacing the transport (and Engine) entirely.
+   */
+  onError(cb: (reason: unknown) => void): () => void;
   terminate(): void;
 }
 

@@ -9,6 +9,7 @@ import { formatScore, TARGET_DEPTH, useAnalysis } from './useAnalysis';
 // before the mock factory below executes.
 const fake = vi.hoisted(() => {
   const listeners = new Set<(line: string) => void>();
+  const errorListeners = new Set<(reason: unknown) => void>();
   const sent: string[] = [];
   const shouldThrow = { value: false };
   // When set, simulates a real engine that instantly replies to `go depth`
@@ -20,6 +21,7 @@ const fake = vi.hoisted(() => {
   };
   return {
     listeners,
+    errorListeners,
     sent,
     shouldThrow,
     autoRespondEmpty,
@@ -33,12 +35,22 @@ const fake = vi.hoisted(() => {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
+    onError: (cb: (reason: unknown) => void) => {
+      errorListeners.add(cb);
+      return () => errorListeners.delete(cb);
+    },
     terminate: () => {
       listeners.clear();
+      errorListeners.clear();
     },
     emit: emitLine,
+    /** Simulates the transport's asynchronous fatal-error event (Fix 2). */
+    emitError: (reason: unknown) => {
+      [...errorListeners].forEach((cb) => cb(reason));
+    },
     reset: () => {
       listeners.clear();
+      errorListeners.clear();
       sent.length = 0;
       shouldThrow.value = false;
       autoRespondEmpty.value = false;
@@ -156,10 +168,52 @@ describe('useAnalysis stale-result guard', () => {
     unmount();
   });
 
-  it('sets status to unavailable when the engine transport fails to initialize', () => {
+  // This covers only the defensive fallback around Engine construction
+  // itself (e.g. a malformed transport factory throwing synchronously). It
+  // is not representative of a real broken engine: `new Worker(url)` never
+  // throws synchronously when the script 404s or fails to compile — that
+  // fires the asynchronous `error` event instead, covered by the test below.
+  it('sets status to unavailable if constructing the engine throws synchronously', () => {
     fake.shouldThrow.value = true;
 
     const { result, unmount } = renderHook(() => useAnalysis());
+
+    expect(result.current.status).toBe('unavailable');
+
+    unmount();
+  });
+
+  it('sets status to unavailable when the transport reports a fatal error asynchronously (e.g. a missing worker script)', async () => {
+    const { result, unmount } = renderHook(() => useAnalysis());
+
+    expect(result.current.status).toBe('analyzing');
+
+    await act(async () => {
+      fake.emitError(new Error('worker script 404'));
+      await flush();
+    });
+
+    expect(result.current.status).toBe('unavailable');
+
+    unmount();
+  });
+
+  it('sets status to unavailable on a transport error even when no search is in flight (node already fully cached)', async () => {
+    // No analyze() call is issued for an already-cached, deep-enough node —
+    // so this can only be caught by a direct subscription to the engine's
+    // error signal, not by an analyze() promise rejection.
+    useTreeStore.getState().cacheEval('root', {
+      depth: TARGET_DEPTH,
+      lines: [{ san: 'e4', cp: 10, mate: null, pv: ['e4'] }],
+    });
+
+    const { result, unmount } = renderHook(() => useAnalysis());
+    expect(result.current.status).toBe('idle');
+
+    await act(async () => {
+      fake.emitError(new Error('wasm failed to instantiate'));
+      await flush();
+    });
 
     expect(result.current.status).toBe('unavailable');
 

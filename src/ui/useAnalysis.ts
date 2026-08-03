@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Engine } from '../engine/engine';
 import { createWorkerTransport } from '../engine/stockfishWorker';
 import type { EvalResult, PvLine } from '../engine/types';
@@ -20,12 +20,17 @@ export function formatScore(line: PvLine): string {
   return `${pawns > 0 ? '+' : '-'}${Math.abs(pawns).toFixed(2)}`;
 }
 
-export function useAnalysis(): { result: EvalResult | null; status: AnalysisStatus } {
+export function useAnalysis(): { result: EvalResult | null; status: AnalysisStatus; retry: () => void } {
   const node = useSelectedNode();
   const cacheEval = useTreeStore((state) => state.cacheEval);
   const engineRef = useRef<Engine | null>(null);
   const [status, setStatus] = useState<AnalysisStatus>('idle');
   const [result, setResult] = useState<EvalResult | null>(node.eval ?? null);
+  // Bumped by retry() to tear down and recreate the engine below, and to
+  // re-run analysis for the currently selected node against the new one.
+  const [retryToken, setRetryToken] = useState(0);
+
+  const retry = useCallback(() => setRetryToken((token) => token + 1), []);
 
   useEffect(() => {
     try {
@@ -43,11 +48,19 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
       engineRef.current?.dispose();
       engineRef.current = null;
     };
-  }, []);
+  }, [retryToken]);
 
   useEffect(() => {
     const engine = engineRef.current;
     if (!engine) return;
+
+    // `new Worker(url)` never throws synchronously when the script 404s or
+    // the wasm fails to instantiate — that fires asynchronously instead, any
+    // time after this hook has mounted. Subscribed unconditionally (not only
+    // while a search is in flight) so a node that's already fully cached —
+    // and therefore never issues its own analyze() call below — still learns
+    // the engine died, rather than silently reporting a stale 'idle'.
+    const unsubscribeError = engine.onError(() => setStatus('unavailable'));
 
     // Read the cached eval from the store directly rather than through
     // `node.eval`. This effect must not depend on `node.eval`: caching a
@@ -68,7 +81,7 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
       // reset here, or navigating to an already-cached node while another
       // search is outstanding leaves status stuck at 'analyzing' forever.
       setStatus('idle');
-      return;
+      return unsubscribeError;
     }
 
     const requestedFor = node.id;
@@ -98,11 +111,14 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
         setStatus('unavailable');
       });
 
-    return () => controller.abort();
+    return () => {
+      unsubscribeError();
+      controller.abort();
+    };
     // node.eval is deliberately excluded — see the comment at the top of this
     // effect. node.fen is 1:1 with node.id and included only for clarity.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [node.id, node.fen, cacheEval]);
+  }, [node.id, node.fen, cacheEval, retryToken]);
 
-  return { result, status };
+  return { result, status, retry };
 }

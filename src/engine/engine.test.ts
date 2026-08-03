@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-import { Engine } from './engine';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ANALYZE_TIMEOUT_MS, Engine } from './engine';
 import type { UciTransport } from './types';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -7,6 +7,7 @@ const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 /** A scriptable stand-in for the Stockfish worker. */
 function createFakeTransport() {
   const listeners = new Set<(line: string) => void>();
+  const errorListeners = new Set<(reason: unknown) => void>();
   const sent: string[] = [];
   const transport: UciTransport = {
     send: (cmd) => {
@@ -16,12 +17,20 @@ function createFakeTransport() {
       listeners.add(cb);
       return () => listeners.delete(cb);
     },
-    terminate: () => listeners.clear(),
+    onError: (cb) => {
+      errorListeners.add(cb);
+      return () => errorListeners.delete(cb);
+    },
+    terminate: () => {
+      listeners.clear();
+      errorListeners.clear();
+    },
   };
   return {
     transport,
     sent,
     emit: (line: string) => listeners.forEach((cb) => cb(line)),
+    fail: (reason: unknown) => errorListeners.forEach((cb) => cb(reason)),
   };
 }
 
@@ -283,5 +292,71 @@ describe('Engine lifecycle', () => {
     const resultB = await promiseB;
 
     expect(resultB.lines[0].san).toBe('d4');
+  });
+});
+
+describe('Engine transport failure (Fix 2)', () => {
+  it('rejects the in-flight search and notifies onError listeners when the transport reports a fatal error', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+    const onError = vi.fn();
+    engine.onError(onError);
+
+    const promise = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    expect(engine.isBusy).toBe(true);
+
+    fake.fail(new Error('worker script 404'));
+
+    await expect(promise).rejects.toThrow();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(engine.isBusy).toBe(false);
+  });
+
+  it('notifies onError listeners even with no search in flight', () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+    const onError = vi.fn();
+    engine.onError(onError);
+
+    fake.fail(new Error('wasm failed to instantiate'));
+
+    expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Engine wall-clock timeout (Fix 2)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('rejects a search that never receives a bestmove within ANALYZE_TIMEOUT_MS', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promise = engine.analyze({ fen: START, depth: 20, multiPV: 3 });
+    const assertion = expect(promise).rejects.toThrow(/timed out|timeout/i);
+
+    await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS);
+    await assertion;
+
+    expect(engine.isBusy).toBe(false);
+  });
+
+  it('does not time out a search that resolves well within the budget', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promise = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    fake.emit('info depth 12 multipv 1 score cp 31 pv e2e4');
+    fake.emit('bestmove e2e4');
+
+    await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS);
+    const result = await promise;
+
+    expect(result.lines[0].san).toBe('e4');
   });
 });

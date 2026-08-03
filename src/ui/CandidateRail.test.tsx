@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTreeStore } from '../tree/store';
 import { CandidateRail } from './CandidateRail';
 
-const analysis = vi.hoisted(() => ({ value: { result: null, status: 'idle' } as never }));
+const analysis = vi.hoisted(() => ({ value: { result: null, status: 'idle', retry: () => {} } as never }));
 vi.mock('./useAnalysis', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./useAnalysis')>()),
   useAnalysis: () => analysis.value,
@@ -13,7 +13,7 @@ vi.mock('./useAnalysis', async (importOriginal) => ({
 describe('CandidateRail', () => {
   beforeEach(() => {
     useTreeStore.getState().reset();
-    analysis.value = { result: null, status: 'idle' } as never;
+    analysis.value = { result: null, status: 'idle', retry: () => {} } as never;
   });
 
   it('lists candidate moves with their scores', () => {
@@ -45,9 +45,18 @@ describe('CandidateRail', () => {
   });
 
   it('shows the degraded banner when the engine is unavailable', () => {
-    analysis.value = { result: null, status: 'unavailable' } as never;
+    analysis.value = { result: null, status: 'unavailable', retry: () => {} } as never;
     render(<CandidateRail />);
     expect(screen.getByRole('status')).toHaveTextContent(/engine unavailable/i);
+  });
+
+  it('shows a retry button in the unavailable state and calls retry on click', async () => {
+    const retry = vi.fn();
+    analysis.value = { result: null, status: 'unavailable', retry } as never;
+    render(<CandidateRail />);
+
+    await userEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(retry).toHaveBeenCalledTimes(1);
   });
 
   it('shows a thinking state while analysing with no result yet', () => {

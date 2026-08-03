@@ -3,7 +3,7 @@ import { EvalBar } from './EvalBar';
 import { formatScore, useAnalysis } from './useAnalysis';
 
 export function CandidateRail() {
-  const { result, status } = useAnalysis();
+  const { result, status, retry } = useAnalysis();
   const playMove = useTreeStore((state) => state.playMove);
 
   if (status === 'unavailable') {
@@ -17,7 +17,26 @@ export function CandidateRail() {
           fontSize: 13,
         }}
       >
-        Engine unavailable — lesson content still works, but live evaluation is off.
+        <p style={{ margin: '0 0 8px' }}>
+          Engine unavailable — lesson content still works, but live evaluation is off.
+        </p>
+        <button
+          type="button"
+          onClick={retry}
+          style={{
+            font: 'inherit',
+            fontWeight: 700,
+            fontSize: 13,
+            padding: '6px 12px',
+            cursor: 'pointer',
+            background: 'var(--surface)',
+            color: 'var(--ink)',
+            border: '2px solid var(--border)',
+            borderRadius: 'var(--radius)',
+          }}
+        >
+          Retry
+        </button>
       </div>
     );
   }

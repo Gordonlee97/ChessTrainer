@@ -21,10 +21,19 @@ function pvToSan(fen: string, uciMoves: string[]): string[] {
   return san;
 }
 
+// Task 2's spike measured the real engine at ~1s for a depth-20 search. This
+// is a generous multiple of that budget, used only as a second net against a
+// silently dead engine (wasm failed to instantiate with no `onerror`, or a
+// worker that stopped responding) — not something a healthy search should
+// ever approach.
+export const ANALYZE_TIMEOUT_MS = 15_000;
+
 /** A search that's currently occupying the `pending` slot on the Engine. */
 interface PendingSearch {
-  /** Idempotently rejects this search. Safe to call more than once. */
+  /** Idempotently rejects this search with an AbortError. Safe to call more than once. */
   cancel: () => void;
+  /** Idempotently rejects this search with a non-abort error (transport failure, timeout). Safe to call more than once. */
+  fail: (reason: unknown) => void;
 }
 
 export class Engine {
@@ -45,10 +54,33 @@ export class Engine {
    * `dispose()` to release it instead.
    */
   private drain: Promise<void> | null = null;
+  private readonly errorListeners = new Set<(reason: unknown) => void>();
+  private readonly unsubscribeTransportError: () => void;
 
   constructor(private readonly transport: UciTransport) {
     this.transport.send('uci');
     this.transport.send('isready');
+    this.unsubscribeTransportError = this.transport.onError((reason) => this.handleTransportError(reason));
+  }
+
+  /**
+   * Registers a callback invoked when the transport reports a fatal failure
+   * (worker script 404, wasm failed to instantiate) or a search times out
+   * with no bestmove ever arriving. Consumers (e.g. useAnalysis) use this to
+   * surface a degraded/unavailable state instead of spinning forever.
+   */
+  onError(cb: (reason: unknown) => void): () => void {
+    this.errorListeners.add(cb);
+    return () => this.errorListeners.delete(cb);
+  }
+
+  private handleTransportError(reason: unknown): void {
+    const error = reason instanceof Error ? reason : new Error('Engine transport failed');
+    this.pending?.fail(error);
+    this.pending = null;
+    this.busy = false;
+    this.drain = null;
+    this.errorListeners.forEach((cb) => cb(error));
   }
 
   /**
@@ -85,11 +117,16 @@ export class Engine {
 
       const onAbort = () => cancel();
 
+      const clearGuards = () => {
+        clearTimeout(timeoutId);
+        signal?.removeEventListener('abort', onAbort);
+      };
+
       const cancel = () => {
         if (cancelled) return;
         cancelled = true;
+        clearGuards();
         reject(new DOMException('Analysis aborted', 'AbortError'));
-        signal?.removeEventListener('abort', onAbort);
         if (started) {
           // The engine still owes this search a `bestmove`. Stay subscribed
           // so it can be drained (and ignored) below before the next
@@ -109,7 +146,27 @@ export class Engine {
         }
       };
 
-      const handle: PendingSearch = { cancel };
+      // A fatal, non-abort failure: the transport died, or no bestmove ever
+      // arrived within the wall-clock budget. Unlike `cancel()`, there is no
+      // `bestmove` left to drain — the engine (or transport) is presumed
+      // dead — so this always fully releases the busy/drain state.
+      const fail = (reason: unknown) => {
+        if (cancelled) return;
+        cancelled = true;
+        clearGuards();
+        unsubscribe();
+        if (this.pending === handle) this.pending = null;
+        this.busy = false;
+        this.drain = null;
+        reject(reason instanceof Error ? reason : new Error(String(reason)));
+      };
+
+      const handle: PendingSearch = { cancel, fail };
+
+      const timeoutId = setTimeout(
+        () => handle.fail(new Error(`analyze() timed out after ${ANALYZE_TIMEOUT_MS}ms with no bestmove`)),
+        ANALYZE_TIMEOUT_MS,
+      );
 
       if (signal?.aborted) {
         cancel();
@@ -132,7 +189,7 @@ export class Engine {
           if (line.startsWith('bestmove')) {
             const wasCancelled = cancelled;
             unsubscribe();
-            signal?.removeEventListener('abort', onAbort);
+            clearGuards();
             if (this.pending === handle) this.pending = null;
             this.busy = false;
             this.drain = null;
@@ -184,6 +241,7 @@ export class Engine {
     this.pending?.cancel();
     this.pending = null;
     this.busy = false;
+    this.unsubscribeTransportError();
     this.drain = null;
     this.transport.terminate();
   }
