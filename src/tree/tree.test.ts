@@ -114,4 +114,40 @@ describe('game tree', () => {
     expect(Object.keys(evicted.nodes)).toEqual([tree.rootId]); // only root survives
     expect(evicted.nodes[tree.rootId].childIds).toHaveLength(0); // root correctly re-parented as childless
   });
+
+  it('protects pinned nodes from eviction when not on selected path', () => {
+    let tree = createTree();
+    const e4 = insertMove(tree, tree.rootId, 'e4');
+    const d4 = insertMove(e4.tree, tree.rootId, 'd4');
+    tree = d4.tree;
+    // Keep root selected — neither e4 nor d4 is on the selected path
+    expect(tree.selectedId).toBe(tree.rootId);
+    // Pin e4 only
+    tree = { ...tree, pinned: [e4.nodeId] };
+
+    const evicted = evict(tree, 0);
+    expect(evicted.nodes[e4.nodeId]).toBeDefined(); // pinned node survives
+    expect(evicted.nodes[d4.nodeId]).toBeUndefined(); // unpinned sibling is evicted
+  });
+
+  it('protects authored nodes from eviction when not on selected path', () => {
+    let tree = createTree();
+    const e4 = insertMove(tree, tree.rootId, 'e4');
+    const d4 = insertMove(e4.tree, tree.rootId, 'd4');
+    tree = d4.tree;
+    // Mark e4 as authored
+    tree = {
+      ...tree,
+      nodes: {
+        ...tree.nodes,
+        [e4.nodeId]: { ...tree.nodes[e4.nodeId], origin: 'authored' },
+      },
+    };
+    // Keep root selected — e4 is not on the selected path
+    expect(tree.selectedId).toBe(tree.rootId);
+
+    const evicted = evict(tree, 0);
+    expect(evicted.nodes[e4.nodeId]).toBeDefined(); // authored node survives
+    expect(evicted.nodes[d4.nodeId]).toBeUndefined(); // explored sibling is evicted
+  });
 });
