@@ -14,7 +14,14 @@ export type AnalysisStatus = 'idle' | 'analyzing' | 'unavailable';
 
 /** Renders a White-relative score (positive always favors White), e.g. "+0.31" or "M3". */
 export function formatScore(line: PvLine): string {
-  if (line.mate !== null) return line.mate < 0 ? `-M${Math.abs(line.mate)}` : `M${line.mate}`;
+  if (line.mate !== null) {
+    // `line.mate < 0` is false for both +0 and -0, so it can't distinguish
+    // them — but the two are opposite outcomes here: (raw mate * sign) is
+    // +0 when White (to move) is already mated (favors Black), and -0 when
+    // Black is (favors White). Object.is matches EvalBar's matesInWhiteFavor.
+    const matesInWhiteFavor = line.mate > 0 || Object.is(line.mate, -0);
+    return matesInWhiteFavor ? `M${Math.abs(line.mate)}` : `-M${Math.abs(line.mate)}`;
+  }
   const pawns = (line.cp ?? 0) / 100;
   if (pawns === 0) return '0.00';
   return `${pawns > 0 ? '+' : '-'}${Math.abs(pawns).toFixed(2)}`;

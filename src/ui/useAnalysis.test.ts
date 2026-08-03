@@ -95,6 +95,22 @@ describe('formatScore', () => {
     expect(formatScore({ san: 'Qh7', cp: null, mate: 3, pv: ['Qh7'] })).toBe('M3');
     expect(formatScore({ san: 'Kg1', cp: null, mate: -2, pv: ['Kg1'] })).toBe('-M2');
   });
+
+  it('formats a mate score of -0 (Black is mated) as favoring White, matching EvalBar', () => {
+    // (raw UCI mate * sideToMoveSign) yields -0 when Black to move is mated
+    // — this already renders correctly today (M0, no minus), but is covered
+    // here as a pin so a future change to the sign logic can't regress it.
+    expect(formatScore({ san: 'Qh4', cp: null, mate: -0, pv: ['Qh4'] })).toBe('M0');
+  });
+
+  it('formats a mate score of +0 (White is mated) as favoring Black, matching EvalBar', () => {
+    // (raw UCI mate * sideToMoveSign) yields plain +0 when White to move is
+    // mated. `mate < 0` is false for +0 too, so the current ternary's `else`
+    // branch renders this the same as -0 (`M0`, no minus — as though White
+    // were winning) instead of `-M0`. EvalBar's matesInWhiteFavor already
+    // distinguishes +0 from -0 via Object.is; formatScore must agree.
+    expect(formatScore({ san: 'Kg1', cp: null, mate: 0, pv: ['Kg1'] })).toBe('-M0');
+  });
 });
 
 describe('useAnalysis stale-result guard', () => {
