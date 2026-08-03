@@ -13,11 +13,11 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
-export function Button({ variant = 'primary', sound = true, children, onClick, ...rest }: ButtonProps) {
+export function Button({ variant = 'primary', sound = true, children, onClick, className, ...rest }: ButtonProps) {
   return (
     <button
       {...rest}
-      className="btn"
+      className={className ? `btn ${className}` : 'btn'}
       data-variant={variant}
       onClick={(event) => {
         if (sound) sounds.play('buttonPress');

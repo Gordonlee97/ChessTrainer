@@ -47,6 +47,13 @@ describe('Button', () => {
     );
   });
 
+  it('merges a caller-supplied className with the shared btn class instead of overwriting it', () => {
+    render(<Button className="candidate-row">Compare lines</Button>);
+    const button = screen.getByRole('button', { name: 'Compare lines' });
+    expect(button).toHaveClass('btn');
+    expect(button).toHaveClass('candidate-row');
+  });
+
   it('does not play the click sound when sound={false}, but still fires onClick', async () => {
     const onClick = vi.fn();
     render(
