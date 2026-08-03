@@ -1,10 +1,8 @@
 import { useMemo } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { resolveDrop } from '../chess/resolveDrop';
-import { SoundManager } from '../sound/SoundManager';
+import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
-
-const sounds = new SoundManager();
 
 const prefersReducedMotion =
   typeof window !== 'undefined' &&
@@ -39,12 +37,17 @@ export function Board() {
     return true;
   }
 
+  function onPieceDrag(): void {
+    sounds.play('pickup');
+  }
+
   return (
     <Chessboard
       options={{
         id: 'main-board',
         position: node.fen,
         onPieceDrop,
+        onPieceDrag,
         squareStyles: highlight,
         lightSquareStyle: { backgroundColor: 'var(--board-light)' },
         darkSquareStyle: { backgroundColor: 'var(--board-dark)' },

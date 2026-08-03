@@ -1,7 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { SoundManager } from '../sound/SoundManager';
-
-const sounds = new SoundManager();
+import { sounds } from '../sound';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost';
