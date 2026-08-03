@@ -46,4 +46,16 @@ describe('Button', () => {
       'secondary',
     );
   });
+
+  it('does not play the click sound when sound={false}, but still fires onClick', async () => {
+    const onClick = vi.fn();
+    render(
+      <Button sound={false} onClick={onClick}>
+        Candidate move
+      </Button>,
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Candidate move' }));
+    expect(mocks.play).not.toHaveBeenCalled();
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
 });

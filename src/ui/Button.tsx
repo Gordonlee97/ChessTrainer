@@ -3,17 +3,24 @@ import { sounds } from '../sound';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary' | 'ghost';
+  /**
+   * Set to false to suppress the shared `buttonPress` click sound — for a
+   * caller that already plays its own, more specific sound (e.g. a
+   * candidate move row playing its move sound) and doesn't want the two
+   * layered on top of each other. Defaults to true.
+   */
+  sound?: boolean;
   children: ReactNode;
 }
 
-export function Button({ variant = 'primary', children, onClick, ...rest }: ButtonProps) {
+export function Button({ variant = 'primary', sound = true, children, onClick, ...rest }: ButtonProps) {
   return (
     <button
       {...rest}
       className="btn"
       data-variant={variant}
       onClick={(event) => {
-        sounds.play('buttonPress');
+        if (sound) sounds.play('buttonPress');
         onClick?.(event);
       }}
     >
