@@ -216,6 +216,12 @@ describe('Engine lifecycle', () => {
     });
     controllerB.abort();
 
+    // Finding 1 regression: B never started (it was still queued behind
+    // A's drain), so its cancel() never sent any commands of its own. But
+    // A's search is still outstanding — the engine still owes A a
+    // `bestmove` — so isBusy must stay true here, not go stale.
+    expect(engine.isBusy).toBe(true);
+
     await expect(promiseA).rejects.toThrow(/aborted/i);
     await expect(promiseB).rejects.toThrow(/aborted/i);
 
@@ -235,5 +241,47 @@ describe('Engine lifecycle', () => {
     fake.emit('bestmove g1f3');
     const resultC = await promiseC;
     expect(resultC.lines[0].san).toBe('Nf3');
+  });
+
+  it('auto-aborts a running search when a new one is started with no AbortSignal on either call', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    // Neither call ever touches an AbortSignal — this is the headline
+    // `this.pending?.cancel()` path (engine.ts:58), not the
+    // already-cancelled-so-it's-a-no-op path every other test exercises.
+    const promiseA = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    const promiseB = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+
+    // A is superseded synchronously by B and must reject.
+    await expect(promiseA).rejects.toThrow(/aborted/i);
+
+    // B must not send its own `position`/`go` until A's stale `bestmove`
+    // has drained from the engine — only A's `go` has been sent so far.
+    const goCommands = () => fake.sent.filter((cmd) => cmd.startsWith('go depth'));
+    expect(goCommands()).toHaveLength(1);
+
+    let bSettled = false;
+    promiseB.then(() => {
+      bSettled = true;
+    });
+
+    // A's belated `bestmove` arrives, in response to the `stop` sent when
+    // it was superseded.
+    fake.emit('bestmove e2e4');
+    await flush();
+
+    // That stale bestmove must not resolve B, and B's own commands should
+    // now have been sent (queued behind A's drain, released once it
+    // completed).
+    expect(bSettled).toBe(false);
+    expect(goCommands()).toHaveLength(2);
+
+    // B's own search now genuinely completes, with its own result.
+    fake.emit('info depth 12 multipv 1 score cp 40 pv d2d4 d7d5');
+    fake.emit('bestmove d2d4');
+    const resultB = await promiseB;
+
+    expect(resultB.lines[0].san).toBe('d4');
   });
 });

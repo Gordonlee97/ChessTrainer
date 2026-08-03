@@ -36,6 +36,13 @@ export class Engine {
    * currently occupying it (genuine or stale-after-stop). `null` when no
    * search has commands in flight with the engine, so the next `analyze()`
    * may send its own commands immediately.
+   *
+   * This awaits an external `bestmove` with no timeout: if the underlying
+   * engine process crashes or hangs after `go`, nothing here ever forces
+   * this promise to resolve. A later `analyze()` queued behind it (via
+   * `this.drain.then(start)`) would wait forever on its own — it relies on
+   * a subsequent `analyze()` (which cancels it, rejecting it directly) or
+   * `dispose()` to release it instead.
    */
   private drain: Promise<void> | null = null;
 
@@ -94,7 +101,11 @@ export class Engine {
           // still reflects whatever the *previous* search needs to drain.
           unsubscribe();
           if (this.pending === handle) this.pending = null;
-          this.busy = false;
+          // Only clear busy if nothing else is still draining. A
+          // different, earlier search may still be outstanding at the
+          // engine (this.drain non-null) — isBusy must keep reflecting
+          // that, not go stale just because *this* search never started.
+          if (!this.drain) this.busy = false;
         }
       };
 
