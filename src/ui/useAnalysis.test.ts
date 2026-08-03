@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTreeStore } from '../tree/store';
+import { resetSharedEngineForTests } from './sharedEngine';
 import { formatScore, TARGET_DEPTH, useAnalysis } from './useAnalysis';
 
 // vi.mock calls are hoisted above imports by vitest, so this replaces the
@@ -16,6 +17,10 @@ const fake = vi.hoisted(() => {
   // with an empty bestmove — what Stockfish does on a checkmate/stalemate
   // position (Fix 1's regression scenario).
   const autoRespondEmpty = { value: false };
+  // Counts createWorkerTransport() factory calls — i.e. how many "workers"
+  // have been spawned. Fix 4's regression test asserts this stays at 1
+  // across multiple concurrent useAnalysis() call sites.
+  const createCount = { value: 0 };
   const emitLine = (line: string) => {
     [...listeners].forEach((cb) => cb(line));
   };
@@ -25,6 +30,7 @@ const fake = vi.hoisted(() => {
     sent,
     shouldThrow,
     autoRespondEmpty,
+    createCount,
     send: (cmd: string) => {
       sent.push(cmd);
       if (autoRespondEmpty.value && cmd.startsWith('go depth')) {
@@ -54,12 +60,14 @@ const fake = vi.hoisted(() => {
       sent.length = 0;
       shouldThrow.value = false;
       autoRespondEmpty.value = false;
+      createCount.value = 0;
     },
   };
 });
 
 vi.mock('../engine/stockfishWorker', () => ({
   createWorkerTransport: () => {
+    fake.createCount.value += 1;
     if (fake.shouldThrow.value) throw new Error('worker unavailable');
     return fake;
   },
@@ -93,6 +101,7 @@ describe('useAnalysis stale-result guard', () => {
   beforeEach(() => {
     useTreeStore.getState().reset();
     fake.reset();
+    resetSharedEngineForTests();
   });
 
   it('renders a result for the node that requested it', async () => {
@@ -272,6 +281,79 @@ describe('useAnalysis stale-result guard', () => {
     // return — status must not be left stuck at 'analyzing' from root's
     // still-outstanding search.
     expect(result.current.status).toBe('idle');
+
+    unmount();
+  });
+});
+
+describe('useAnalysis shared engine (Fix 4)', () => {
+  beforeEach(() => {
+    useTreeStore.getState().reset();
+    fake.reset();
+    resetSharedEngineForTests();
+  });
+
+  it('shares a single Engine (and worker transport) across multiple concurrent call sites', () => {
+    // Plan 2 adds a second consumer (the compare drawer) of this same hook.
+    // Each hook call site constructing its own Engine would spawn its own
+    // 7MB Stockfish worker running its own search — two workers competing
+    // for one core.
+    const first = renderHook(() => useAnalysis());
+    const second = renderHook(() => useAnalysis());
+
+    expect(fake.createCount.value).toBe(1);
+
+    first.unmount();
+    second.unmount();
+  });
+
+  it('does not tear down the shared engine when one consumer unmounts while another is still mounted', async () => {
+    const first = renderHook(() => useAnalysis());
+    // Both hooks analyze the same (only) selected node through the one
+    // shared Engine, so second's analyze() call supersedes first's — the
+    // engine serializes searches regardless of which consumer issued them.
+    // First's stale, cancelled search must still drain (its own bestmove)
+    // before second's own commands are sent.
+    const second = renderHook(() => useAnalysis());
+
+    first.unmount();
+
+    // If first's unmount had disposed the shared engine (instead of merely
+    // aborting its own AbortController), the transport would be terminated
+    // here and none of the following would ever resolve.
+    await act(async () => {
+      fake.emit('bestmove e2e4'); // drains first's superseded search
+      await flush();
+    });
+
+    await act(async () => {
+      fake.emit(`info depth ${TARGET_DEPTH} multipv 1 score cp 5 pv e2e4`);
+      fake.emit('bestmove e2e4'); // resolves second's own search
+      await flush();
+    });
+
+    expect(second.result.current.status).toBe('idle');
+    expect(second.result.current.result?.lines[0]?.cp).toBe(5);
+
+    second.unmount();
+  });
+
+  it('retry replaces the shared engine (new transport) and resumes analysis for the current node', async () => {
+    const { result, unmount } = renderHook(() => useAnalysis());
+    expect(fake.createCount.value).toBe(1);
+
+    await act(async () => {
+      fake.emitError(new Error('worker died'));
+      await flush();
+    });
+    expect(result.current.status).toBe('unavailable');
+
+    act(() => {
+      result.current.retry();
+    });
+
+    expect(fake.createCount.value).toBe(2);
+    expect(result.current.status).toBe('analyzing');
 
     unmount();
   });

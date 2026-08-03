@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Engine } from '../engine/engine';
-import { createWorkerTransport } from '../engine/stockfishWorker';
+import { useCallback, useEffect, useState } from 'react';
+import type { Engine } from '../engine/engine';
 import type { EvalResult, PvLine } from '../engine/types';
 import { useSelectedNode, useTreeStore } from '../tree/store';
+import { getSharedEngine, hasSharedEngineFailed, restartSharedEngine } from './sharedEngine';
 
 // Task 2's spike measured the real engine at this depth: ~975ms from the
 // start position, ~700ms in a middlegame — comfortably inside the
@@ -23,43 +23,41 @@ export function formatScore(line: PvLine): string {
 export function useAnalysis(): { result: EvalResult | null; status: AnalysisStatus; retry: () => void } {
   const node = useSelectedNode();
   const cacheEval = useTreeStore((state) => state.cacheEval);
-  const engineRef = useRef<Engine | null>(null);
   const [status, setStatus] = useState<AnalysisStatus>('idle');
   const [result, setResult] = useState<EvalResult | null>(node.eval ?? null);
-  // Bumped by retry() to tear down and recreate the engine below, and to
-  // re-run analysis for the currently selected node against the new one.
+  // Bumped by retry() to re-run this effect against the freshly recreated
+  // shared engine, resuming analysis for the currently selected node.
   const [retryToken, setRetryToken] = useState(0);
 
-  const retry = useCallback(() => setRetryToken((token) => token + 1), []);
+  const retry = useCallback(() => {
+    restartSharedEngine();
+    setRetryToken((token) => token + 1);
+  }, []);
 
   useEffect(() => {
+    // Every useAnalysis() call site shares one Engine (and one Stockfish
+    // worker) — see sharedEngine.ts. It is never disposed here: another
+    // consumer (Plan 2's compare drawer) may still be using it. The worker
+    // dies with the page; this hook only ever aborts its own in-flight
+    // search below.
+    let engine: Engine;
     try {
-      engineRef.current = new Engine(createWorkerTransport());
+      engine = getSharedEngine();
     } catch {
       setStatus('unavailable');
+      return;
     }
-    return () => {
-      // Cleanups run in declaration order (verified empirically against
-      // React 19, not reverse order as an earlier report claimed), so this
-      // disposal always runs *before* the analysis effect's below
-      // `controller.abort()`. Safety against a leaked in-flight search here
-      // depends on `Engine.dispose()` itself cancelling any pending search
-      // before terminating the transport — not on abort-then-dispose order.
-      engineRef.current?.dispose();
-      engineRef.current = null;
-    };
-  }, [retryToken]);
 
-  useEffect(() => {
-    const engine = engineRef.current;
-    if (!engine) return;
+    // Engine.onError() only notifies listeners registered before it fires.
+    // If the shared engine already failed before this hook mounted (e.g. a
+    // second consumer mounting after the first learned of the failure),
+    // that first check catches it; the subscription below catches a failure
+    // that happens later.
+    if (hasSharedEngineFailed()) {
+      setStatus('unavailable');
+      return;
+    }
 
-    // `new Worker(url)` never throws synchronously when the script 404s or
-    // the wasm fails to instantiate — that fires asynchronously instead, any
-    // time after this hook has mounted. Subscribed unconditionally (not only
-    // while a search is in flight) so a node that's already fully cached —
-    // and therefore never issues its own analyze() call below — still learns
-    // the engine died, rather than silently reporting a stale 'idle'.
     const unsubscribeError = engine.onError(() => setStatus('unavailable'));
 
     // Read the cached eval from the store directly rather than through
