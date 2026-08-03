@@ -119,6 +119,12 @@ export function select(tree: GameTree, nodeId: NodeId): GameTree {
 
 export function setEval(tree: GameTree, nodeId: NodeId, evaluation: EvalResult): GameTree {
   const node = tree.nodes[nodeId];
+  // Deliberately a silent no-op, unlike insertMove/select which throw on an
+  // unknown id: an in-flight analysis can resolve for a node that has since
+  // been evicted from the *selected path* (i.e. the user navigated away and
+  // back, or the node itself no longer exists for some other reason) by the
+  // time its result arrives. That is an expected race, not a bug, and must
+  // not throw.
   if (!node) return tree;
   return { ...tree, nodes: { ...tree.nodes, [nodeId]: { ...node, eval: evaluation } } };
 }
@@ -134,38 +140,40 @@ export function pathTo(tree: GameTree, nodeId: NodeId): TreeNode[] {
 }
 
 /**
- * Drops the least recently selected explored nodes once the explored count
- * exceeds `maxExplored`. Authored nodes, pinned nodes, the selected node's
- * ancestry, and any node with surviving children are all protected — eviction
- * removes leaves only, so no reachable position is ever orphaned.
+ * Clears the cached `eval` from the least-recently-selected nodes once the
+ * number of nodes holding a cached eval exceeds `maxCachedEvals`. This never
+ * removes a node from the tree and never rewrites `childIds` — a position
+ * the user can navigate to is never discarded, only the (re-computable, and
+ * comparatively bulky — PV string arrays) analysis cached on it. Nodes on
+ * the selected path, pinned nodes, and authored nodes keep their eval
+ * regardless of the cap: clearing the eval of the position currently on
+ * screen would trigger a pointless re-analysis.
  */
-export function evict(tree: GameTree, maxExplored: number): GameTree {
+export function evict(tree: GameTree, maxCachedEvals: number): GameTree {
   const protectedIds = new Set<NodeId>([
     ...tree.pinned,
     ...pathTo(tree, tree.selectedId).map((node) => node.id),
   ]);
 
+  const allNodes = Object.values(tree.nodes);
+  const cachedCount = allNodes.filter((node) => node.eval !== undefined).length;
+  const overflow = cachedCount - maxCachedEvals;
+  if (overflow <= 0) return tree;
+
+  const clearable = allNodes
+    .filter(
+      (node) =>
+        node.eval !== undefined && node.origin !== 'authored' && !protectedIds.has(node.id),
+    )
+    .sort((a, b) => a.lastSelectedAt - b.lastSelectedAt)
+    .slice(0, overflow);
+
+  if (clearable.length === 0) return tree;
+
   const nodes = { ...tree.nodes };
-
-  while (true) {
-    const explored = Object.values(nodes).filter((node) => node.origin === 'explored');
-    if (explored.length <= maxExplored) break;
-
-    const removable = explored
-      .filter((node) => !protectedIds.has(node.id) && node.childIds.length === 0)
-      .sort((a, b) => a.lastSelectedAt - b.lastSelectedAt);
-
-    const victim = removable[0];
-    if (!victim) break; // nothing left that is safe to remove
-
-    const parent = victim.parentId ? nodes[victim.parentId] : undefined;
-    if (parent) {
-      nodes[parent.id] = {
-        ...parent,
-        childIds: parent.childIds.filter((id) => id !== victim.id),
-      };
-    }
-    delete nodes[victim.id];
+  for (const node of clearable) {
+    const { eval: _droppedEval, ...rest } = nodes[node.id];
+    nodes[node.id] = rest;
   }
 
   return { ...tree, nodes };

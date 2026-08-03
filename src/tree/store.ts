@@ -13,7 +13,7 @@ import {
   type TreeNode,
 } from './tree';
 
-const MAX_EXPLORED_NODES = 1000;
+const MAX_CACHED_EVALS = 1000;
 
 interface TreeStore {
   tree: GameTree;
@@ -34,7 +34,7 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
     } catch {
       return null;
     }
-    set({ tree: evict(select(inserted.tree, inserted.nodeId), MAX_EXPLORED_NODES) });
+    set({ tree: evict(select(inserted.tree, inserted.nodeId), MAX_CACHED_EVALS) });
     return inserted.nodeId;
   },
 

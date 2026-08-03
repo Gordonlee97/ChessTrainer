@@ -32,7 +32,7 @@ describe('game tree', () => {
     expect(tree.nodes[tree.rootId].childIds).toContain(nodeId);
   });
 
-  it('reuses an existing node instead of duplicating a transposition', () => {
+  it('reuses an existing node when the same move is replayed from the same parent', () => {
     const first = withMoves(['e4']);
     const second = insertMove(first.tree, first.tree.rootId, 'e4');
     expect(second.nodeId).toBe(first.nodeId);
@@ -79,75 +79,96 @@ describe('game tree', () => {
     expect(updated.nodes[nodeId].lastSelectedAt).toBeGreaterThan(0);
   });
 
-  it('evicts the least recently selected explored leaves over the cap', () => {
-    let tree = createTree();
-    const first = insertMove(tree, tree.rootId, 'e4');
-    const second = insertMove(first.tree, first.tree.rootId, 'd4');
-    const third = insertMove(second.tree, second.tree.rootId, 'c4');
-    tree = select(third.tree, third.nodeId);
+  describe('evict', () => {
+    const EVAL = { depth: 10, lines: [] };
 
-    const evicted = evict(tree, 2);
-    expect(Object.keys(evicted.nodes)).toHaveLength(3); // root + 2 survivors
-    expect(evicted.nodes[third.nodeId]).toBeDefined(); // currently selected survives
-    expect(evicted.nodes[first.nodeId]).toBeUndefined(); // oldest goes
-  });
+    it('clears the eval of the least-recently-selected nodes once the cached-eval count exceeds the cap, without removing any node or touching childIds', () => {
+      let tree = createTree();
+      const first = insertMove(tree, tree.rootId, 'e4');
+      const second = insertMove(first.tree, first.tree.rootId, 'd4');
+      const third = insertMove(second.tree, second.tree.rootId, 'c4');
+      tree = select(third.tree, third.nodeId);
+      tree = setEval(tree, first.nodeId, EVAL);
+      tree = setEval(tree, second.nodeId, EVAL);
+      tree = setEval(tree, third.nodeId, EVAL);
 
-  it('never evicts authored nodes, pinned nodes, or the selected path', () => {
-    let tree = createTree();
-    const a = insertMove(tree, tree.rootId, 'e4');
-    tree = a.tree;
-    tree.nodes[a.nodeId] = { ...tree.nodes[a.nodeId], origin: 'authored' };
-    const b = insertMove(tree, a.nodeId, 'e5');
-    tree = select(b.tree, b.nodeId);
+      const evicted = evict(tree, 2);
 
-    const evicted = evict(tree, 0);
-    expect(evicted.nodes[a.nodeId]).toBeDefined();
-    expect(evicted.nodes[b.nodeId]).toBeDefined();
-  });
+      // No node is ever removed and the tree shape is untouched.
+      expect(Object.keys(evicted.nodes).sort()).toEqual(Object.keys(tree.nodes).sort());
+      expect(evicted.nodes[tree.rootId].childIds).toEqual(tree.nodes[tree.rootId].childIds);
+      expect(evicted.nodes[first.nodeId].childIds).toEqual(tree.nodes[first.nodeId].childIds);
 
-  it('cascades eviction through an unprotected explored chain down to the cap', () => {
-    let tree = createTree();
-    const { tree: chained } = withMoves(['e4', 'e5', 'Nf3']);
-    tree = select(chained, tree.rootId); // select root — whole chain is unprotected
+      // Oldest cached eval is cleared; the two most-recently-selected survive.
+      expect(evicted.nodes[first.nodeId].eval).toBeUndefined();
+      expect(evicted.nodes[second.nodeId].eval).toBeDefined();
+      expect(evicted.nodes[third.nodeId].eval).toBeDefined();
+      // The position itself is still there and still navigable.
+      expect(evicted.nodes[first.nodeId]).toBeDefined();
+      expect(evicted.nodes[first.nodeId].fen).toBe(tree.nodes[first.nodeId].fen);
+    });
 
-    const evicted = evict(tree, 0);
-    expect(Object.keys(evicted.nodes)).toEqual([tree.rootId]); // only root survives
-    expect(evicted.nodes[tree.rootId].childIds).toHaveLength(0); // root correctly re-parented as childless
-  });
+    it('does nothing when the cached-eval count is at or under the cap', () => {
+      let tree = createTree();
+      const first = insertMove(tree, tree.rootId, 'e4');
+      tree = select(first.tree, first.nodeId);
+      tree = setEval(tree, first.nodeId, EVAL);
 
-  it('protects pinned nodes from eviction when not on selected path', () => {
-    let tree = createTree();
-    const e4 = insertMove(tree, tree.rootId, 'e4');
-    const d4 = insertMove(e4.tree, tree.rootId, 'd4');
-    tree = d4.tree;
-    // Keep root selected — neither e4 nor d4 is on the selected path
-    expect(tree.selectedId).toBe(tree.rootId);
-    // Pin e4 only
-    tree = { ...tree, pinned: [e4.nodeId] };
+      const evicted = evict(tree, 5);
+      expect(evicted.nodes[first.nodeId].eval).toBeDefined();
+    });
 
-    const evicted = evict(tree, 0);
-    expect(evicted.nodes[e4.nodeId]).toBeDefined(); // pinned node survives
-    expect(evicted.nodes[d4.nodeId]).toBeUndefined(); // unpinned sibling is evicted
-  });
+    it('keeps the eval of every node on the selected path regardless of the cap', () => {
+      let tree = createTree();
+      const { tree: chained, nodeId } = withMoves(['e4', 'e5']);
+      tree = select(chained, nodeId);
+      const path = pathTo(tree, nodeId);
+      for (const node of path) tree = setEval(tree, node.id, EVAL);
 
-  it('protects authored nodes from eviction when not on selected path', () => {
-    let tree = createTree();
-    const e4 = insertMove(tree, tree.rootId, 'e4');
-    const d4 = insertMove(e4.tree, tree.rootId, 'd4');
-    tree = d4.tree;
-    // Mark e4 as authored
-    tree = {
-      ...tree,
-      nodes: {
-        ...tree.nodes,
-        [e4.nodeId]: { ...tree.nodes[e4.nodeId], origin: 'authored' },
-      },
-    };
-    // Keep root selected — e4 is not on the selected path
-    expect(tree.selectedId).toBe(tree.rootId);
+      const evicted = evict(tree, 0);
+      for (const node of path) {
+        expect(evicted.nodes[node.id].eval).toBeDefined();
+      }
+    });
 
-    const evicted = evict(tree, 0);
-    expect(evicted.nodes[e4.nodeId]).toBeDefined(); // authored node survives
-    expect(evicted.nodes[d4.nodeId]).toBeUndefined(); // explored sibling is evicted
+    it('keeps evals on pinned nodes regardless of the cap', () => {
+      let tree = createTree();
+      const e4 = insertMove(tree, tree.rootId, 'e4');
+      const d4 = insertMove(e4.tree, tree.rootId, 'd4');
+      tree = d4.tree;
+      tree = setEval(tree, e4.nodeId, EVAL);
+      tree = setEval(tree, d4.nodeId, EVAL);
+      // Keep root selected — neither e4 nor d4 is on the selected path.
+      expect(tree.selectedId).toBe(tree.rootId);
+      tree = { ...tree, pinned: [e4.nodeId] };
+
+      const evicted = evict(tree, 0);
+      expect(evicted.nodes[e4.nodeId].eval).toBeDefined(); // pinned node keeps its eval
+      expect(evicted.nodes[d4.nodeId].eval).toBeUndefined(); // unpinned sibling loses it
+      expect(evicted.nodes[d4.nodeId]).toBeDefined(); // but the node itself remains
+    });
+
+    it('keeps evals on authored nodes regardless of the cap', () => {
+      let tree = createTree();
+      const e4 = insertMove(tree, tree.rootId, 'e4');
+      const d4 = insertMove(e4.tree, tree.rootId, 'd4');
+      tree = d4.tree;
+      tree = {
+        ...tree,
+        nodes: {
+          ...tree.nodes,
+          [e4.nodeId]: { ...tree.nodes[e4.nodeId], origin: 'authored' },
+        },
+      };
+      tree = setEval(tree, e4.nodeId, EVAL);
+      tree = setEval(tree, d4.nodeId, EVAL);
+      // Keep root selected — e4 is not on the selected path.
+      expect(tree.selectedId).toBe(tree.rootId);
+
+      const evicted = evict(tree, 0);
+      expect(evicted.nodes[e4.nodeId].eval).toBeDefined(); // authored node keeps its eval
+      expect(evicted.nodes[d4.nodeId].eval).toBeUndefined(); // explored sibling loses it
+      expect(evicted.nodes[d4.nodeId]).toBeDefined(); // but the node itself remains
+    });
   });
 });
