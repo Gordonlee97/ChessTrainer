@@ -1,10 +1,23 @@
-import { useTreeStore } from '../tree/store';
+import { resolveSan } from '../chess/resolveDrop';
+import { sounds } from '../sound';
+import { useSelectedNode, useTreeStore } from '../tree/store';
 import { EvalBar } from './EvalBar';
 import { formatScore, useAnalysis } from './useAnalysis';
 
 export function CandidateRail() {
   const { result, status, retry } = useAnalysis();
+  const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
+
+  function playCandidate(san: string) {
+    // Shares resolveDrop's classification (via resolveSan) so a candidate
+    // click and the equivalent drag-and-drop move sound identical.
+    const resolved = resolveSan(node.fen, san);
+    const played = playMove(san);
+    if (played && resolved) {
+      sounds.play(resolved.sound === 'quiet' ? 'move' : resolved.sound);
+    }
+  }
 
   if (status === 'unavailable') {
     return (
@@ -56,9 +69,9 @@ export function CandidateRail() {
       </h2>
       {result.lines.map((line, index) => (
         <button
-          key={line.san}
+          key={`${index}-${line.san}`}
           type="button"
-          onClick={() => playMove(line.san)}
+          onClick={() => playCandidate(line.san)}
           style={{
             display: 'block',
             width: '100%',

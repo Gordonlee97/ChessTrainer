@@ -1,4 +1,4 @@
-import { Chess } from 'chess.js';
+import { Chess, type Move } from 'chess.js';
 
 export type SoundCategory = 'quiet' | 'capture' | 'check';
 
@@ -10,6 +10,25 @@ export interface DropResolution {
 }
 
 /**
+ * Decides the sound category for a move already applied to `chess`.
+ *
+ * This is the one place that classifies capture/check, shared by resolveDrop
+ * (drag-and-drop, which has from/to squares) and resolveSan (the candidate
+ * rail, which only has SAN) so the classification logic is never duplicated.
+ *
+ * This checks `move.captured` (was a piece actually captured), not
+ * `move.isCapture()` — chess.js's `isCapture()` only tests the CAPTURE flag
+ * and reports `false` for en passant captures, which set only the
+ * EP_CAPTURE flag, even though a pawn was genuinely captured and the SAN
+ * correctly shows an 'x'. `captured` is set in both cases, so it is the
+ * reliable signal. Check is tested on the *resulting* position via
+ * `chess.isCheck()` after the move has been applied.
+ */
+function classifySound(chess: Chess, move: Move): SoundCategory {
+  return chess.isCheck() ? 'check' : move.captured ? 'capture' : 'quiet';
+}
+
+/**
  * Resolves a drag-and-drop move attempt against a FEN position.
  *
  * Returns `null` when `from` -> `to` is not a legal move in `fen`.
@@ -18,15 +37,6 @@ export interface DropResolution {
  * under-promotion is unreachable via drag and drop; auto-queen is the
  * deliberate, documented behavior here rather than an incidental
  * `promotion: 'q'` buried in a UI closure.
- *
- * The sound category is decided from chess.js's verbose move data, not by
- * string-matching the SAN. Specifically this checks `move.captured` (was a
- * piece actually captured), not `move.isCapture()` — chess.js's
- * `isCapture()` only tests the CAPTURE flag and reports `false` for en
- * passant captures, which set only the EP_CAPTURE flag, even though a pawn
- * was genuinely captured and the SAN correctly shows an 'x'. `captured` is
- * set in both cases, so it is the reliable signal. Check is tested on the
- * *resulting* position via `chess.isCheck()` after the move has been applied.
  */
 export function resolveDrop(fen: string, from: string, to: string): DropResolution | null {
   const chess = new Chess(fen);
@@ -38,7 +48,23 @@ export function resolveDrop(fen: string, from: string, to: string): DropResoluti
     return null;
   }
 
-  const sound: SoundCategory = chess.isCheck() ? 'check' : move.captured ? 'capture' : 'quiet';
+  return { san: move.san, sound: classifySound(chess, move) };
+}
 
-  return { san: move.san, sound };
+/**
+ * Resolves a move given in SAN (rather than from/to squares) against a FEN
+ * position — used by the candidate rail, whose MultiPV lines carry SAN but
+ * no squares. Returns `null` when `san` is not a legal move in `fen`.
+ */
+export function resolveSan(fen: string, san: string): DropResolution | null {
+  const chess = new Chess(fen);
+
+  let move;
+  try {
+    move = chess.move(san);
+  } catch {
+    return null;
+  }
+
+  return { san: move.san, sound: classifySound(chess, move) };
 }
