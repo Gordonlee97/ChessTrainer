@@ -1,6 +1,6 @@
-import { Chess } from 'chess.js';
 import { useMemo } from 'react';
 import { Chessboard } from 'react-chessboard';
+import { resolveDrop } from '../chess/resolveDrop';
 import { SoundManager } from '../sound/SoundManager';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 
@@ -29,22 +29,13 @@ export function Board() {
   }): boolean {
     if (!targetSquare) return false;
 
-    // Resolve the drag to SAN before handing it to the tree, which speaks SAN.
-    const probe = new Chess(node.fen);
-    let san: string;
-    try {
-      san = probe.move({ from: sourceSquare, to: targetSquare, promotion: 'q' }).san;
-    } catch {
-      return false;
-    }
+    const resolved = resolveDrop(node.fen, sourceSquare, targetSquare);
+    if (!resolved) return false;
 
-    const played = playMove(san);
+    const played = playMove(resolved.san);
     if (!played) return false;
 
-    if (probe.isCheck()) sounds.play('check');
-    else if (san.includes('x')) sounds.play('capture');
-    else sounds.play('move');
-
+    sounds.play(resolved.sound === 'quiet' ? 'move' : resolved.sound);
     return true;
   }
 

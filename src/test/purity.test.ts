@@ -5,12 +5,18 @@ import { describe, expect, it } from 'vitest';
 const PURE_DIRS = ['src/chess', 'src/engine', 'src/tree'];
 const FORBIDDEN = [/from ['"]react['"]/, /from ['"]react-dom/, /from ['"]zustand/];
 
+// The Zustand binding layer over the pure game tree. This one file is allowed
+// to import zustand; everything else under PURE_DIRS must stay framework-free.
+// Built with `join` (not a literal) so it matches regardless of the path
+// separator `tsFilesIn`'s walk produces on the current platform.
+const STORE_EXEMPTION = join('src', 'tree', 'store.ts');
+
 function tsFilesIn(dir: string): string[] {
   if (!existsSync(dir)) return [];
   return readdirSync(dir).flatMap((entry) => {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) return tsFilesIn(full);
-    return full.endsWith('.ts') && !full.endsWith('.test.ts') && !full.endsWith('store.ts')
+    return full.endsWith('.ts') && !full.endsWith('.test.ts') && full !== STORE_EXEMPTION
       ? [full]
       : [];
   });
