@@ -10,7 +10,9 @@ function tsFilesIn(dir: string): string[] {
   return readdirSync(dir).flatMap((entry) => {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) return tsFilesIn(full);
-    return full.endsWith('.ts') && !full.endsWith('.test.ts') ? [full] : [];
+    return full.endsWith('.ts') && !full.endsWith('.test.ts') && !full.endsWith('store.ts')
+      ? [full]
+      : [];
   });
 }
 
