@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useTreeStore } from '../tree/store';
+import { createTree } from '../tree/tree';
 import { sounds } from '../sound';
 import { CandidateRail } from './CandidateRail';
 
@@ -112,8 +113,56 @@ describe('CandidateRail', () => {
     expect(retry).toHaveBeenCalledTimes(1);
   });
 
+  it('gives the retry button the shared .btn class so it keeps the focus ring and reduced-motion feedback', () => {
+    analysis.value = { result: null, status: 'unavailable', retry: () => {} } as never;
+    render(<CandidateRail />);
+    expect(screen.getByRole('button', { name: /retry/i })).toHaveClass('btn');
+  });
+
+  it('gives candidate rows the shared .btn class so they keep the focus ring and reduced-motion feedback', () => {
+    analysis.value = {
+      status: 'idle',
+      result: { depth: 16, lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4'] }] },
+    } as never;
+    render(<CandidateRail />);
+    expect(screen.getByRole('button', { name: /e4/ })).toHaveClass('btn');
+  });
+
   it('shows a thinking state while analysing with no result yet', () => {
     analysis.value = { result: null, status: 'analyzing' } as never;
+    render(<CandidateRail />);
+    expect(screen.getByRole('status')).toHaveTextContent(/thinking/i);
+  });
+
+  it('shows a checkmate message instead of "Thinking…" once analysis finishes with zero moves on a mated position', () => {
+    // Fool's Mate: 1. f3 e5 2. g4 Qh4# — White is checkmated.
+    useTreeStore.getState().playMove('f3');
+    useTreeStore.getState().playMove('e5');
+    useTreeStore.getState().playMove('g4');
+    useTreeStore.getState().playMove('Qh4');
+
+    analysis.value = { status: 'idle', result: { depth: 0, lines: [] }, retry: () => {} } as never;
+    render(<CandidateRail />);
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(/checkmate/i);
+    expect(status).not.toHaveTextContent(/thinking/i);
+  });
+
+  it('shows a stalemate message instead of "Thinking…" once analysis finishes with zero moves on a stalemated position', () => {
+    const STALEMATE_FEN = '7k/5Q2/6K1/8/8/8/8/8 b - - 0 1';
+    useTreeStore.setState({ tree: createTree(STALEMATE_FEN) });
+
+    analysis.value = { status: 'idle', result: { depth: 0, lines: [] }, retry: () => {} } as never;
+    render(<CandidateRail />);
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveTextContent(/stalemate/i);
+    expect(status).not.toHaveTextContent(/thinking/i);
+  });
+
+  it('still shows the thinking state when analysis is genuinely still running with no lines yet', () => {
+    analysis.value = { status: 'analyzing', result: { depth: 5, lines: [] }, retry: () => {} } as never;
     render(<CandidateRail />);
     expect(screen.getByRole('status')).toHaveTextContent(/thinking/i);
   });

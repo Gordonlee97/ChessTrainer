@@ -1,8 +1,19 @@
+import { Chess } from 'chess.js';
+import type { CSSProperties } from 'react';
 import { resolveSan } from '../chess/resolveDrop';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
+import { Button } from './Button';
 import { EvalBar } from './EvalBar';
 import { formatScore, useAnalysis } from './useAnalysis';
+
+/** Describes a position where analysis has finished with no legal moves. */
+function terminalPositionMessage(fen: string): string {
+  const chess = new Chess(fen);
+  if (chess.isCheckmate()) return 'Checkmate.';
+  if (chess.isStalemate()) return 'Stalemate — the game is drawn.';
+  return 'No legal moves in this position.';
+}
 
 export function CandidateRail() {
   const { result, status, retry } = useAnalysis();
@@ -33,28 +44,40 @@ export function CandidateRail() {
         <p style={{ margin: '0 0 8px' }}>
           Engine unavailable — lesson content still works, but live evaluation is off.
         </p>
-        <button
+        <Button
           type="button"
+          variant="ghost"
           onClick={retry}
-          style={{
-            font: 'inherit',
-            fontWeight: 700,
-            fontSize: 13,
-            padding: '6px 12px',
-            cursor: 'pointer',
-            background: 'var(--surface)',
-            color: 'var(--ink)',
-            border: '2px solid var(--border)',
-            borderRadius: 'var(--radius)',
-          }}
+          style={
+            {
+              fontWeight: 700,
+              fontSize: 13,
+              padding: '6px 12px',
+              background: 'var(--surface)',
+              color: 'var(--ink)',
+              border: '2px solid var(--border)',
+              '--btn-shadow': 'var(--border)',
+            } as CSSProperties
+          }
         >
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
 
   if (!result || result.lines.length === 0) {
+    // A finished analysis (status idle) with zero candidate moves means the
+    // position itself has no legal moves — checkmate or stalemate — not
+    // that analysis is still running. Anything else (still analyzing, or no
+    // result at all yet) is the ordinary "still thinking" state.
+    if (status === 'idle' && result) {
+      return (
+        <div role="status" style={{ padding: 12, color: 'var(--ink-soft)', fontSize: 13 }}>
+          {terminalPositionMessage(node.fen)}
+        </div>
+      );
+    }
     return (
       <div role="status" style={{ padding: 12, color: 'var(--ink-soft)', fontSize: 13 }}>
         Thinking…
@@ -68,26 +91,32 @@ export function CandidateRail() {
         CANDIDATE MOVES · depth {result.depth}
       </h2>
       {result.lines.map((line, index) => (
-        <button
+        <Button
           key={`${index}-${line.san}`}
           type="button"
+          variant="ghost"
+          // The move sound (played by playCandidate below) is the only
+          // sound a candidate click makes — it must match dragging the same
+          // move exactly, so the shared buttonPress click is suppressed.
+          sound={false}
           onClick={() => playCandidate(line.san)}
-          style={{
-            display: 'block',
-            width: '100%',
-            textAlign: 'left',
-            font: 'inherit',
-            fontWeight: 700,
-            fontSize: 13,
-            marginBottom: 8,
-            padding: '10px 12px',
-            cursor: 'pointer',
-            background: 'var(--surface)',
-            color: 'var(--ink)',
-            border: `2px solid ${index === 0 ? 'var(--primary)' : 'var(--border)'}`,
-            borderRadius: 'var(--radius)',
-            boxShadow: `0 3px 0 ${index === 0 ? 'var(--primary)' : 'var(--border)'}`,
-          }}
+          style={
+            {
+              display: 'block',
+              width: '100%',
+              textAlign: 'left',
+              fontWeight: 700,
+              fontSize: 13,
+              marginBottom: 8,
+              padding: '10px 12px',
+              background: 'var(--surface)',
+              color: 'var(--ink)',
+              border: `2px solid ${index === 0 ? 'var(--primary)' : 'var(--border)'}`,
+              borderRadius: 'var(--radius)',
+              boxShadow: `0 3px 0 ${index === 0 ? 'var(--primary)' : 'var(--border)'}`,
+              '--btn-shadow': index === 0 ? 'var(--primary)' : 'var(--border)',
+            } as CSSProperties
+          }
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
             <span style={{ fontFamily: 'ui-monospace, Consolas, monospace' }}>{line.san}</span>
@@ -99,7 +128,7 @@ export function CandidateRail() {
           <div style={{ marginTop: 6, fontWeight: 600, fontSize: 12, color: 'var(--ink-soft)' }}>
             {line.pv.slice(0, 6).join(' ')}
           </div>
-        </button>
+        </Button>
       ))}
     </section>
   );
