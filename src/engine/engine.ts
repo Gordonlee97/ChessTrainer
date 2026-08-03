@@ -30,9 +30,20 @@ export const ANALYZE_TIMEOUT_MS = 15_000;
 
 /** A search that's currently occupying the `pending` slot on the Engine. */
 interface PendingSearch {
-  /** Idempotently rejects this search with an AbortError. Safe to call more than once. */
+  /**
+   * Idempotently rejects this search with an AbortError. Safe to call more
+   * than once. Also used internally for a timeout on a search that has
+   * already started: since the timer is only ever armed once `go` has been
+   * sent, a timeout can only fire post-start, so it always takes the
+   * "stay subscribed and drain" branch below rather than the full release.
+   */
   cancel: () => void;
-  /** Idempotently rejects this search with a non-abort error (transport failure, timeout). Safe to call more than once. */
+  /**
+   * Idempotently rejects this search with a non-abort error representing a
+   * dead transport. Safe to call more than once. Unlike a timeout, a dead
+   * transport will never deliver the owed `bestmove`, so this always fully
+   * releases busy/drain — there is nothing left to drain.
+   */
   fail: (reason: unknown) => void;
 }
 
@@ -105,6 +116,12 @@ export class Engine {
       let cancelled = false;
       let started = false;
       let unsubscribe: () => void = () => {};
+      // Armed inside start() (not here) so time spent queued behind another
+      // search's drain never counts against the budget — queuing is normal
+      // with a shared engine and multiple consumers. Refreshed on every
+      // parsed `info` line so a slow-but-healthy search isn't rejected while
+      // it is visibly making progress.
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
 
       const bySlot = new Map<number, RawInfo>();
       let deepest = 0;
@@ -132,15 +149,20 @@ export class Engine {
         signal?.removeEventListener('abort', onAbort);
       };
 
-      const cancel = () => {
+      // Shared by cancel() (AbortError) and the timeout (a plain Error): both
+      // end the search without a genuine `bestmove` in hand, and both must
+      // behave identically depending on whether `go` was ever sent.
+      const settle = (reason: unknown) => {
         if (cancelled) return;
         cancelled = true;
         clearGuards();
-        reject(new DOMException('Analysis aborted', 'AbortError'));
+        reject(reason);
         if (started) {
           // The engine still owes this search a `bestmove`. Stay subscribed
           // so it can be drained (and ignored) below before the next
-          // search's commands are sent.
+          // search's commands are sent. Deliberately leaves `this.busy` and
+          // `this.drain` untouched — the engine is genuinely still busy
+          // until that `bestmove` arrives.
           this.transport.send('stop');
         } else {
           // Never sent `go`, so no `bestmove` will ever arrive for this
@@ -155,6 +177,8 @@ export class Engine {
           if (!this.drain) this.busy = false;
         }
       };
+
+      const cancel = () => settle(new DOMException('Analysis aborted', 'AbortError'));
 
       // A fatal, non-abort failure: the transport died, or no bestmove ever
       // arrived within the wall-clock budget. Unlike `cancel()`, there is no
@@ -173,10 +197,17 @@ export class Engine {
 
       const handle: PendingSearch = { cancel, fail };
 
-      const timeoutId = setTimeout(
-        () => handle.fail(new Error(`analyze() timed out after ${ANALYZE_TIMEOUT_MS}ms with no bestmove`)),
-        ANALYZE_TIMEOUT_MS,
-      );
+      // Arming (and re-arming) is only ever done once `go` has actually been
+      // sent — see the comment on `timeoutId` above. By the time this fires,
+      // `started` is always true, so `settle` always takes the "stay
+      // subscribed and drain" branch rather than the full release.
+      const armTimeout = () => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(
+          () => settle(new Error(`analyze() timed out after ${ANALYZE_TIMEOUT_MS}ms with no bestmove`)),
+          ANALYZE_TIMEOUT_MS,
+        );
+      };
 
       if (signal?.aborted) {
         cancel();
@@ -189,6 +220,7 @@ export class Engine {
       const start = () => {
         if (cancelled) return;
         started = true;
+        armTimeout();
 
         let releaseDrain!: () => void;
         this.drain = new Promise<void>((res) => {
@@ -212,6 +244,10 @@ export class Engine {
 
           const info = parseInfoLine(line);
           if (!info) return;
+
+          // Visible progress — refresh the budget rather than let a slow
+          // but healthy search get rejected mid-flight.
+          armTimeout();
 
           const existing = bySlot.get(info.multipv);
           if (existing && existing.depth > info.depth) return;

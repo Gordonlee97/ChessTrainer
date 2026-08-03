@@ -345,6 +345,15 @@ describe('Engine wall-clock timeout (Fix 2)', () => {
     await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS);
     await assertion;
 
+    // The engine still owes this search a `bestmove` (a `stop` was sent, but
+    // nothing has drained yet) — isBusy must stay true, exactly like an
+    // aborted-but-started search. Contract change from wave 2: the timeout
+    // used to fully release busy/drain immediately, which is the same bug
+    // Fix 1 (wave 3) closes for the stale-bestmove race.
+    expect(engine.isBusy).toBe(true);
+
+    // Once the stale bestmove actually drains, busy correctly clears.
+    fake.emit('bestmove e2e4');
     expect(engine.isBusy).toBe(false);
   });
 
@@ -360,6 +369,83 @@ describe('Engine wall-clock timeout (Fix 2)', () => {
     const result = await promise;
 
     expect(result.lines[0].san).toBe('e4');
+  });
+
+  it('does not let a late bestmove from a timed-out search resolve the next search (Fix 1, wave 3)', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promiseA = engine.analyze({ fen: START, depth: 20, multiPV: 3 });
+    // Attach the rejection assertion before advancing timers (not after) so
+    // there is no window where the timeout fires and rejects promiseA with
+    // no handler attached yet.
+    const assertionA = expect(promiseA).rejects.toThrow(/timed out|timeout/i);
+    await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS);
+    await assertionA;
+
+    // A's stale bestmove has not drained yet, so B queues behind it rather
+    // than sending its own position/go immediately.
+    const promiseB = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(1);
+
+    // A's belated bestmove arrives — this must drain A, not resolve B.
+    fake.emit('bestmove e2e4');
+
+    let bSettled = false;
+    promiseB.then(() => {
+      bSettled = true;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(bSettled).toBe(false);
+    expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(2);
+
+    fake.emit('info depth 12 multipv 1 score cp 40 pv d2d4 d7d5');
+    fake.emit('bestmove d2d4');
+    const resultB = await promiseB;
+
+    expect(resultB.lines[0].san).toBe('d4');
+  });
+
+  it('does not count time queued behind another search against the timeout (Fix 1, wave 3)', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    // A occupies the engine and will be superseded without ever resolving.
+    const promiseA = engine.analyze({ fen: START, depth: 20, multiPV: 3 });
+    promiseA.catch(() => {});
+
+    // B is queued behind A's drain immediately (A hasn't sent bestmove yet).
+    const promiseB = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+
+    // B sits queued for nearly the full timeout budget before it ever starts.
+    await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS - 100);
+
+    // A's belated bestmove now drains, releasing B to send its own commands.
+    fake.emit('bestmove e2e4');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(2);
+
+    // Nearly a full timeout budget elapses again, measured from when B
+    // actually started (not from when analyze() was first called). If queue
+    // time counted against B's budget, B would already have timed out by now.
+    await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS - 100);
+
+    let bSettled = false;
+    promiseB.then(
+      () => {
+        bSettled = true;
+      },
+      () => {
+        bSettled = true;
+      },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(bSettled).toBe(false);
+
+    fake.emit('info depth 12 multipv 1 score cp 1 pv d2d4');
+    fake.emit('bestmove d2d4');
+    const resultB = await promiseB;
+    expect(resultB.lines[0].san).toBe('d4');
   });
 });
 
