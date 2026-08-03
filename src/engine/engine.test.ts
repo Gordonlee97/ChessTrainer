@@ -3,6 +3,8 @@ import { ANALYZE_TIMEOUT_MS, Engine } from './engine';
 import type { UciTransport } from './types';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+// After 1. e4 — Black to move.
+const BLACK_TO_MOVE = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
 
 /** A scriptable stand-in for the Stockfish worker. */
 function createFakeTransport() {
@@ -358,5 +360,45 @@ describe('Engine wall-clock timeout (Fix 2)', () => {
     const result = await promise;
 
     expect(result.lines[0].san).toBe('e4');
+  });
+});
+
+describe('Engine White-relative score normalization (Fix 5)', () => {
+  it('leaves scores unchanged when White is to move', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promise = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    fake.emit('info depth 12 multipv 1 score cp 31 pv e2e4');
+    fake.emit('bestmove e2e4');
+    const result = await promise;
+
+    expect(result.lines[0].cp).toBe(31);
+  });
+
+  it('flips the sign of a cp score when Black is to move, so positive always favors White', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promise = engine.analyze({ fen: BLACK_TO_MOVE, depth: 12, multiPV: 1 });
+    // UCI reports this from the side to move (Black): +50 means Black is
+    // ahead by half a pawn, i.e. White is actually behind.
+    fake.emit('info depth 12 multipv 1 score cp 50 pv e7e5');
+    fake.emit('bestmove e7e5');
+    const result = await promise;
+
+    expect(result.lines[0].cp).toBe(-50);
+  });
+
+  it('flips the sign of a mate score when Black is to move', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promise = engine.analyze({ fen: BLACK_TO_MOVE, depth: 12, multiPV: 1 });
+    fake.emit('info depth 12 multipv 1 score mate 3 pv e7e5');
+    fake.emit('bestmove e7e5');
+    const result = await promise;
+
+    expect(result.lines[0].mate).toBe(-3);
   });
 });

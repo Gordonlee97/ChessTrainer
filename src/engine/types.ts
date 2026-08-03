@@ -14,9 +14,18 @@ export interface UciTransport {
 export interface PvLine {
   /** The first move of the line, in SAN. */
   san: string;
-  /** Score in centipawns from the side-to-move's perspective. Null if mate. */
+  /**
+   * Score in centipawns, normalized to be White-relative: positive always
+   * favors White and negative always favors Black, regardless of whose
+   * turn it is to move. (Raw UCI `score cp` is reported from the side to
+   * move instead — Engine flips the sign when Black is to move before this
+   * is ever constructed.) Null if mate.
+   */
   cp: number | null;
-  /** Moves to mate, signed. Null if not a mate line. */
+  /**
+   * Moves to mate, signed the same White-relative way as `cp`: positive
+   * means White mates, negative means Black mates. Null if not a mate line.
+   */
   mate: number | null;
   /** The principal variation in SAN, first move included. */
   pv: string[];

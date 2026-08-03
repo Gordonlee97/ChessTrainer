@@ -93,6 +93,11 @@ export class Engine {
   analyze(request: AnalyzeRequest): Promise<EvalResult> {
     const { fen, depth, multiPV, onUpdate, signal } = request;
 
+    // UCI reports cp/mate from the side to move, not from White. Flip the
+    // sign whenever Black is to move so a positive score always favors
+    // White — see the convention documented on PvLine.
+    const sideToMoveSign = fen.trim().split(/\s+/)[1] === 'b' ? -1 : 1;
+
     // A new search always supersedes whatever was pending before it.
     this.pending?.cancel();
 
@@ -109,7 +114,12 @@ export class Engine {
           .sort(([a], [b]) => a - b)
           .map(([, info]) => {
             const pv = pvToSan(fen, info.pv);
-            return { san: pv[0] ?? '', cp: info.cp, mate: info.mate, pv };
+            return {
+              san: pv[0] ?? '',
+              cp: info.cp === null ? null : info.cp * sideToMoveSign,
+              mate: info.mate === null ? null : info.mate * sideToMoveSign,
+              pv,
+            };
           })
           .filter((line) => line.san.length > 0);
         return { depth: deepest, lines };

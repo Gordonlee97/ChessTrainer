@@ -12,7 +12,7 @@ export const MULTI_PV = 3;
 
 export type AnalysisStatus = 'idle' | 'analyzing' | 'unavailable';
 
-/** Renders a score from the side-to-move's perspective, e.g. "+0.31" or "M3". */
+/** Renders a White-relative score (positive always favors White), e.g. "+0.31" or "M3". */
 export function formatScore(line: PvLine): string {
   if (line.mate !== null) return line.mate < 0 ? `-M${Math.abs(line.mate)}` : `M${line.mate}`;
   const pawns = (line.cp ?? 0) / 100;
