@@ -90,10 +90,11 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .btn {
-    transition: none;
+    transition: filter 90ms ease;
   }
   .btn:not(:disabled):active {
     transform: none;
     box-shadow: 0 var(--lip) 0 var(--btn-shadow);
+    filter: brightness(0.92);
   }
 }
