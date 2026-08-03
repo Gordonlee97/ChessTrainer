@@ -49,9 +49,27 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
     const engine = engineRef.current;
     if (!engine) return;
 
+    // Read the cached eval from the store directly rather than through
+    // `node.eval`. This effect must not depend on `node.eval`: caching a
+    // result replaces the node object (changing `node.eval`'s identity), and
+    // if that were a dependency it would re-run this effect on every cache
+    // write. On a checkmate/stalemate position the engine resolves instantly
+    // with { depth: 0, lines: [] } — below TARGET_DEPTH — so that re-trigger
+    // would immediately kick off another search, cache another depth-0
+    // result, and loop forever between React and the worker (Fix 1).
+    const cached = useTreeStore.getState().tree.nodes[node.id]?.eval ?? null;
+
     // Show any cached result immediately so navigating back is instant.
-    setResult(node.eval ?? null);
-    if (node.eval && node.eval.depth >= TARGET_DEPTH) return;
+    setResult(cached);
+    if (cached && cached.depth >= TARGET_DEPTH) {
+      // A search for a previously-selected node may still be in flight; its
+      // `.then`/`.catch` is guarded by the requestedFor check below, but
+      // `status` itself is set eagerly on that node's effect run and must be
+      // reset here, or navigating to an already-cached node while another
+      // search is outstanding leaves status stuck at 'analyzing' forever.
+      setStatus('idle');
+      return;
+    }
 
     const requestedFor = node.id;
     const controller = new AbortController();
@@ -81,7 +99,10 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
       });
 
     return () => controller.abort();
-  }, [node.id, node.fen, node.eval, cacheEval]);
+    // node.eval is deliberately excluded — see the comment at the top of this
+    // effect. node.fen is 1:1 with node.id and included only for clarity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [node.id, node.fen, cacheEval]);
 
   return { result, status };
 }

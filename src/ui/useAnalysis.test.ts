@@ -11,12 +11,23 @@ const fake = vi.hoisted(() => {
   const listeners = new Set<(line: string) => void>();
   const sent: string[] = [];
   const shouldThrow = { value: false };
+  // When set, simulates a real engine that instantly replies to `go depth`
+  // with an empty bestmove — what Stockfish does on a checkmate/stalemate
+  // position (Fix 1's regression scenario).
+  const autoRespondEmpty = { value: false };
+  const emitLine = (line: string) => {
+    [...listeners].forEach((cb) => cb(line));
+  };
   return {
     listeners,
     sent,
     shouldThrow,
+    autoRespondEmpty,
     send: (cmd: string) => {
       sent.push(cmd);
+      if (autoRespondEmpty.value && cmd.startsWith('go depth')) {
+        queueMicrotask(() => emitLine('bestmove (none)'));
+      }
     },
     onLine: (cb: (line: string) => void) => {
       listeners.add(cb);
@@ -25,13 +36,12 @@ const fake = vi.hoisted(() => {
     terminate: () => {
       listeners.clear();
     },
-    emit: (line: string) => {
-      [...listeners].forEach((cb) => cb(line));
-    },
+    emit: emitLine,
     reset: () => {
       listeners.clear();
       sent.length = 0;
       shouldThrow.value = false;
+      autoRespondEmpty.value = false;
     },
   };
 });
@@ -79,11 +89,10 @@ describe('useAnalysis stale-result guard', () => {
     expect(fake.sent).toContain(`go depth ${TARGET_DEPTH}`);
 
     await act(async () => {
-      // Depth must reach TARGET_DEPTH so cacheEval's stored eval satisfies
-      // the effect's own `node.eval.depth >= TARGET_DEPTH` guard — otherwise
-      // caching this result re-triggers the effect (since node.eval changes
-      // reference) and it immediately kicks off a second, unresolved
-      // analyze() call, flipping status back to 'analyzing'.
+      // Resolve at TARGET_DEPTH so the cached eval satisfies the "already
+      // deep enough" check on a later render, matching a realistic completed
+      // search (the effect itself no longer re-triggers on cacheEval writes
+      // regardless of depth — see Fix 1).
       fake.emit(`info depth ${TARGET_DEPTH} multipv 1 score cp 42 pv e2e4`);
       fake.emit('bestmove e2e4');
       await flush();
@@ -153,6 +162,62 @@ describe('useAnalysis stale-result guard', () => {
     const { result, unmount } = renderHook(() => useAnalysis());
 
     expect(result.current.status).toBe('unavailable');
+
+    unmount();
+  });
+
+  it('sends exactly one go command when a search resolves with an empty, depth-0 result (checkmate/stalemate)', async () => {
+    // Fix 1 regression: caching an eval replaces the node object, changing
+    // `node.eval`'s identity. If the analysis effect depends on `node.eval`,
+    // that re-triggers the effect — and on a mate/stalemate position (which
+    // resolves instantly with { depth: 0, lines: [] }), each re-trigger caches
+    // another depth-0 result, re-triggering again: an unbounded loop between
+    // React and the worker. This asserts the loop cannot start, by having the
+    // fake transport behave like a real engine on a mate position — replying
+    // to every `go depth` with an immediate empty bestmove — and checking
+    // that only one such command is ever sent.
+    fake.autoRespondEmpty.value = true;
+
+    const { result, unmount } = renderHook(() => useAnalysis());
+
+    expect(fake.sent).toContain(`go depth ${TARGET_DEPTH}`);
+
+    await act(async () => {
+      await flush();
+      await flush();
+      await flush();
+    });
+
+    const goCommands = fake.sent.filter((cmd) => cmd.startsWith('go depth'));
+    expect(goCommands).toHaveLength(1);
+    expect(result.current.result).toEqual({ depth: 0, lines: [] });
+    expect(result.current.status).toBe('idle');
+
+    unmount();
+  });
+
+  it('resets status to idle when navigating to a fully cached node while a previous search is in flight', async () => {
+    const nodeB = useTreeStore.getState().playMove('e4');
+    expect(nodeB).not.toBeNull();
+    useTreeStore.getState().cacheEval(nodeB as string, {
+      depth: TARGET_DEPTH,
+      lines: [{ san: 'e5', cp: 10, mate: null, pv: ['e5'] }],
+    });
+    useTreeStore.getState().selectNode('root');
+
+    const { result, unmount } = renderHook(() => useAnalysis());
+
+    // Root's search is in flight (no bestmove delivered yet).
+    expect(result.current.status).toBe('analyzing');
+
+    act(() => {
+      useTreeStore.getState().selectNode(nodeB as string);
+    });
+
+    // B is already cached at TARGET_DEPTH, so the effect takes its early
+    // return — status must not be left stuck at 'analyzing' from root's
+    // still-outstanding search.
+    expect(result.current.status).toBe('idle');
 
     unmount();
   });
