@@ -67,7 +67,12 @@ describe('core module purity', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('fails loudly rather than silently passing when a guarded directory does not exist', () => {
+  it('reports zero scanned files for a directory that does not exist', () => {
+    // This does not itself assert the "fails loudly" guarantee — that comes
+    // from the `expect(scanned).toBeGreaterThan(0)` assertion in the test
+    // above. This test only verifies the supporting fact that a missing
+    // directory scans as zero files (rather than throwing), which is what
+    // makes that guard meaningful.
     const { scanned, offenders } = findOffenders(['src/this-directory-does-not-exist']);
     expect(offenders).toEqual([]);
     expect(scanned).toBe(0);
