@@ -104,4 +104,14 @@ describe('game tree', () => {
     expect(evicted.nodes[a.nodeId]).toBeDefined();
     expect(evicted.nodes[b.nodeId]).toBeDefined();
   });
+
+  it('cascades eviction through an unprotected explored chain down to the cap', () => {
+    let tree = createTree();
+    const { tree: chained } = withMoves(['e4', 'e5', 'Nf3']);
+    tree = select(chained, tree.rootId); // select root — whole chain is unprotected
+
+    const evicted = evict(tree, 0);
+    expect(Object.keys(evicted.nodes)).toEqual([tree.rootId]); // only root survives
+    expect(evicted.nodes[tree.rootId].childIds).toHaveLength(0); // root correctly re-parented as childless
+  });
 });

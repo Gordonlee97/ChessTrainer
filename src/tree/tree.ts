@@ -146,9 +146,11 @@ export function evict(tree: GameTree, maxExplored: number): GameTree {
   ]);
 
   const nodes = { ...tree.nodes };
-  let explored = Object.values(nodes).filter((node) => node.origin === 'explored');
 
-  while (explored.length > maxExplored) {
+  while (true) {
+    const explored = Object.values(nodes).filter((node) => node.origin === 'explored');
+    if (explored.length <= maxExplored) break;
+
     const removable = explored
       .filter((node) => !protectedIds.has(node.id) && node.childIds.length === 0)
       .sort((a, b) => a.lastSelectedAt - b.lastSelectedAt);
@@ -164,7 +166,6 @@ export function evict(tree: GameTree, maxExplored: number): GameTree {
       };
     }
     delete nodes[victim.id];
-    explored = explored.filter((node) => node.id !== victim.id);
   }
 
   return { ...tree, nodes };
