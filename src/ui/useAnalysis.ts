@@ -34,6 +34,12 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
       setStatus('unavailable');
     }
     return () => {
+      // Cleanups run in declaration order (verified empirically against
+      // React 19, not reverse order as an earlier report claimed), so this
+      // disposal always runs *before* the analysis effect's below
+      // `controller.abort()`. Safety against a leaked in-flight search here
+      // depends on `Engine.dispose()` itself cancelling any pending search
+      // before terminating the transport — not on abort-then-dispose order.
       engineRef.current?.dispose();
       engineRef.current = null;
     };
