@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { ANALYZE_TIMEOUT_MS, Engine } from './engine';
+import { ANALYZE_TIMEOUT_MS, DRAIN_GRACE_MS, Engine } from './engine';
 import type { UciTransport } from './types';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -446,6 +446,64 @@ describe('Engine wall-clock timeout (Fix 2)', () => {
     fake.emit('bestmove d2d4');
     const resultB = await promiseB;
     expect(resultB.lines[0].san).toBe('d4');
+  });
+});
+
+describe('Engine timeout against a genuinely dead engine (Fix A, wave 4)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('does not hang a later analyze() forever when a timed-out search never drains (grace period releases it)', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promiseA = engine.analyze({ fen: START, depth: 20, multiPV: 3 });
+    const assertionA = expect(promiseA).rejects.toThrow(/timed out|timeout/i);
+    await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS);
+    await assertionA;
+
+    // B queues behind A's drain — the engine never answers `stop`, so
+    // without a bound on the drain this would hang forever (the bug).
+    const promiseB = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(1);
+
+    // The engine never responds. The grace period must eventually release
+    // the drain anyway, letting B send its own commands.
+    await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS);
+    expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(2);
+
+    // A later search (C) must not queue forever either — confirms the
+    // engine's busy/drain bookkeeping was actually released, not just B's
+    // own commands sent through some other path.
+    fake.emit('info depth 12 multipv 1 score cp 5 pv e2e4');
+    fake.emit('bestmove e2e4');
+    const resultB = await promiseB;
+    expect(resultB.lines[0].san).toBe('e4');
+
+    const promiseC = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    fake.emit('info depth 12 multipv 1 score cp 1 pv d2d4');
+    fake.emit('bestmove d2d4');
+    const resultC = await promiseC;
+    expect(resultC.lines[0].san).toBe('d4');
+  });
+
+  it('notifies onError listeners when a search times out', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+    const onError = vi.fn();
+    engine.onError(onError);
+
+    const promise = engine.analyze({ fen: START, depth: 20, multiPV: 3 });
+    promise.catch(() => {});
+
+    await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS);
+
+    expect(onError).toHaveBeenCalledTimes(1);
   });
 });
 

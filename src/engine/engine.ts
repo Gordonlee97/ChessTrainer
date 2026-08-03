@@ -28,6 +28,18 @@ function pvToSan(fen: string, uciMoves: string[]): string[] {
 // ever approach.
 export const ANALYZE_TIMEOUT_MS = 15_000;
 
+// Once a search times out, its `stop` is expected to be answered within
+// milliseconds by a live engine — the drain is left open only to absorb that
+// realistic delay. This bounds how long it stays open: if no `bestmove`
+// arrives within this window either, the engine is presumed genuinely dead
+// (not just slow), and the drain is released anyway so later, queued
+// searches are not stranded behind it forever. Trade-off: if the engine is
+// merely extremely slow rather than dead and answers after this window
+// elapses, that stale `bestmove` can land after a new search has already
+// started and be misread as its own — accepted because by this point
+// ANALYZE_TIMEOUT_MS has already fired, so something is already badly wrong.
+export const DRAIN_GRACE_MS = 2_000;
+
 /** A search that's currently occupying the `pending` slot on the Engine. */
 interface PendingSearch {
   /**
@@ -77,7 +89,7 @@ export class Engine {
   /**
    * Registers a callback invoked when the transport reports a fatal failure
    * (worker script 404, wasm failed to instantiate) or a search times out
-   * with no bestmove ever arriving. Consumers (e.g. useAnalysis) use this to
+   * waiting for a `bestmove`. Consumers (e.g. useAnalysis) use this to
    * surface a degraded/unavailable state instead of spinning forever.
    */
   onError(cb: (reason: unknown) => void): () => void {
@@ -119,9 +131,18 @@ export class Engine {
       // Armed inside start() (not here) so time spent queued behind another
       // search's drain never counts against the budget — queuing is normal
       // with a shared engine and multiple consumers. Refreshed on every
-      // parsed `info` line so a slow-but-healthy search isn't rejected while
-      // it is visibly making progress.
+      // parsed `info` line as a liveness check — the engine is still
+      // responding, even if it hasn't reached a new depth — not a check
+      // that it's making genuine progress.
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
+      // Set only when a timeout takes the "stay subscribed and drain"
+      // branch below — see DRAIN_GRACE_MS.
+      let graceTimeoutId: ReturnType<typeof setTimeout> | undefined;
+      // Assigned synchronously in start(), before anything can reference it.
+      // Lifted out of start() (rather than declared local to it) so both the
+      // timeout's grace-release path and the genuine-bestmove path can
+      // unblock whatever search is queued behind this one's drain.
+      let releaseDrain: (() => void) | undefined;
 
       const bySlot = new Map<number, RawInfo>();
       let deepest = 0;
@@ -146,13 +167,14 @@ export class Engine {
 
       const clearGuards = () => {
         clearTimeout(timeoutId);
+        clearTimeout(graceTimeoutId);
         signal?.removeEventListener('abort', onAbort);
       };
 
       // Shared by cancel() (AbortError) and the timeout (a plain Error): both
       // end the search without a genuine `bestmove` in hand, and both must
       // behave identically depending on whether `go` was ever sent.
-      const settle = (reason: unknown) => {
+      const settle = (reason: unknown, timedOut = false) => {
         if (cancelled) return;
         cancelled = true;
         clearGuards();
@@ -164,6 +186,26 @@ export class Engine {
           // `this.drain` untouched — the engine is genuinely still busy
           // until that `bestmove` arrives.
           this.transport.send('stop');
+          if (timedOut) {
+            // Escalate to the error listeners immediately — this is exactly
+            // the "no bestmove ever arrived" case onError's docstring
+            // promises, and it lets a consumer like useAnalysis flip to a
+            // degraded state right away rather than waiting on the grace
+            // period below.
+            this.errorListeners.forEach((cb) => cb(reason));
+            // Bound how long this search can keep the next one queued: a
+            // live engine answers `stop` within milliseconds, but a
+            // genuinely dead one never will. If nothing drains within
+            // DRAIN_GRACE_MS, force the same full release a dead transport
+            // gets — see DRAIN_GRACE_MS for the trade-off this accepts.
+            graceTimeoutId = setTimeout(() => {
+              unsubscribe();
+              if (this.pending === handle) this.pending = null;
+              this.busy = false;
+              this.drain = null;
+              releaseDrain?.();
+            }, DRAIN_GRACE_MS);
+          }
         } else {
           // Never sent `go`, so no `bestmove` will ever arrive for this
           // search — nothing to drain. `this.drain` is left untouched: it
@@ -180,10 +222,10 @@ export class Engine {
 
       const cancel = () => settle(new DOMException('Analysis aborted', 'AbortError'));
 
-      // A fatal, non-abort failure: the transport died, or no bestmove ever
-      // arrived within the wall-clock budget. Unlike `cancel()`, there is no
-      // `bestmove` left to drain — the engine (or transport) is presumed
-      // dead — so this always fully releases the busy/drain state.
+      // A fatal, non-abort failure: the transport itself died. Unlike
+      // `cancel()` or a timeout, there is no `bestmove` left to drain — the
+      // transport is presumed dead — so this always fully releases the
+      // busy/drain state.
       const fail = (reason: unknown) => {
         if (cancelled) return;
         cancelled = true;
@@ -204,7 +246,7 @@ export class Engine {
       const armTimeout = () => {
         clearTimeout(timeoutId);
         timeoutId = setTimeout(
-          () => settle(new Error(`analyze() timed out after ${ANALYZE_TIMEOUT_MS}ms with no bestmove`)),
+          () => settle(new Error(`analyze() timed out after ${ANALYZE_TIMEOUT_MS}ms with no bestmove`), true),
           ANALYZE_TIMEOUT_MS,
         );
       };
@@ -222,7 +264,6 @@ export class Engine {
         started = true;
         armTimeout();
 
-        let releaseDrain!: () => void;
         this.drain = new Promise<void>((res) => {
           releaseDrain = res;
         });
@@ -235,7 +276,7 @@ export class Engine {
             if (this.pending === handle) this.pending = null;
             this.busy = false;
             this.drain = null;
-            releaseDrain();
+            releaseDrain?.();
             if (!wasCancelled) resolve(buildResult());
             return;
           }
@@ -245,8 +286,9 @@ export class Engine {
           const info = parseInfoLine(line);
           if (!info) return;
 
-          // Visible progress — refresh the budget rather than let a slow
-          // but healthy search get rejected mid-flight.
+          // Liveness, not progress — the engine is still responding, so
+          // refresh the budget rather than reject a search that's merely
+          // slow (even one wedged re-emitting the same depth stays alive).
           armTimeout();
 
           const existing = bySlot.get(info.multipv);
