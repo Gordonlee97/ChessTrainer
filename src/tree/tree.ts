@@ -120,11 +120,12 @@ export function select(tree: GameTree, nodeId: NodeId): GameTree {
 export function setEval(tree: GameTree, nodeId: NodeId, evaluation: EvalResult): GameTree {
   const node = tree.nodes[nodeId];
   // Deliberately a silent no-op, unlike insertMove/select which throw on an
-  // unknown id: an in-flight analysis can resolve for a node that has since
-  // been evicted from the *selected path* (i.e. the user navigated away and
-  // back, or the node itself no longer exists for some other reason) by the
-  // time its result arrives. That is an expected race, not a bug, and must
-  // not throw.
+  // unknown id: an in-flight analysis can resolve after a reset() has
+  // replaced the entire tree (a fresh createTree(), so nodeId no longer
+  // exists in tree.nodes at all) landing between the request and its
+  // resolution. That is an expected race, not a bug, and must not throw.
+  // (evict() itself never removes nodes — it only clears cached evals — so
+  // it is not a source of unknown ids here.)
   if (!node) return tree;
   return { ...tree, nodes: { ...tree.nodes, [nodeId]: { ...node, eval: evaluation } } };
 }
