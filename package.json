@@ -1,0 +1,38 @@
+{
+  "name": "chesstrainer",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "framer-motion": "^11.11.0",
+    "howler": "^2.2.4",
+    "react": "^19.0.0",
+    "react-chessboard": "^5.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.1"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.0.1",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/howler": "^2.2.12",
+    "@types/node": "^22.7.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.3",
+    "jsdom": "^25.0.1",
+    "stockfish": "^18.0.8",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "vitest": "^2.1.4"
+  }
+}

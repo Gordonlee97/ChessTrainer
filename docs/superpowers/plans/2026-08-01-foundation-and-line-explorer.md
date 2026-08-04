@@ -1452,34 +1452,41 @@ file is missing so the app is fully usable before the sounds exist.
 
 `src/sound/SoundManager.test.ts`:
 
+`vi.mock` factories are hoisted above every `const` in the file, so the mock's
+state must come from `vi.hoisted` — referencing a plain outer `const` throws
+`ReferenceError: Cannot access before initialization`.
+
 ```ts
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const rate = vi.fn();
-const play = vi.fn();
-const HowlMock = vi.fn(() => ({ play, rate, once: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  play: vi.fn(),
+  rate: vi.fn(),
+  once: vi.fn(),
+}));
 
-vi.mock('howler', () => ({ Howl: HowlMock }));
+vi.mock('howler', () => ({
+  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate, once: mocks.once })),
+}));
 
 import { SoundManager } from './SoundManager';
 
 describe('SoundManager', () => {
   beforeEach(() => {
-    play.mockClear();
-    rate.mockClear();
-    HowlMock.mockClear();
+    mocks.play.mockClear();
+    mocks.rate.mockClear();
   });
 
   it('plays the requested sound', () => {
     new SoundManager().play('move');
-    expect(play).toHaveBeenCalledTimes(1);
+    expect(mocks.play).toHaveBeenCalledTimes(1);
   });
 
   it('varies button click pitch within +/- 2 semitones', () => {
     const manager = new SoundManager();
     for (let i = 0; i < 40; i += 1) manager.play('buttonPress');
 
-    const rates = rate.mock.calls.map(([value]) => value as number);
+    const rates = mocks.rate.mock.calls.map(([value]) => value as number);
     expect(rates.length).toBe(40);
     // 2 semitones is a factor of 2^(2/12) either way.
     const min = 2 ** (-2 / 12);
@@ -1493,14 +1500,14 @@ describe('SoundManager', () => {
 
   it('does not vary pitch for non-button sounds', () => {
     new SoundManager().play('move');
-    expect(rate).not.toHaveBeenCalled();
+    expect(mocks.rate).not.toHaveBeenCalled();
   });
 
   it('plays nothing while muted', () => {
     const manager = new SoundManager();
     manager.setMuted(true);
     manager.play('move');
-    expect(play).not.toHaveBeenCalled();
+    expect(mocks.play).not.toHaveBeenCalled();
     expect(manager.muted).toBe(true);
   });
 });
@@ -1632,23 +1639,34 @@ git commit -m "feat: add sound manager with pitch-varied button presses"
 
 `src/ui/Button.test.tsx`:
 
+Howler is mocked rather than `SoundManager`, so the test exercises the real
+manager and asserts the click sound actually fires. As in Task 6, the mock's
+state comes from `vi.hoisted` because `vi.mock` is hoisted above every `const`.
+
 ```tsx
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
-import { Button } from './Button';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../sound/SoundManager', () => ({
-  SoundManager: class {
-    play = playSpy;
-    setMuted = vi.fn();
-    muted = false;
-  },
+const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
+
+vi.mock('howler', () => ({
+  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
 }));
 
-const playSpy = vi.fn();
+import { Button } from './Button';
 
 describe('Button', () => {
+  beforeEach(() => {
+    mocks.play.mockClear();
+  });
+
+  it('plays a click sound when pressed', async () => {
+    render(<Button>Compare lines</Button>);
+    await userEvent.click(screen.getByRole('button', { name: 'Compare lines' }));
+    expect(mocks.play).toHaveBeenCalledTimes(1);
+  });
+
   it('renders its label and fires onClick', async () => {
     const onClick = vi.fn();
     render(<Button onClick={onClick}>Compare lines</Button>);
@@ -1830,7 +1848,7 @@ export function App() {
 - [ ] **Step 6: Run to verify tests pass**
 
 Run: `npm test -- src/ui/Button.test.tsx`
-Expected: PASS, 3 tests.
+Expected: PASS, 4 tests.
 
 Then run `npm run dev` and confirm the button style renders and compresses on
 press.
