@@ -10,17 +10,22 @@ This vault is the running state of the ChessTrainer project. It is maintained
 alongside the code, not written up afterwards. If a note contradicts the code,
 the code is right and the note is a bug — see [[Known Issues]].
 
-**New here? Read [[Project Overview]], then [[Current State]].** That's about ten
-minutes and covers what this is and where it stands.
+**Picking up the work? → [[Start Here]].** Repo state, the next action, and what
+to update before you finish.
+
+**Just want to understand the project?** [[Project Overview]], then
+[[Current State]]. About ten minutes.
 
 ## Map of content
 
 | Note | Read it when you want to know |
 |---|---|
+| [[Start Here]] | Where things stand right now and what to do next — the handoff note |
 | [[Project Overview]] | What ChessTrainer is, who it's for, what it deliberately isn't |
 | [[Current State]] | What actually works today, and what's still scaffolding |
 | [[Roadmap]] | What's next, in priority order, and why |
 | [[Architecture]] | How the pieces fit and which invariants must not break |
+| [[Workflow]] | How work gets done here: the cycle, the review bar, the conventions |
 | [[Known Issues]] | Bugs, leaks, dead code, drift between spec and reality |
 | [[Glossary]] | What "PV", "MultiPV", "centipawn", "node", and "line" mean here |
 

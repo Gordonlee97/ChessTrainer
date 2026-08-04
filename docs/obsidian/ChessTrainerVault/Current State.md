@@ -9,6 +9,9 @@ tags: [chesstrainer, state]
 **As of 2026-08-04.** Plan 1 (foundation and line explorer) is complete and
 sitting in PR #1, unmerged. Plan 2 has not been written.
 
+> Picking the work up rather than reading about it? [[Start Here]] has the repo
+> state and the next action. This note is what *exists*; that one is what to *do*.
+
 Suite: **138 passing, 1 skipped**, 18 test files. `tsc --noEmit` clean,
 `npm run build` succeeds. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.

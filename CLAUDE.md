@@ -3,6 +3,23 @@
 Project-specific instructions. These sit under the global working rules in
 `~/.claude/CLAUDE.md`; where they conflict, the global rules win.
 
+## Read this before doing anything
+
+**Open `docs/obsidian/ChessTrainerVault/Start Here.md` at the beginning of every
+session, before you plan, explore the codebase, or answer questions about the
+project's state.**
+
+It is the handoff note: the current repo state, the next action, and what to
+update before you finish. This file tells you the project's *rules*; that note
+tells you where the project actually *is*, and it is the one thing that cannot be
+reconstructed by reading the code.
+
+From there, `Workflow.md` covers how work gets done here — the process, the
+review bar, and the branch and commit conventions. Follow it rather than
+improvising a process.
+
+Then update the vault as you go, per the rules below.
+
 ## What this project is
 
 A browser-based chess trainer for new and improving players, built around a
@@ -38,8 +55,10 @@ worse than no vault because it is believed.
 
 | Note | Holds | Churn |
 |---|---|---|
+| `Start Here.md` | **The handoff note.** Repo state, the next action, what to update before finishing. Read first, update last. | Every session |
 | `Home.md` | Map of content. Entry point, links to everything else. | Rare |
 | `Project Overview.md` | What ChessTrainer is, who it's for, the goals, what's out of scope. | Rare |
+| `Workflow.md` | The process: brainstorm → spec → plan → implement → review → finish. Branch and commit conventions. | Rare |
 | `Current State.md` | What works *today*, what is half-built, what is stubbed. The single most important note. | Every session that changes behaviour |
 | `Roadmap.md` | What's next and why, in priority order. Plans that are done, in flight, and not yet written. | Whenever priorities move |
 | `Architecture.md` | The layers, how data flows, and the invariants that must not break. | When structure changes |
@@ -88,6 +107,11 @@ Triggers:
 - **Priorities moved, or a plan was finished or written** → `Roadmap.md`.
 - **A session ended having changed nothing** → change nothing. An empty update
   is noise.
+
+**Always, before you report a session's work complete:** update `Start Here.md`.
+Its repo-state table and its "Do this next" section must describe reality as you
+are leaving it, not as you found it. A stale handoff note is worse than none,
+because the next session will believe it.
 
 Bump `updated:` on every note you touch, and only on notes you touch.
 
