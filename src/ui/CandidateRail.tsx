@@ -73,10 +73,12 @@ export function CandidateRail() {
   }
 
   if (!result || result.lines.length === 0) {
-    // A finished analysis (status idle) with zero candidate moves means the
-    // position itself has no legal moves — checkmate or stalemate — not
-    // that analysis is still running. Anything else (still analyzing, or no
-    // result at all yet) is the ordinary "still thinking" state.
+    // A finished analysis (status idle) with zero candidate moves is not
+    // necessarily checkmate or stalemate — see noCandidatesMessage above,
+    // which also covers every PV being filtered as illegal or a `bestmove`
+    // arriving before any pv-bearing `info`. Anything else (still
+    // analyzing, or no result at all yet) is the ordinary "still thinking"
+    // state.
     if (status === 'idle' && result) {
       return (
         <div role="status" style={{ padding: 12, color: 'var(--ink-soft)', fontSize: 13 }}>

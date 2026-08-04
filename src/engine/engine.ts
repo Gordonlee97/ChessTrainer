@@ -28,16 +28,24 @@ function pvToSan(fen: string, uciMoves: string[]): string[] {
 // ever approach.
 export const ANALYZE_TIMEOUT_MS = 15_000;
 
-// Once a search times out, its `stop` is expected to be answered within
-// milliseconds by a live engine — the drain is left open only to absorb that
-// realistic delay. This bounds how long it stays open: if no `bestmove`
-// arrives within this window either, the engine is presumed genuinely dead
-// (not just slow), and the drain is released anyway so later, queued
-// searches are not stranded behind it forever. Trade-off: if the engine is
-// merely extremely slow rather than dead and answers after this window
-// elapses, that stale `bestmove` can land after a new search has already
-// started and be misread as its own — accepted because by this point
-// ANALYZE_TIMEOUT_MS has already fired, so something is already badly wrong.
+// Once a search ends without a genuine `bestmove` in hand — whether it timed
+// out, was aborted, or was superseded by a later search — its `stop` is
+// expected to be answered within milliseconds by a live engine. The drain is
+// left open only to absorb that realistic delay. This bounds how long it
+// stays open: if no `bestmove` arrives within this window either, the engine
+// is presumed genuinely dead (not just slow), and the drain is released
+// anyway so later, queued searches are not stranded behind it forever.
+//
+// Armed on every started search that ends this way (not just timeouts):
+// without that, an aborted/superseded search leaves the drain unresolved
+// with no timer of any kind if the engine never answers `stop` at all,
+// deadlocking every later queued search — this is exactly the path the app
+// takes on every node change (useAnalysis aborts the in-flight search), so a
+// silently dead engine plus one click would wedge the app permanently.
+//
+// If the "merely slow, not dead" engine referenced above answers after this
+// window elapses, that stale `bestmove` is swallowed rather than misread as
+// the next search's own — see `owedBestmoves`.
 export const DRAIN_GRACE_MS = 2_000;
 
 /** A search that's currently occupying the `pending` slot on the Engine. */
@@ -57,6 +65,16 @@ interface PendingSearch {
    * releases busy/drain — there is nothing left to drain.
    */
   fail: (reason: unknown) => void;
+  /**
+   * Clears this search's grace timer (see DRAIN_GRACE_MS) if one is armed,
+   * regardless of whether the search has already settled. `cancel()`/`fail()`
+   * alone are not enough for this: they no-op on an already-cancelled
+   * search, so a grace timer armed by an *earlier* settle (e.g. a timeout
+   * followed by dispose() before the grace window elapses) would otherwise
+   * never be cleared, firing its callback against a torn-down engine and
+   * keeping this search's whole closure alive in the meantime.
+   */
+  clearGraceTimer: () => void;
 }
 
 export class Engine {
@@ -77,6 +95,18 @@ export class Engine {
    * `dispose()` to release it instead.
    */
   private drain: Promise<void> | null = null;
+  /**
+   * Counts `bestmove` lines presumed still owed to the engine by searches
+   * that a grace timer already force-released (see DRAIN_GRACE_MS) before
+   * their own `bestmove` arrived, if it ever does. UCI engines process
+   * commands and emit responses in the order sent, so the next `bestmove`
+   * line received after a grace release is presumed to be one of these
+   * stale, already-abandoned answers rather than belonging to whoever is
+   * listening now — it is swallowed (see the `bestmove` handling in
+   * `analyze()`) and this counter decremented, rather than settling the
+   * wrong search.
+   */
+  private owedBestmoves = 0;
   private readonly errorListeners = new Set<(reason: unknown) => void>();
   private readonly unsubscribeTransportError: () => void;
 
@@ -100,10 +130,23 @@ export class Engine {
   private handleTransportError(reason: unknown): void {
     const error = reason instanceof Error ? reason : new Error('Engine transport failed');
     this.pending?.fail(error);
+    // `fail()` no-ops if this search already settled once (e.g. an earlier
+    // timeout or abort) and is now only waiting out its grace timer — clear
+    // that timer explicitly so it doesn't fire later against state this
+    // method is about to reset anyway. Same reasoning as dispose().
+    this.pending?.clearGraceTimer();
     this.pending = null;
     this.busy = false;
     this.drain = null;
-    this.errorListeners.forEach((cb) => cb(error));
+    // Same reasoning as the timeout branch in settle(): a misbehaving
+    // listener must not prevent other listeners from being notified.
+    this.errorListeners.forEach((cb) => {
+      try {
+        cb(error);
+      } catch {
+        // Swallowed — see above.
+      }
+    });
   }
 
   /**
@@ -135,14 +178,20 @@ export class Engine {
       // responding, even if it hasn't reached a new depth — not a check
       // that it's making genuine progress.
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      // Set only when a timeout takes the "stay subscribed and drain"
-      // branch below — see DRAIN_GRACE_MS.
+      // Set whenever this search ends up taking the "stay subscribed and
+      // drain" branch below — see DRAIN_GRACE_MS.
       let graceTimeoutId: ReturnType<typeof setTimeout> | undefined;
       // Assigned synchronously in start(), before anything can reference it.
       // Lifted out of start() (rather than declared local to it) so both the
-      // timeout's grace-release path and the genuine-bestmove path can
-      // unblock whatever search is queued behind this one's drain.
+      // grace-release path and the genuine-bestmove path can unblock
+      // whatever search is queued behind this one's drain.
       let releaseDrain: (() => void) | undefined;
+      // This search's own `this.drain` promise, captured at the same time
+      // it's assigned to `this.drain` in start(). The grace timeout below
+      // must only clear `this.busy`/`this.drain` if `this.drain` is *still*
+      // this exact promise — otherwise a stale grace timer could clobber a
+      // different, later search's serialization state.
+      let ownDrain: Promise<void> | undefined;
 
       const bySlot = new Map<number, RawInfo>();
       let deepest = 0;
@@ -186,25 +235,46 @@ export class Engine {
           // `this.drain` untouched — the engine is genuinely still busy
           // until that `bestmove` arrives.
           this.transport.send('stop');
-          if (timedOut) {
-            // Escalate to the error listeners immediately — this is exactly
-            // the "no bestmove ever arrived" case onError's docstring
-            // promises, and it lets a consumer like useAnalysis flip to a
-            // degraded state right away rather than waiting on the grace
-            // period below.
-            this.errorListeners.forEach((cb) => cb(reason));
-            // Bound how long this search can keep the next one queued: a
-            // live engine answers `stop` within milliseconds, but a
-            // genuinely dead one never will. If nothing drains within
-            // DRAIN_GRACE_MS, force the same full release a dead transport
-            // gets — see DRAIN_GRACE_MS for the trade-off this accepts.
-            graceTimeoutId = setTimeout(() => {
-              unsubscribe();
-              if (this.pending === handle) this.pending = null;
+          // Bound how long this search can keep the next one queued: a live
+          // engine answers `stop` within milliseconds, but a genuinely dead
+          // one never will. Armed here unconditionally (abort, supersede, or
+          // timeout) — not just for timeouts — because an aborted/superseded
+          // search that never drains would otherwise leave `this.drain`
+          // unresolved with no timer of any kind, wedging every later queued
+          // search forever. See DRAIN_GRACE_MS.
+          graceTimeoutId = setTimeout(() => {
+            unsubscribe();
+            // This search's own `bestmove` is now presumed permanently lost.
+            // Whatever `bestmove` line arrives next belongs to it, not to
+            // whoever ends up listening by then — see `owedBestmoves`.
+            this.owedBestmoves++;
+            if (this.pending === handle) this.pending = null;
+            // Only release busy/drain if nothing *later* already claimed
+            // them — a stale grace timer must never clobber a different,
+            // live search's serialization state.
+            if (this.drain === ownDrain) {
               this.busy = false;
               this.drain = null;
-              releaseDrain?.();
-            }, DRAIN_GRACE_MS);
+            }
+            releaseDrain?.();
+          }, DRAIN_GRACE_MS);
+
+          if (timedOut) {
+            // Notified only after the grace timer above is armed: a
+            // listener that throws must not be able to skip arming it and
+            // reintroduce the deadlock. Escalating immediately (rather than
+            // waiting on the grace period) is exactly the "no bestmove ever
+            // arrived" case onError's docstring promises, letting a
+            // consumer like useAnalysis flip to a degraded state right away.
+            this.errorListeners.forEach((cb) => {
+              try {
+                cb(reason);
+              } catch {
+                // A misbehaving listener must not prevent other listeners
+                // from running, and must never be able to undo the timer
+                // arming above.
+              }
+            });
           }
         } else {
           // Never sent `go`, so no `bestmove` will ever arrive for this
@@ -237,7 +307,9 @@ export class Engine {
         reject(reason instanceof Error ? reason : new Error(String(reason)));
       };
 
-      const handle: PendingSearch = { cancel, fail };
+      const clearGraceTimer = () => clearTimeout(graceTimeoutId);
+
+      const handle: PendingSearch = { cancel, fail, clearGraceTimer };
 
       // Arming (and re-arming) is only ever done once `go` has actually been
       // sent — see the comment on `timeoutId` above. By the time this fires,
@@ -264,12 +336,20 @@ export class Engine {
         started = true;
         armTimeout();
 
-        this.drain = new Promise<void>((res) => {
+        ownDrain = this.drain = new Promise<void>((res) => {
           releaseDrain = res;
         });
 
         unsubscribe = this.transport.onLine((line) => {
           if (line.startsWith('bestmove')) {
+            if (this.owedBestmoves > 0) {
+              // Belongs to a search that a grace timer already force-
+              // released; whoever is listening now must not mistake it for
+              // their own.
+              this.owedBestmoves--;
+              return;
+            }
+
             const wasCancelled = cancelled;
             unsubscribe();
             clearGuards();
@@ -327,6 +407,13 @@ export class Engine {
     // otherwise its `bestmove` can never arrive and the promise hangs
     // forever.
     this.pending?.cancel();
+    // `cancel()` no-ops if this search already settled once (e.g. an
+    // earlier timeout/abort) and is now only waiting out its grace timer —
+    // clear that explicitly, otherwise it fires later against a disposed
+    // engine and keeps this search's whole closure alive until then. Also
+    // clears whatever `cancel()` just armed above, since nothing left in
+    // this method needs a grace-forced release: busy/drain are reset below.
+    this.pending?.clearGraceTimer();
     this.pending = null;
     this.busy = false;
     this.unsubscribeTransportError();

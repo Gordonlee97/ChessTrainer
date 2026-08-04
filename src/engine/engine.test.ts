@@ -112,6 +112,10 @@ describe('Engine', () => {
     // analyze() also sends `stop` on entry, so assert a stop was sent *after*
     // the search started — otherwise this passes without the abort working.
     expect(fake.sent.lastIndexOf('stop')).toBeGreaterThan(fake.sent.indexOf('go depth 20'));
+
+    // The abort armed a real (non-fake-timer) grace timer since this search
+    // had already started — dispose() so it doesn't leak into later tests.
+    engine.dispose();
   });
 
   it('drops principal variations that are illegal in the given position', async () => {
@@ -324,6 +328,24 @@ describe('Engine transport failure (Fix 2)', () => {
 
     expect(onError).toHaveBeenCalledTimes(1);
   });
+
+  it('still notifies later onError listeners when an earlier one throws', () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+    const throwingListener = vi.fn(() => {
+      throw new Error('listener boom');
+    });
+    const laterListener = vi.fn();
+    // Registration order matters: Set iteration order is insertion order, so
+    // the throwing listener runs first.
+    engine.onError(throwingListener);
+    engine.onError(laterListener);
+
+    fake.fail(new Error('worker script 404'));
+
+    expect(throwingListener).toHaveBeenCalledTimes(1);
+    expect(laterListener).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('Engine wall-clock timeout (Fix 2)', () => {
@@ -417,10 +439,14 @@ describe('Engine wall-clock timeout (Fix 2)', () => {
     // B is queued behind A's drain immediately (A hasn't sent bestmove yet).
     const promiseB = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
 
-    // B sits queued for nearly the full timeout budget before it ever starts.
-    await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS - 100);
-
-    // A's belated bestmove now drains, releasing B to send its own commands.
+    // A's belated bestmove drains well within the grace window, so B is
+    // released by the genuine drain rather than by the grace timer forcing
+    // it. (Wave 5: grace is now armed on every started settle, not just
+    // timeouts, so A's supersede here already armed one — if B's release
+    // were left to depend on it, B would start at DRAIN_GRACE_MS instead of
+    // whenever A's own bestmove happens to arrive, which is what this test
+    // used to assume when only timeouts armed a grace timer.)
+    await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS - 100);
     fake.emit('bestmove e2e4');
     await vi.advanceTimersByTimeAsync(0);
     expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(2);
@@ -477,13 +503,33 @@ describe('Engine timeout against a genuinely dead engine (Fix A, wave 4)', () =>
     await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS);
     expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(2);
 
+    // A's own bestmove is presumed permanently lost the moment grace
+    // force-releases it (wave 5 swallow counter): whatever bestmove arrives
+    // first afterward is swallowed as A's stale answer potentially finally
+    // showing up, rather than mistaken for B's — B needs its own, second
+    // bestmove to actually resolve. This is the same race the DRAIN_GRACE_MS
+    // docstring used to document as an accepted trade-off; the swallow
+    // counter closes it instead of accepting it.
+    fake.emit('bestmove e2e4');
+    let bSettled = false;
+    promiseB.then(
+      () => {
+        bSettled = true;
+      },
+      () => {
+        bSettled = true;
+      },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(bSettled).toBe(false);
+
     // A later search (C) must not queue forever either — confirms the
     // engine's busy/drain bookkeeping was actually released, not just B's
     // own commands sent through some other path.
-    fake.emit('info depth 12 multipv 1 score cp 5 pv e2e4');
-    fake.emit('bestmove e2e4');
+    fake.emit('info depth 12 multipv 1 score cp 5 pv g1f3');
+    fake.emit('bestmove g1f3');
     const resultB = await promiseB;
-    expect(resultB.lines[0].san).toBe('e4');
+    expect(resultB.lines[0].san).toBe('Nf3');
 
     const promiseC = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
     fake.emit('info depth 12 multipv 1 score cp 1 pv d2d4');
@@ -504,6 +550,111 @@ describe('Engine timeout against a genuinely dead engine (Fix A, wave 4)', () =>
     await vi.advanceTimersByTimeAsync(ANALYZE_TIMEOUT_MS);
 
     expect(onError).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('Engine grace release for aborted/superseded searches (wave 5 fix)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('settles a queued search even when the preceding one was aborted (not timed out) and the engine never answers', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+    const controllerA = new AbortController();
+
+    const promiseA = engine.analyze({
+      fen: START,
+      depth: 20,
+      multiPV: 3,
+      signal: controllerA.signal,
+    });
+    controllerA.abort();
+    await expect(promiseA).rejects.toThrow(/aborted/i);
+
+    // The engine still owes A a bestmove — nothing has drained yet.
+    expect(engine.isBusy).toBe(true);
+
+    const promiseB = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(1);
+
+    // The engine never answers `stop` and never emits anything else at all.
+    // Without a grace timer armed on abort/supersede (not just timeout),
+    // this hangs forever — the deadlock the reviewer traced: a silently
+    // dead engine plus one abort/supersede (exactly what useAnalysis does
+    // on every node change) wedges every later search permanently, with no
+    // timer of any kind to release it.
+    await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS);
+
+    expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(2);
+    expect(engine.isBusy).toBe(true); // B now genuinely occupies the engine
+
+    // The grace release already gave up on A's own bestmove ever arriving —
+    // whatever bestmove shows up first is presumed to still be it, and is
+    // swallowed rather than mistaken for B's (the same swallow-counter
+    // mechanism exercised directly below). B needs its own, second bestmove
+    // to actually resolve.
+    fake.emit('bestmove e2e4');
+    let bSettled = false;
+    promiseB.then(
+      () => {
+        bSettled = true;
+      },
+      () => {
+        bSettled = true;
+      },
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    expect(bSettled).toBe(false);
+
+    fake.emit('info depth 12 multipv 1 score cp 7 pv g1f3');
+    fake.emit('bestmove g1f3');
+    const resultB = await promiseB;
+    expect(resultB.lines[0].san).toBe('Nf3');
+    expect(engine.isBusy).toBe(false);
+  });
+
+  it('swallows a bestmove that arrives after a grace release instead of settling whoever is listening now', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+
+    const promiseA = engine.analyze({ fen: START, depth: 20, multiPV: 3 });
+    promiseA.catch(() => {});
+
+    // B supersedes A — A is cancelled (not timed out) but already started,
+    // so it stays subscribed to drain.
+    const promiseB = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+
+    // Grace releases B before A's stale bestmove ever shows up.
+    await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS);
+    expect(fake.sent.filter((cmd) => cmd.startsWith('go depth')).length).toBe(2);
+
+    let bSettled = false;
+    promiseB.then(
+      () => {
+        bSettled = true;
+      },
+      () => {
+        bSettled = true;
+      },
+    );
+
+    // A's stale bestmove finally arrives, long after the grace release,
+    // while B is the one currently listening. It must be swallowed — not
+    // mistaken for B's own answer.
+    fake.emit('bestmove e2e4');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(bSettled).toBe(false);
+
+    // B's genuine bestmove still resolves B correctly.
+    fake.emit('info depth 12 multipv 1 score cp 1 pv d2d4');
+    fake.emit('bestmove d2d4');
+    const resultB = await promiseB;
+    expect(resultB.lines[0].san).toBe('d4');
   });
 });
 
