@@ -105,8 +105,28 @@ export class Engine {
    * listening now — it is swallowed (see the `bestmove` handling in
    * `analyze()`) and this counter decremented, rather than settling the
    * wrong search.
+   *
+   * An increment can go unreconciled forever if the engine never actually
+   * answers that `stop` at all (or answers so late nothing is listening for
+   * it anymore): with nothing to swallow, the counter would otherwise stay
+   * stuck above zero and silently steal the next healthy search's own
+   * genuine `bestmove`, stalling it out to ANALYZE_TIMEOUT_MS. Each
+   * increment is therefore given a bounded lifetime — see
+   * `owedBestmoveExpiryTimers` — capping the drift at one extra
+   * DRAIN_GRACE_MS window rather than letting it poison the instance
+   * permanently.
    */
   private owedBestmoves = 0;
+  /**
+   * One pending timer per unreconciled `owedBestmoves` increment, each
+   * forgiving its increment (decrementing the counter back down) after one
+   * more DRAIN_GRACE_MS if nothing swallowed it first. Guarded to never fire
+   * against a counter already at zero, so it can never remove a debt a
+   * genuine stale-`bestmove` swallow already reconciled. Tracked here purely
+   * so `dispose()` can clear them all — a disposed engine must leave nothing
+   * armed.
+   */
+  private readonly owedBestmoveExpiryTimers = new Set<ReturnType<typeof setTimeout>>();
   private readonly errorListeners = new Set<(reason: unknown) => void>();
   private readonly unsubscribeTransportError: () => void;
 
@@ -248,6 +268,17 @@ export class Engine {
             // Whatever `bestmove` line arrives next belongs to it, not to
             // whoever ends up listening by then — see `owedBestmoves`.
             this.owedBestmoves++;
+            // Bound how long this specific increment can stay unreconciled
+            // — see `owedBestmoveExpiryTimers`. The `> 0` guard means this
+            // only ever removes a debt still believed outstanding by the
+            // time it fires; if a genuine stale `bestmove` already swallowed
+            // it (or some other expiry already did), this becomes a no-op
+            // rather than driving the counter negative.
+            const expiryTimer: ReturnType<typeof setTimeout> = setTimeout(() => {
+              this.owedBestmoveExpiryTimers.delete(expiryTimer);
+              if (this.owedBestmoves > 0) this.owedBestmoves--;
+            }, DRAIN_GRACE_MS);
+            this.owedBestmoveExpiryTimers.add(expiryTimer);
             if (this.pending === handle) this.pending = null;
             // Only release busy/drain if nothing *later* already claimed
             // them — a stale grace timer must never clobber a different,
@@ -418,6 +449,10 @@ export class Engine {
     this.busy = false;
     this.unsubscribeTransportError();
     this.drain = null;
+    // Leave nothing armed behind a disposed engine — see
+    // `owedBestmoveExpiryTimers`.
+    this.owedBestmoveExpiryTimers.forEach((id) => clearTimeout(id));
+    this.owedBestmoveExpiryTimers.clear();
     this.transport.terminate();
   }
 }

@@ -658,6 +658,61 @@ describe('Engine grace release for aborted/superseded searches (wave 5 fix)', ()
   });
 });
 
+describe('Engine owedBestmoves bounded lifetime (wave 6 fix)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('forgives an unreconciled grace-expiry increment so a later healthy search is not swallowed', async () => {
+    const fake = createFakeTransport();
+    const engine = new Engine(fake.transport);
+    const controllerA = new AbortController();
+
+    // A starts, then is aborted with no successor queued behind it — this
+    // mirrors useAnalysis aborting on a node change when the next effect
+    // run returns early (the newly-selected node already has a deep-enough
+    // cached eval), so nothing queues behind the drain.
+    const promiseA = engine.analyze({
+      fen: START,
+      depth: 20,
+      multiPV: 3,
+      signal: controllerA.signal,
+    });
+    controllerA.abort();
+    await expect(promiseA).rejects.toThrow(/aborted/i);
+
+    // Grace expires with nobody queued behind it: owedBestmoves becomes 1
+    // and the engine goes idle. A's own bestmove is presumed lost.
+    await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS);
+    expect(engine.isBusy).toBe(false);
+
+    // The engine never actually answers `stop` for A at all (or answers far
+    // too late to matter), and nothing else arrives to reconcile the
+    // increment. Let the increment's own bounded lifetime elapse too, still
+    // with the engine idle and nothing queued.
+    await vi.advanceTimersByTimeAsync(DRAIN_GRACE_MS);
+
+    // A healthy search now starts well after both windows have elapsed. Its
+    // own, genuine bestmove must resolve it — not be silently swallowed as
+    // a presumed-stale answer to a debt that was never actually reconciled.
+    const promiseC = engine.analyze({ fen: START, depth: 12, multiPV: 1 });
+    fake.emit('info depth 12 multipv 1 score cp 40 pv d2d4 d7d5');
+    fake.emit('bestmove d2d4');
+
+    let resultC: Awaited<typeof promiseC> | undefined;
+    promiseC.then((r) => {
+      resultC = r;
+    });
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(resultC?.lines?.[0]?.san).toBe('d4');
+  });
+});
+
 describe('Engine White-relative score normalization (Fix 5)', () => {
   it('leaves scores unchanged when White is to move', async () => {
     const fake = createFakeTransport();
