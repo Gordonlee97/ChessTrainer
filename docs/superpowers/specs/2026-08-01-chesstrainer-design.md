@@ -46,14 +46,26 @@ best-effort.
 
 ## 3. Stack
 
-- **Vite + React 18 + TypeScript**
+- **Vite + React 19 + TypeScript**
 - **chess.js** — legal move generation, SAN, FEN
 - **react-chessboard** — board surface, drag and drop, animation hooks
 - **stockfish.wasm** — engine, in a Web Worker, driven over UCI
 - **Zustand** — tree store
-- **Framer Motion** — springs and drawer transitions
 - **Howler** — sound pooling and playback
-- **Vitest + React Testing Library + Zod** — tests and content validation
+- **Vitest + React Testing Library** — tests
+- **Zod** — content validation (Plan 2; not yet installed)
+
+> **Amended 2026-08-04, after Plan 1.** This section originally said React 18 and
+> listed Framer Motion. Corrected to match what was actually built:
+>
+> - **React 19**, forced by `react-chessboard@5.10.0`'s peer dependency. The
+>   upgrade is deliberate — see `Decisions/React 19 Upgrade` in the vault.
+> - **Framer Motion is a dependency but is imported nowhere.** Plan 1 delivered
+>   the press feedback and transitions with CSS, which is why the box-shadow
+>   press rule in §9 works the way it does. Plan 2 should either use it for the
+>   compare drawer or drop the dependency; it must not stay installed and unused.
+> - **Zod is not installed yet.** It is genuinely needed for §6's content schema,
+>   so Plan 2 installs it rather than the spec implying it is already present.
 
 ### 3.1 Verification spike (do this first)
 

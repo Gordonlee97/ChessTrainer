@@ -11,26 +11,15 @@ Severity is about consequence, not effort.
 
 ## Blocks Plan 2
 
-### Node identity does not handle transpositions
+None. Both prior blockers were settled on 2026-08-04:
 
-**Where:** `src/tree/tree.ts`
-Node ids are built from the SAN move path (`"root/e4/e5/Nf3"`), so the same
-position reached by a different move order creates two nodes with the same FEN.
-Deduplication only covers replaying the same move from the same parent.
-
-The test named *"reuses an existing node instead of duplicating a transposition"*
-overstates what is implemented. Rename it or widen the behaviour.
-
-**Why it blocks:** lesson content and "My Lines" both key off node identity. If
-Plan 2 assumes transposition identity works, it will be wrong in a way that shows
-up as duplicated lesson state.
-
-### Spec says React 18; the build is React 19
-
-**Where:** `docs/superpowers/specs/2026-08-01-chesstrainer-design.md` §3
-The upgrade was forced by `react-chessboard@5.10.0`'s peer dependency and is
-correct — but the spec still says 18, and the spec is what a future plan gets
-written against. Amend it. See [[Decisions/React 19 Upgrade]].
+- **Transpositions** — decided, not fixed. The tree stays path-addressed and
+  Plan 2 dedupes *evaluations* by FEN instead. See
+  [[Decisions/Transposition Identity]] for what that makes harder. The test that
+  overstated the behaviour had already been renamed to "reuses an existing node
+  when the same move is replayed from the same parent".
+- **React 18 in the spec** — amended to React 19, with a dated note in §3
+  recording the correction.
 
 ## Correctness — low consequence
 
@@ -65,6 +54,11 @@ was plan-specified, but the inconsistency is a trap.
 
 ## Dead code and cleanup
 
+- **`framer-motion` is installed but imported nowhere.** Found 2026-08-04. The
+  spec listed it for "springs and drawer transitions", but Plan 1 delivered all
+  motion in CSS. Plan 2 must either use it for the compare drawer or remove the
+  dependency — an unused runtime dependency that ships in the bundle is worse
+  than either.
 - **`Engine.stop()` has no callers** and does no bookkeeping.
   `src/engine/engine.ts`
 - **`tsconfig.json` includes `types: ["node"]`**, which is unnecessary —

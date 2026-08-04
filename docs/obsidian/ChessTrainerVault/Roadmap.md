@@ -11,7 +11,8 @@ tags: [chesstrainer, roadmap]
 **Plan 1 — Foundation and line explorer.** Nine tasks, complete 2026-08-03.
 Board, eval bar, breadcrumb, candidate rail, the immutable game tree, the UCI
 engine wrapper, the sound layer, and the theme. See [[Current State]] for what
-that actually gets you. Awaiting merge as PR #1.
+that actually gets you. **Merged to `master` 2026-08-04 as PR #1** (merge commit,
+not squash — the engine's revision-by-revision history is worth keeping).
 
 ## Next: Plan 2 — the teaching layer
 
@@ -95,6 +96,14 @@ Small, and each has a stated reason for existing:
 
 ## Before Plan 2 starts
 
-Two items in [[Known Issues]] should be settled first, because Plan 2 builds
-directly on them: **node identity and transpositions**, and the **spec's React 18
-reference**.
+**Settled 2026-08-04.** Both gating items are closed:
+
+- **Transpositions** — the tree stays path-addressed; Plan 2 dedupes
+  *evaluations* by FEN instead of unifying nodes. See
+  [[Decisions/Transposition Identity]]. This adds a task to Plan 2: a FEN-keyed
+  eval cache with its own bound, read on node selection rather than only written
+  after a search.
+- **React 18 in the spec** — amended to React 19.
+
+One item found while checking: **`framer-motion` is installed and imported
+nowhere.** Plan 2 either uses it for the compare drawer or removes it.
