@@ -7,6 +7,10 @@ dist-ssr/
 # Brainstorming visual companion working files
 .superpowers/
 
+# Obsidian local UI state — pane layout, rewritten on every interaction.
+# The vault's notes ARE tracked; only this churn is not.
+docs/obsidian/ChessTrainerVault/.obsidian/workspace.json
+
 # Editor / OS
 .DS_Store
 Thumbs.db
