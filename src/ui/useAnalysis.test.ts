@@ -383,17 +383,32 @@ describe('useAnalysis shared engine (Fix 4)', () => {
 });
 
 describe('transposition reuse', () => {
-  it('serves a previously analysed position from the FEN cache', () => {
+  beforeEach(() => {
+    useTreeStore.getState().reset();
+    fake.reset();
+    resetSharedEngineForTests();
     sharedEvalCache.clear();
-    const fen = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+  });
+
+  it('serves a previously analysed position from the FEN cache without a fresh search', () => {
+    // Root's FEN (tree.ts's START_FEN) pre-seeded at TARGET_DEPTH, as if this
+    // exact position had already been analysed under a different node id — a
+    // transposition. The hook must surface that result immediately and must
+    // not issue a `go depth` command for a position it already has at depth.
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     sharedEvalCache.set(fen, {
-      depth: 20,
+      depth: TARGET_DEPTH,
       lines: [{ san: 'Nf3', cp: 31, mate: null, pv: ['Nf3'] }],
     });
 
-    // Two different node ids can reach this same FEN; the cache is keyed by
-    // position, so both get the analysis without a second search.
-    expect(sharedEvalCache.get(fen)?.depth).toBe(20);
-    expect(sharedEvalCache.get(fen)?.lines[0].san).toBe('Nf3');
+    const { result, unmount } = renderHook(() => useAnalysis());
+
+    expect(result.current.result?.lines[0]?.san).toBe('Nf3');
+    expect(result.current.status).toBe('idle');
+
+    const goCommands = fake.sent.filter((cmd) => cmd.startsWith('go depth'));
+    expect(goCommands).toHaveLength(0);
+
+    unmount();
   });
 });

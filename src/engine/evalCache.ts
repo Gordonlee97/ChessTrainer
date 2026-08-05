@@ -26,6 +26,8 @@ export class EvalCache {
   set(fen: string, result: EvalResult): void {
     const existing = this.entries.get(fen);
     // Streaming updates arrive shallow-first; never regress a deeper result.
+    // A rejected shallower write deliberately leaves the key's LRU position
+    // untouched — it wasn't a real read or a real update.
     if (existing && existing.depth > result.depth) return;
 
     this.entries.delete(fen);
