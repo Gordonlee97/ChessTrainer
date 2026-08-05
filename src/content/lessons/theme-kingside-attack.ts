@@ -12,7 +12,7 @@ export const themeKingsideAttack = parseLesson({
     {
       startFen: 'r1bq1rk1/ppp2ppp/2np1n2/2b1p3/2B1P3/2PP1N2/PP3PPP/RNBQ1RK1 w - - 2 7',
       intro:
-        'This is the position from the Italian Game lesson — you\'ve already been here. Now the plan: walk the knight on b1 — still sitting on its own starting square, on the queenside, the half of the board behind your queen — all the way to d2, then f1, then g3, toward the kingside. That side of the board is quiet and has nothing left for the knight to do, so it heads instead toward more space — more squares your pieces control — where Black\'s king lives.',
+        'This is the position from the Italian Game lesson — you\'ve already been here. Now the plan: walk the knight on b1 — still sitting on its own starting square, on the queenside, the half of the board behind your queen — all the way to d2, then f1, then g3, toward the kingside. That side of the board is quiet and has nothing left for the knight to do, so it heads instead toward more space — more squares your pieces control — where Black\'s king lives. One more term: files are the board\'s vertical columns, and a rook wants to stand on one with no pawns in the way.',
       moves: [
         { san: 'Re1', note: 'The rook steps onto the file it was castled next to, ready for whenever the centre opens.' },
         { san: 'a6', note: 'Black takes the b5 square away from your pieces before you can use it.' },
