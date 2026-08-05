@@ -92,10 +92,25 @@ describe('validateLessonChess', () => {
   });
 
   it('validates a segment that starts from a custom FEN', () => {
+    // Bc4 only becomes legal once e2 is vacated by 1.e4 (verified against
+    // chess.js directly: legal from this FEN, illegal from the standard
+    // start where the e2 pawn still blocks the f1 bishop). That makes the
+    // test fail if startFen is ever ignored, unlike a move legal from both.
     const fromFen = structuredClone(minimal) as Lesson;
     fromFen.segments[0].startFen = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
-    fromFen.segments[0].moves = [{ san: 'Nf3' }, { san: 'Nc6' }];
+    fromFen.segments[0].moves = [{ san: 'Bc4' }, { san: 'Nf6' }];
     expect(validateLessonChess(fromFen)).toEqual([]);
+  });
+
+  it('reports a malformed startFen instead of throwing', () => {
+    const bad = structuredClone(minimal) as Lesson;
+    bad.segments[0].startFen = 'not a fen';
+    let problems: string[] = [];
+    expect(() => {
+      problems = validateLessonChess(bad);
+    }).not.toThrow();
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toMatch(/segment 0/i);
   });
 });
 

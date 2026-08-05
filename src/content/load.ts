@@ -28,7 +28,13 @@ function isLegal(fen: string, san: string): boolean {
 
 function validateSegment(segment: Segment, segmentIndex: number): string[] {
   const problems: string[] = [];
-  const chess = new Chess(segment.startFen ?? START_FEN);
+  let chess: Chess;
+  try {
+    chess = new Chess(segment.startFen ?? START_FEN);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    return [`segment ${segmentIndex}: startFen "${segment.startFen}" is not a valid FEN (${detail})`];
+  }
 
   segment.moves.forEach((move, moveIndex) => {
     const where = `segment ${segmentIndex}, move ${moveIndex}`;
