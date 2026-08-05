@@ -12,7 +12,7 @@ export const italianGame = parseLesson({
     {
       startFen: null,
       intro:
-        'You are White. The plan is simple and you can hold it in your head: claim the centre, develop your knight and bishop — get them off their starting squares and into the game — and get the king safe. Nothing clever is required.',
+        'You are White. The plan is simple and you can hold it in your head: claim the centre, develop your knight and bishop — get them off their starting squares and into the game — and get the king safe. Nothing clever is required. One more term for later: the board\'s vertical columns are called files, and a rook wants to stand on one with no pawns blocking it.',
       moves: [
         {
           san: 'e4',
