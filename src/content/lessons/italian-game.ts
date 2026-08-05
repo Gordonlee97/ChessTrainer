@@ -6,13 +6,13 @@ export const italianGame = parseLesson({
   kind: 'opening',
   side: 'white',
   summary:
-    'The most natural opening in chess: put a pawn in the middle, bring out both minor pieces, and castle. Every move has one clear job.',
+    'The most natural opening in chess: put a pawn in the middle, bring out both minor pieces — your knights and bishops — and castle. Every move has one clear job.',
   tags: ['center-control', 'development', 'king-safety'],
   segments: [
     {
       startFen: null,
       intro:
-        'You are White. The plan is simple and you can hold it in your head: claim the centre, develop the knight and bishop, and get the king safe. Nothing clever is required.',
+        'You are White. The plan is simple and you can hold it in your head: claim the centre, develop your knight and bishop — get them off their starting squares and into the game — and get the king safe. Nothing clever is required.',
       moves: [
         {
           san: 'e4',
@@ -35,7 +35,7 @@ export const italianGame = parseLesson({
         { san: 'e5', note: 'Black mirrors you. Now both sides have a pawn in the centre and the fight is over d4 and d5.' },
         {
           san: 'Nf3',
-          note: 'Develops a piece and attacks the e5 pawn at the same time. A developing move that also makes a threat is a free tempo.',
+          note: 'Develops a piece and attacks the e5 pawn at the same time. A move that develops and threatens together gains a tempo — a free move, because your opponent has to spend one answering it.',
         },
         { san: 'Nc6', note: 'Black defends e5 with a knight, which also develops. Notice both sides are following the same rules.' },
         {
@@ -77,7 +77,7 @@ export const italianGame = parseLesson({
               note: 'Pressures the knight that defends e5, rather than aiming at f7.',
               pros: [
                 'Applies long-term pressure to Black\'s centre',
-                'The most respected opening in chess at every level',
+                'Can leave Black with weaker pawns if the bishop trades on c6',
               ],
               cons: [
                 'Far more theory than the Italian',
