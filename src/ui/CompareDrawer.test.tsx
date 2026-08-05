@@ -43,6 +43,34 @@ describe('CompareDrawer', () => {
     expect(screen.getByTestId('verdict')).toHaveTextContent(/practically equal/i);
   });
 
+  it('captions the mini-board with the plies actually walked, not the length of the PV', () => {
+    // The comparison walks at most 8 plies. Captioning the board with
+    // line.pv.length ("after 26 plies", as observed in the browser) asserts
+    // something false about the picture next to it.
+    const long: PvLine = {
+      san: 'e4',
+      cp: 31,
+      mate: null,
+      pv: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5', 'c3', 'Nf6', 'd4', 'exd4', 'cxd4', 'Bb4+'],
+    };
+    render(<CompareDrawer a={long} b={b} baseFen={START} onClose={vi.fn()} />);
+    const dialog = screen.getByRole('dialog');
+
+    expect(dialog).toHaveTextContent(/after 8 plies/i);
+    expect(dialog).not.toHaveTextContent(/12 plies/i);
+  });
+
+  it('does not claim the engine score belongs to the position on the mini-board', () => {
+    // The score is for the whole principal variation; the board is a
+    // truncated snapshot of it. "+0.31 after 8 plies" reads as one claim
+    // about one position, and is wrong.
+    render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
+    const dialog = screen.getByRole('dialog');
+
+    expect(dialog).not.toHaveTextContent(/\+0\.31 after/i);
+    expect(dialog).toHaveTextContent(/whole line/i);
+  });
+
   it('lists pros and cons for each line', () => {
     render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
     expect(screen.getAllByRole('list').length).toBeGreaterThanOrEqual(2);

@@ -15,6 +15,13 @@ const DEFAULT_PLIES = 8;
 export interface LineSummary {
   san: string;
   endFen: string;
+  /**
+   * How many plies of the principal variation `endFen` actually reflects.
+   * At most the ply limit, and below it when the PV is shorter or stops at an
+   * illegal move. The drawer captions the mini-board with this, so it must be
+   * the count that was played rather than the PV's length.
+   */
+  plies: number;
   scoreCp: number;
   pros: string[];
   cons: string[];
@@ -27,17 +34,22 @@ export interface Comparison {
   verdict: string;
 }
 
-/** Plays a principal variation out, stopping at the ply limit or the first illegal move. */
-function walk(baseFen: string, pv: string[], plies: number): string {
+/**
+ * Plays a principal variation out, stopping at the ply limit or the first
+ * illegal move. Reports how many plies it managed, which can be below the cap.
+ */
+function walk(baseFen: string, pv: string[], plies: number): { fen: string; played: number } {
   const chess = new Chess(baseFen);
+  let played = 0;
   for (const san of pv.slice(0, plies)) {
     try {
       chess.move(san);
     } catch {
       break;
     }
+    played += 1;
   }
-  return chess.fen();
+  return { fen: chess.fen(), played };
 }
 
 function summarise(
@@ -47,7 +59,7 @@ function summarise(
   mover: Color,
   plies: number,
 ): LineSummary {
-  const endFen = walk(baseFen, line.pv, plies);
+  const { fen: endFen, played } = walk(baseFen, line.pv, plies);
   const end = extractFeatures(endFen);
   const pros: string[] = [];
   const cons: string[] = [];
@@ -73,7 +85,7 @@ function summarise(
   // Every line needs something said about it, even a quiet one.
   if (pros.length === 0 && cons.length === 0) pros.push('Keeps the position balanced and flexible');
 
-  return { san: line.san, endFen, scoreCp: toCentipawns(line), pros, cons };
+  return { san: line.san, endFen, plies: played, scoreCp: toCentipawns(line), pros, cons };
 }
 
 function buildVerdict(a: LineSummary, b: LineSummary, mover: Color): {

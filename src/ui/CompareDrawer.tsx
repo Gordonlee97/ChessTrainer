@@ -22,8 +22,19 @@ function LinePanel({ summary, line }: { summary: LineSummary; line: PvLine }) {
       <div style={{ marginTop: 8 }}>
         <EvalBar cp={line.cp} mate={line.mate} />
       </div>
-      <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '6px 0 10px' }}>
-        {formatScore(line)} after {line.pv.length} plies
+      {/*
+        Two separate claims, deliberately not one sentence. The score is the
+        engine's verdict on the whole principal variation; the board above is
+        a snapshot taken part-way through it. Running them together ("+0.31
+        after 8 plies") reads as a score for the pictured position, which it
+        is not — and the ply count is the number the walk actually played,
+        not the length of the PV.
+      */}
+      <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '6px 0 2px' }}>
+        Engine score for the whole line: {formatScore(line)}
+      </p>
+      <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '0 0 10px' }}>
+        Board shown after {summary.plies} {summary.plies === 1 ? 'ply' : 'plies'}
       </p>
       {summary.pros.length > 0 && (
         <>
