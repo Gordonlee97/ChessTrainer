@@ -16,7 +16,7 @@ can be reconstructed from the code, and this cannot.
 |---|---|
 | Branch | `feat/teaching-layer` |
 | Base | `master` (PR #1 merged 2026-08-04) |
-| PR | Not yet opened for this branch |
+| PR | [#2](https://github.com/Gordonlee97/ChessTrainer/pull/2) — **open, unmerged** |
 | Working tree | Clean |
 | Suite | 246 passing, 1 skipped (expected — see below) |
 | Last plan finished | Plan 2, the explainer and compare, 2026-08-04 (nine tasks) |
@@ -32,15 +32,20 @@ and the compare verdict said roughly the same thing about every move; the
 
 ## Do this next
 
-**1. Open a PR for `feat/teaching-layer`.** Nothing is outstanding on the
-branch: full suite, `tsc --noEmit`, and `npm run build` are all clean, and the
-browser verification that was blocking Plan 2 is done. `gh pr create` against
-`master`, following [[Workflow]].
+**1. Review and merge [PR #2](https://github.com/Gordonlee97/ChessTrainer/pull/2).**
+Opened 2026-08-05 against `master`. Nothing is outstanding on the branch: full
+suite, `tsc --noEmit`, and `npm run build` are all clean, and the browser
+verification that was blocking Plan 2 is done.
 
-One thing worth re-checking by hand first, because no test covers it: confirm
+One thing to check by hand while reviewing, because no test covers it: confirm
 `prefers-reduced-motion` still suppresses the compare drawer's entrance
 animation (DevTools → Rendering → emulate `prefers-reduced-motion: reduce`),
-and that a press still gives a visible signal.
+and that a press still gives a visible signal. The CSS is right by inspection
+(`theme.css`, `animation: none` inside the media query) but it has never been
+observed with the emulation on.
+
+Merge with `--merge`, not `--squash`, for the same reason PR #1 was: the fix
+history is worth reading commit by commit.
 
 **2. Write Plan 3 — the lesson layer.** Do not start writing `src/content/` or
 `src/lesson/` directly — see [[Workflow]]. The ordering is in [[Roadmap]]: the
