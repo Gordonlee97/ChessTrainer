@@ -31,7 +31,81 @@ describe('compareLines', () => {
     const result = compareLines(START, italian, scotch);
     expect(result.practicallyEqual).toBe(true);
     expect(result.verdict).toMatch(/practically equal/i);
+  });
+
+  it('does not claim a difference of character when both lines lead with the same idea', () => {
+    // Observed verbatim in the browser: "Practically equal — the real
+    // difference is character, not evaluation. e4 develops 1 more piece; d4
+    // develops 1 more piece." The sentence asserts a difference and then
+    // states none. Over a realistic 8-ply opening the two lines routinely
+    // produce the identical leading pro, so "pick the first pro the other
+    // doesn't have" cannot rescue it either — the honest move is to say so.
+    const result = compareLines(START, italian, scotch);
+
+    expect(result.a.pros[0]).toBe(result.b.pros[0]);
+    expect(result.verdict).toMatch(/same idea/i);
+    expect(result.verdict).not.toMatch(/difference is character/i);
+  });
+
+  it('still contrasts the two lines when they genuinely differ', () => {
+    // A develops one minor over its line; B develops two.
+    const oneMinor: PvLine = { san: 'Nf3', cp: 20, mate: null, pv: ['Nf3', 'd5', 'd4', 'Nf6'] };
+    const twoMinors: PvLine = {
+      san: 'e4',
+      cp: 31,
+      mate: null,
+      pv: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5'],
+    };
+    const result = compareLines(START, oneMinor, twoMinors);
+
+    expect(result.practicallyEqual).toBe(true);
+    expect(result.a.pros[0]).not.toBe(result.b.pros[0]);
     expect(result.verdict).toMatch(/character/i);
+    expect(result.verdict).not.toMatch(/same idea/i);
+  });
+
+  it('gives the decisive gap a unit', () => {
+    // "about 0.45 better than d4" leaves the reader to guess at pawns.
+    const verdict = compareLines(START, winning, scotch).verdict;
+    expect(verdict).toMatch(/3\.72 pawns/);
+  });
+
+  it('names the mate distance rather than formatting a mate score as pawns', () => {
+    // toCentipawns returns ~100000 for a mate, so the decisive branch's
+    // (gap / 100).toFixed(2) rendered "about 998.00 better than".
+    const forcedMate: PvLine = { san: 'e4', cp: null, mate: 3, pv: ['e4', 'e5', 'Qh5'] };
+    const result = compareLines(START, forcedMate, scotch);
+
+    expect(result.practicallyEqual).toBe(false);
+    expect(result.verdict).toMatch(/mate in 3/i);
+    expect(result.verdict).not.toMatch(/\d{3}\.\d\d/);
+    expect(result.verdict).not.toMatch(/pawns/i);
+  });
+
+  it('separates two mating lines by speed, not by a centipawn gap', () => {
+    // MATE_SCORE - |mate| puts every pair of mates within a few centipawns
+    // of each other, so the equality threshold would otherwise swallow them.
+    const fast: PvLine = { san: 'Qh5', cp: null, mate: 1, pv: ['Qh5'] };
+    const slow: PvLine = { san: 'Qf3', cp: null, mate: 4, pv: ['Qf3'] };
+    const result = compareLines(START, fast, slow);
+
+    expect(result.verdict).toMatch(/mate in 1/i);
+    expect(result.verdict).toMatch(/mate in 4/i);
+    expect(result.verdict).not.toMatch(/practically equal/i);
+  });
+
+  it('says plainly when the mover is getting mated in the line', () => {
+    // A mate score that favours White while Black is to move means Black is
+    // the one being mated — the verdict must not read as a win.
+    const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
+    const mated: PvLine = { san: 'g5', cp: null, mate: 2, pv: ['g5'] };
+    const survives: PvLine = { san: 'e5', cp: 30, mate: null, pv: ['e5'] };
+    const result = compareLines(AFTER_E4, mated, survives);
+
+    expect(result.practicallyEqual).toBe(false);
+    expect(result.verdict).toContain('e5');
+    expect(result.verdict).toMatch(/mate in 2/i);
+    expect(result.verdict).not.toMatch(/g5 forces mate/i);
   });
 
   it('does not call a decisive gap equal', () => {
