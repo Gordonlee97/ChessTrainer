@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "chess.js": "^1.4.0",
-    "framer-motion": "^11.11.0",
     "howler": "^2.2.4",
     "react": "^19.0.0",
     "react-chessboard": "^5.0.0",

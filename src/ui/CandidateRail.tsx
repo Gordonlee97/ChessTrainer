@@ -1,12 +1,13 @@
 import { Chess } from 'chess.js';
 import type { CSSProperties } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { resolveSan } from '../chess/resolveDrop';
 import { buildContext, describeMove } from '../explain/explain';
 import { classifyMove } from '../explain/quality';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 import { Button } from './Button';
+import { CompareDrawer } from './CompareDrawer';
 import { EvalBar } from './EvalBar';
 import { QualityBadge } from './QualityBadge';
 import { formatScore, useAnalysis } from './useAnalysis';
@@ -29,6 +30,7 @@ export function CandidateRail() {
   const { result, status, retry } = useAnalysis();
   const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
+  const [comparing, setComparing] = useState(false);
 
   // Building a context runs chess.js twice per candidate, so this is
   // memoised on the position and the analysis result rather than recomputed
@@ -176,6 +178,25 @@ export function CandidateRail() {
           </div>
         </Button>
       ))}
+      {result.lines.length >= 2 && (
+        <>
+          <Button
+            variant="secondary"
+            style={{ width: '100%', marginTop: 4 }}
+            onClick={() => setComparing((open) => !open)}
+          >
+            {comparing ? 'Hide comparison' : `Compare ${result.lines[0].san} and ${result.lines[1].san}`}
+          </Button>
+          {comparing && (
+            <CompareDrawer
+              a={result.lines[0]}
+              b={result.lines[1]}
+              baseFen={node.fen}
+              onClose={() => setComparing(false)}
+            />
+          )}
+        </>
+      )}
     </section>
   );
 }

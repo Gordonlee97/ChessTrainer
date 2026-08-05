@@ -38,8 +38,12 @@ describe('CandidateRail', () => {
     } as never;
 
     render(<CandidateRail />);
-    expect(screen.getByRole('button', { name: /e4/ })).toHaveTextContent('+0.31');
-    expect(screen.getByRole('button', { name: /d4/ })).toHaveTextContent('+0.28');
+    // Anchored to the start of the accessible name: a candidate row's SAN
+    // always leads its text content, but with two lines present the rail
+    // also renders a "Compare e4 and d4" button, which an unanchored /e4/ or
+    // /d4/ would match too.
+    expect(screen.getByRole('button', { name: /^e4/ })).toHaveTextContent('+0.31');
+    expect(screen.getByRole('button', { name: /^d4/ })).toHaveTextContent('+0.28');
   });
 
   it('plays the move when a candidate is clicked', async () => {
