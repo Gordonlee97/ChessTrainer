@@ -38,8 +38,12 @@ describe('CandidateRail', () => {
     } as never;
 
     render(<CandidateRail />);
-    expect(screen.getByRole('button', { name: /e4/ })).toHaveTextContent('+0.31');
-    expect(screen.getByRole('button', { name: /d4/ })).toHaveTextContent('+0.28');
+    // Anchored to the start of the accessible name: a candidate row's SAN
+    // always leads its text content, but with two lines present the rail
+    // also renders a "Compare e4 and d4" button, which an unanchored /e4/ or
+    // /d4/ would match too.
+    expect(screen.getByRole('button', { name: /^e4/ })).toHaveTextContent('+0.31');
+    expect(screen.getByRole('button', { name: /^d4/ })).toHaveTextContent('+0.28');
   });
 
   it('plays the move when a candidate is clicked', async () => {
@@ -194,5 +198,105 @@ describe('CandidateRail', () => {
     expect(status).not.toHaveTextContent(/stalemate/i);
     expect(status).not.toHaveTextContent(/thinking/i);
     expect(status).toHaveTextContent(/no candidate moves available/i);
+  });
+
+  it('gives two candidates genuinely different ideas, not the same sentence twice', () => {
+    // This used to assert only /centre|center/i on one row, which passed no
+    // matter what — the centre rule fired on every sensible opening move, so
+    // e4, d4, Nf3, Nc3, c4 and e3 all read "stakes a claim in the centre".
+    // The rail's whole purpose is that two candidates are described
+    // differently, so that is what is asserted.
+    analysis.value = {
+      status: 'idle',
+      result: {
+        depth: 20,
+        lines: [
+          { san: 'e4', cp: 31, mate: null, pv: ['e4', 'e5'] },
+          { san: 'Nf3', cp: 28, mate: null, pv: ['Nf3', 'd5'] },
+        ],
+      },
+    } as never;
+
+    render(<CandidateRail />);
+    const e4Row = screen.getByRole('button', { name: /^e4/ });
+    const nf3Row = screen.getByRole('button', { name: /^Nf3/ });
+
+    // e4 puts a pawn in the centre; Nf3 develops and only pressures it.
+    expect(e4Row).toHaveTextContent(/pawn in the centre/i);
+    expect(nf3Row).not.toHaveTextContent(/pawn in the centre/i);
+    expect(nf3Row).toHaveTextContent(/brings a new piece into the game/i);
+    expect(e4Row).not.toHaveTextContent(/brings a new piece into the game/i);
+  });
+
+  it('shows the top two reasons under a candidate, not just the first', () => {
+    // Spec §7 renders "the top two or three by weight" as prose, and
+    // describeMove's own default is 2. One sentence per candidate is what
+    // makes every row read the same; 1.e4 has a second thing worth saying
+    // (it opens lines for the queen and the light-squared bishop).
+    analysis.value = {
+      status: 'idle',
+      result: {
+        depth: 20,
+        lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4', 'e5'] }],
+      },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.getByRole('button', { name: /e4/ })).toHaveTextContent(/opens lines/i);
+  });
+
+  it('withholds quality badges and ideas while the search is still running', () => {
+    // classifyMove compares one line against another, which only means
+    // something at equal depth. Stockfish emits multipv 1,2,3 per iteration,
+    // so mid-search there is always a render where lines[0] is a full
+    // iteration deeper than lines[1..2] — and the lower candidates flash
+    // through "Mistake"/"Blunder" before settling. The rail must not show a
+    // band it cannot yet stand behind.
+    analysis.value = {
+      status: 'analyzing',
+      result: {
+        depth: 20,
+        lines: [
+          { san: 'e4', cp: 30, mate: null, pv: ['e4'] },
+          { san: 'a3', cp: -80, mate: null, pv: ['a3'] },
+        ],
+      },
+    } as never;
+
+    render(<CandidateRail />);
+
+    expect(screen.getByRole('button', { name: /^e4/ })).toBeInTheDocument();
+    expect(screen.queryByText('Mistake')).not.toBeInTheDocument();
+    expect(screen.queryByText('Best move')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^e4/ })).not.toHaveTextContent(/centre|center/i);
+  });
+
+  it('shows a quality badge relative to the best move', () => {
+    analysis.value = {
+      status: 'idle',
+      result: {
+        depth: 20,
+        lines: [
+          { san: 'e4', cp: 30, mate: null, pv: ['e4'] },
+          { san: 'a3', cp: -80, mate: null, pv: ['a3'] },
+        ],
+      },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.getByText('Best move')).toBeInTheDocument();
+    // 110cp worse than the best move lands in the "mistake" band.
+    expect(screen.getByText('Mistake')).toBeInTheDocument();
+  });
+
+  it('still renders the candidate when the explainer cannot describe it', () => {
+    // A move the rules have nothing to say about must not blank the row.
+    analysis.value = {
+      status: 'idle',
+      result: { depth: 20, lines: [{ san: 'a3', cp: 5, mate: null, pv: ['a3'] }] },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.getByRole('button', { name: /a3/ })).toBeInTheDocument();
   });
 });

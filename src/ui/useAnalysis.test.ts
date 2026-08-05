@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { sharedEvalCache } from '../engine/evalCache';
 import { useTreeStore } from '../tree/store';
 import { resetSharedEngineForTests } from './sharedEngine';
 import { formatScore, TARGET_DEPTH, useAnalysis } from './useAnalysis';
@@ -118,6 +119,9 @@ describe('useAnalysis stale-result guard', () => {
     useTreeStore.getState().reset();
     fake.reset();
     resetSharedEngineForTests();
+    // sharedEvalCache is module-level state that otherwise leaks between
+    // tests in this file — see Task 3's brief.
+    sharedEvalCache.clear();
   });
 
   it('renders a result for the node that requested it', async () => {
@@ -307,6 +311,9 @@ describe('useAnalysis shared engine (Fix 4)', () => {
     useTreeStore.getState().reset();
     fake.reset();
     resetSharedEngineForTests();
+    // sharedEvalCache is module-level state that otherwise leaks between
+    // tests in this file — see Task 3's brief.
+    sharedEvalCache.clear();
   });
 
   it('shares a single Engine (and worker transport) across multiple concurrent call sites', () => {
@@ -370,6 +377,70 @@ describe('useAnalysis shared engine (Fix 4)', () => {
 
     expect(fake.createCount.value).toBe(2);
     expect(result.current.status).toBe('analyzing');
+
+    unmount();
+  });
+});
+
+describe('transposition reuse', () => {
+  beforeEach(() => {
+    useTreeStore.getState().reset();
+    fake.reset();
+    resetSharedEngineForTests();
+    sharedEvalCache.clear();
+  });
+
+  it('serves a previously analysed position from the FEN cache without a fresh search', () => {
+    // Root's FEN (tree.ts's START_FEN) pre-seeded at TARGET_DEPTH, as if this
+    // exact position had already been analysed under a different node id — a
+    // transposition. The hook must surface that result immediately and must
+    // not issue a `go depth` command for a position it already has at depth.
+    const fen = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    sharedEvalCache.set(fen, {
+      depth: TARGET_DEPTH,
+      lines: [{ san: 'Nf3', cp: 31, mate: null, pv: ['Nf3'] }],
+    });
+
+    const { result, unmount } = renderHook(() => useAnalysis());
+
+    expect(result.current.result?.lines[0]?.san).toBe('Nf3');
+    expect(result.current.status).toBe('idle');
+
+    const goCommands = fake.sent.filter((cmd) => cmd.startsWith('go depth'));
+    expect(goCommands).toHaveLength(0);
+
+    unmount();
+  });
+
+  it('caches a completed search by FEN even when the selection has already moved on', async () => {
+    // A depth-20 search that finishes a beat after the player navigates away
+    // is exactly what a global FEN cache exists to catch — the work is done
+    // and the answer is true of that position forever. Discarding it means
+    // navigating back re-runs the whole search. The stale-*render* guard
+    // below the write is a different concern and still applies.
+    const rootFen = useTreeStore.getState().tree.nodes.root.fen;
+    const nodeB = useTreeStore.getState().playMove('e4');
+    expect(nodeB).not.toBeNull();
+    useTreeStore.getState().selectNode('root');
+
+    const { result, unmount } = renderHook(() => useAnalysis());
+    expect(fake.sent).toContain(`go depth ${TARGET_DEPTH}`);
+
+    // Same race as the stale-render test above: selection flips to B, then
+    // root's own search resolves before React has run the effect cleanup.
+    act(() => {
+      useTreeStore.getState().selectNode(nodeB as string);
+      fake.emit(`info depth ${TARGET_DEPTH} multipv 1 score cp 42 pv e2e4`);
+      fake.emit('bestmove e2e4');
+    });
+
+    await act(async () => {
+      await flush();
+    });
+
+    expect(sharedEvalCache.get(rootFen)?.lines[0]?.cp).toBe(42);
+    // And it still must not be rendered as the newly selected node's result.
+    expect(result.current.result?.lines[0]?.cp).not.toBe(42);
 
     unmount();
   });

@@ -17,6 +17,7 @@ describe('extractFeatures', () => {
     expect(f.material).toEqual({ w: 39, b: 39 });
     expect(f.developedMinors).toEqual({ w: 0, b: 0 });
     expect(f.castled).toEqual({ w: false, b: false });
+    expect(f.pawnStructure.islands).toEqual({ w: 1, b: 1 });
   });
 
   it('counts center control from both sides', () => {

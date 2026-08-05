@@ -1,4 +1,5 @@
 import { Chess, type Color, type PieceSymbol, type Square } from 'chess.js';
+import { extractPawnStructure, type PawnStructure } from './pawnStructure';
 
 export const CENTER_SQUARES: Square[] = ['d4', 'e4', 'd5', 'e5'];
 
@@ -48,6 +49,8 @@ export interface PositionFeatures {
   mobility: Record<Color, number | null>;
   /** Squares holding a piece that is attacked and undefended. */
   hanging: Record<Color, Square[]>;
+  /** Doubled, isolated, and passed pawns, plus pawn-island counts. */
+  pawnStructure: PawnStructure;
 }
 
 function occupiedSquares(chess: Chess): { square: Square; type: PieceSymbol; color: Color }[] {
@@ -107,5 +110,5 @@ export function extractFeatures(fen: string): PositionFeatures {
     }
   }
 
-  return { centerControl, developedMinors, castled, material, mobility, hanging };
+  return { centerControl, developedMinors, castled, material, mobility, hanging, pawnStructure: extractPawnStructure(fen) };
 }

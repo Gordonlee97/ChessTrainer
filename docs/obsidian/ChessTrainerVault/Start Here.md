@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-04
+updated: 2026-08-05
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,48 +10,54 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-04
+## Repo state as of 2026-08-05
 
 | | |
 |---|---|
-| Branch | `feat/foundation-and-line-explorer` |
-| Base | `master` |
-| PR | [#1](https://github.com/Gordonlee97/ChessTrainer/pull/1) — **open, unmerged** |
+| Branch | `feat/teaching-layer` |
+| Base | `master` (PR #1 merged 2026-08-04) |
+| PR | [#2](https://github.com/Gordonlee97/ChessTrainer/pull/2) — **open, unmerged** |
 | Working tree | Clean |
-| Suite | 138 passing, 1 skipped (expected — see below) |
-| Last plan finished | Plan 1, foundation and line explorer, 2026-08-03 |
+| Suite | 246 passing, 1 skipped (expected — see below) |
+| Last plan finished | Plan 2, the explainer and compare, 2026-08-04 (nine tasks) |
+| Last change | Whole-branch review fix wave, 2026-08-05 (nine items) |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
 second skip is a real failure.
 
+Plan 2 **has** now been exercised in a browser. That testing found the explainer
+and the compare verdict said roughly the same thing about every move; the
+2026-08-05 fix wave addressed it. [[Current State]] has the before/after table.
+
 ## Do this next
 
-**1. Merge PR #1 first.** Plan 2 branches off `master`, not off the Plan 1
-branch. Stacking would put 43 unreviewed commits underneath new work.
+**1. Review and merge [PR #2](https://github.com/Gordonlee97/ChessTrainer/pull/2).**
+Opened 2026-08-05 against `master`. Nothing is outstanding on the branch: full
+suite, `tsc --noEmit`, and `npm run build` are all clean, and the browser
+verification that was blocking Plan 2 is done.
 
-```bash
-gh pr merge 1 --merge          # --merge, not --squash: the commit-by-commit
-                               # trail of the engine's six revisions is
-                               # genuinely useful history
-git checkout master && git pull
-```
+One thing to check by hand while reviewing, because no test covers it: confirm
+`prefers-reduced-motion` still suppresses the compare drawer's entrance
+animation (DevTools → Rendering → emulate `prefers-reduced-motion: reduce`),
+and that a press still gives a visible signal. The CSS is right by inspection
+(`theme.css`, `animation: none` inside the media query) but it has never been
+observed with the emulation on.
 
-**2. Settle the two blockers in [[Known Issues]] before writing Plan 2.** Both
-change what the plan should say:
+Merge with `--merge`, not `--squash`, for the same reason PR #1 was: the fix
+history is worth reading commit by commit.
 
-- **Node identity and transpositions.** Ids are SAN paths, so the same position
-  reached by a different move order duplicates. Lesson content and "My Lines"
-  both key off node identity. Decide whether to widen it or to design Plan 2
-  around the limitation — but decide before writing the plan, not during it.
-- **The spec says React 18; the build is React 19.** Amend
-  `docs/superpowers/specs/2026-08-01-chesstrainer-design.md` §3. Specs are what
-  plans get written against, so this drift propagates if left.
+**2. Write Plan 3 — the lesson layer.** Do not start writing `src/content/` or
+`src/lesson/` directly — see [[Workflow]]. The ordering is in [[Roadmap]]: the
+content pipeline (Zod schema, validating loader, v1 content) first, since the
+lesson runner depends on it.
 
-**3. Write Plan 2.** Do not start writing `src/explain/` directly — see
-[[Workflow]]. The ordering and the fixed constraints are in [[Roadmap]]; the
-first item is pawn-structure feature extraction, because the explainer depends
-on it.
+Two questions [[Roadmap]] says to settle while writing it, both design decisions
+rather than patches: how wide the comparison's contrast vocabulary should be
+(today two strong openings usually score identically on every feature
+`summarise` measures, so the honest verdict is "choose on feel"), and whether
+the compare drawer is really a modal — it claims `role="dialog"` with no
+`aria-modal`, focus trap, or Escape.
 
 ## Where to look for what
 

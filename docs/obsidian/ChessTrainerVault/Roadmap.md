@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-04
+updated: 2026-08-05
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -11,47 +11,34 @@ tags: [chesstrainer, roadmap]
 **Plan 1 — Foundation and line explorer.** Nine tasks, complete 2026-08-03.
 Board, eval bar, breadcrumb, candidate rail, the immutable game tree, the UCI
 engine wrapper, the sound layer, and the theme. See [[Current State]] for what
-that actually gets you. Awaiting merge as PR #1.
+that actually gets you. **Merged to `master` 2026-08-04 as PR #1** (merge commit,
+not squash — the engine's revision-by-revision history is worth keeping).
 
-## Next: Plan 2 — the teaching layer
+**Plan 2 — The explainer and compare.** Nine tasks, complete 2026-08-04 on
+`feat/teaching-layer` (not yet merged). Pawn-structure features and fork/pin
+detection (`src/chess/pawnStructure.ts`, `src/chess/tactics.ts`); a FEN-keyed
+eval cache so transposed positions are analysed once (`src/engine/evalCache.ts`);
+move-quality banding (`src/explain/quality.ts`); the rule-based explainer with a
+FEN fixture table (`src/explain/rules.ts`, `src/explain/explain.ts`); quality
+badges and one-line ideas on every candidate row (`src/ui/QualityBadge.tsx`,
+`CandidateRail.tsx`); line comparison with a calibrated verdict
+(`src/explain/compare.ts`); and the compare drawer itself
+(`src/ui/CompareDrawer.tsx`, `src/ui/MiniBoard.tsx`). `framer-motion` was
+removed as an unused dependency — the drawer's entrance animation is a CSS
+keyframe.
 
-Not yet written as a plan document. This is the ordering the design spec implies,
-with the highest-risk item first.
+**Browser-verified and fixed 2026-08-04/05.** Hands-on testing plus a
+whole-branch review found that the output layer said roughly the same thing
+about every move; one fix wave of nine items closed it (suite 223 → 246). See
+[[Current State]] for the before/after table, [[Known Issues]] for what was
+deliberately left, and [[Architecture]] for the `src/explain/` layer.
 
-### 1. The rule-based explainer — `src/explain/`
+## Next: Plan 3 — the lesson layer
 
-The single highest-value and highest-risk piece of remaining work, and the reason
-the core was kept React-free: it is testable against a table of FEN fixtures, and
-that is where the TDD effort belongs.
+Not yet written as a plan document. This is the ordering the design spec
+implies.
 
-Turns a before/after feature pair plus an eval delta into ordered `Reason[]`,
-tagged `center | development | king-safety | material | fork | pin | hanging |
-tempo | pawn-structure | mobility | space`. The top two or three by weight render
-as prose.
-
-Depends on **pawn-structure features**, which `extractFeatures` does not yet
-have. Do that first.
-
-Move-quality banding is fixed by the spec:
-
-| Centipawn loss vs best | Band |
-|---|---|
-| ≤ 20 | Best / excellent |
-| ≤ 50 | Good |
-| ≤ 100 | Inaccuracy |
-| ≤ 250 | Mistake |
-| > 250 | Blunder |
-
-### 2. The compare drawer
-
-Walk two sibling PVs out ~8 plies, extract features at both endpoints, contrast
-them. Two mini-boards, eval bars, pros and cons, and a verdict line.
-
-The verdict is deliberately calibrated: **under ~0.3 difference it must say
-"practically equal — the real difference is character"** and lead with the
-structural contrast. This is a teaching decision, not a display detail.
-
-### 3. Content pipeline — `src/content/`
+### 1. Content pipeline — `src/content/`
 
 Zod schema plus a validating loader. A test replays every authored `san` through
 chess.js, so a typo fails the suite instead of blanking the board at runtime.
@@ -59,7 +46,7 @@ chess.js, so a typo fails the suite instead of blanking the board at runtime.
 Then the v1 content itself: 3 openings and 4 theme lessons, listed in
 [[Project Overview]].
 
-### 4. Lesson runner — `src/lesson/`
+### 2. Lesson runner — `src/lesson/`
 
 Derives the current step from the tree selection; grades checkpoints; serves
 three hint tiers. Behaviour the spec pins down:
@@ -69,7 +56,7 @@ three hint tiers. Behaviour the spec pins down:
 - Going off-script is **not an error state** — a "return to lesson" pill waits in
   the rail until taken.
 
-### 5. Progress persistence — `src/progress/`
+### 3. Progress persistence — `src/progress/`
 
 Versioned localStorage: lesson completions, checkpoint accuracy, saved lines.
 Two schema decisions already made and worth not re-litigating:
@@ -79,7 +66,7 @@ Two schema decisions already made and worth not re-litigating:
 - Saved lines are stored as **PGN**, not node paths — portable, replayable, and
   immune to changes in the tree's addressing scheme.
 
-## Also queued for Plan 2
+## Also queued for Plan 3
 
 Small, and each has a stated reason for existing:
 
@@ -93,8 +80,22 @@ Small, and each has a stated reason for existing:
 - No end-to-end suite in v1 — deferred on purpose.
 - Everything in the out-of-scope list in [[Project Overview]].
 
-## Before Plan 2 starts
+## Decide before Plan 3 is written
 
-Two items in [[Known Issues]] should be settled first, because Plan 2 builds
-directly on them: **node identity and transpositions**, and the **spec's React 18
-reference**.
+Nothing gating, unlike Plan 2. Two things want a decision rather than a patch:
+
+- **The comparison's contrast vocabulary.** `summarise` can distinguish two
+  lines on five features, and two strong openings usually score identically on
+  all of them — so the honest verdict is "these are the same, choose on feel."
+  Widening that (pawn structure, open vs closed, which minor came out, space) is
+  what makes compare teach rather than describe. Decide the *shape* of the
+  vocabulary before adding another feature to `summarise`. Detail in
+  [[Known Issues]].
+- **Whether the compare drawer is really a modal.** It claims `role="dialog"`
+  without `aria-modal`, a focus trap, or Escape. Either implement those or make
+  it a labelled section. Cheapest while `App.tsx` is still a placeholder and the
+  layout is about to be rebuilt anyway.
+
+Also queued and small: `MiniBoard` gives screen-reader users no position
+information, and compare is hardwired to the top two candidates. Both in
+[[Known Issues]].

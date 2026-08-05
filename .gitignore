@@ -4,6 +4,9 @@ dist-ssr/
 *.local
 *.tsbuildinfo
 
+# Vite's optimized-deps cache, including its transient deps_temp_* dirs
+.vite/
+
 # Brainstorming visual companion working files
 .superpowers/
 
