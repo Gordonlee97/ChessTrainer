@@ -1,6 +1,6 @@
 import { Chess } from 'chess.js';
 import type { CSSProperties } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { resolveSan } from '../chess/resolveDrop';
 import { buildContext, describeMove } from '../explain/explain';
 import { classifyMove } from '../explain/quality';
@@ -31,6 +31,14 @@ export function CandidateRail() {
   const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
   const [comparing, setComparing] = useState(false);
+
+  // Without this, leaving the drawer open and navigating to a position with
+  // fewer than 2 candidates (which unmounts it) and then back to one with 2+
+  // silently reopens it with no click — a comparison the player never asked
+  // for, attached to whatever position they've now landed on.
+  useEffect(() => {
+    setComparing(false);
+  }, [node.id]);
 
   // Building a context runs chess.js twice per candidate, so this is
   // memoised on the position and the analysis result rather than recomputed

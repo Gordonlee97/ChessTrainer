@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { PvLine } from '../engine/types';
@@ -22,8 +22,20 @@ const b: PvLine = { san: 'd4', cp: 28, mate: null, pv: ['d4', 'd5', 'Nf3'] };
 describe('CompareDrawer', () => {
   it('names both lines being compared', () => {
     render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
-    expect(screen.getByRole('heading', { name: /e4/ })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /d4/ })).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+
+    // The drawer's own <h2> ("Compare e4 and d4") and each LinePanel's <h3>
+    // (its bare SAN) both legitimately contain "e4"/"d4" — querying by level
+    // scopes each assertion to the right element instead of loosening the
+    // markup to avoid the overlap.
+    expect(within(dialog).getByRole('heading', { level: 2 })).toHaveTextContent(
+      'Compare e4 and d4',
+    );
+
+    const panelHeadings = within(dialog).getAllByRole('heading', { level: 3 });
+    expect(panelHeadings).toHaveLength(2);
+    expect(panelHeadings[0]).toHaveTextContent('e4');
+    expect(panelHeadings[1]).toHaveTextContent('d4');
   });
 
   it('shows the calibrated verdict for two near-equal lines', () => {

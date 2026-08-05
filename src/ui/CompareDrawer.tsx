@@ -65,17 +65,9 @@ export function CompareDrawer({
   return (
     <div role="dialog" aria-label={`Compare ${a.san} and ${b.san}`} className="compare-drawer">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        {/*
-         * Not an <h2>: the dialog's aria-label already conveys "Compare {a.san}
-         * and {b.san}" as its accessible name. A heading-role element with the
-         * same text would collide with the per-line <h3> below on any query
-         * for the SAN alone (e.g. name matching /e4/ matches both "Compare e4
-         * and d4" and the "e4" panel heading), and would double-announce the
-         * same text to a screen reader right after the dialog name.
-         */}
-        <div style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>
+        <h2 style={{ fontSize: 16, margin: 0 }}>
           Compare {a.san} and {b.san}
-        </div>
+        </h2>
         <Button variant="ghost" onClick={onClose}>
           Close
         </Button>
