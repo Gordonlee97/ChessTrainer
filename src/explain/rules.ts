@@ -52,7 +52,7 @@ const materialRule: Rule = (ctx) => {
   return {
     tag: 'material',
     polarity: 'good',
-    weight: 70 + gained * 3,
+    weight: Math.min(100, 70 + gained * 3),
     text: `Wins material — up ${gained} point${gained === 1 ? '' : 's'} on the exchange.`,
   };
 };
@@ -119,7 +119,7 @@ const pawnStructureRule: Rule = (ctx) => {
 };
 
 const tempoRule: Rule = (ctx) => {
-  if (!ctx.san.includes('+')) return null;
+  if (!ctx.san.includes('+') && !ctx.san.includes('#')) return null;
   return {
     tag: 'tempo',
     polarity: 'good',

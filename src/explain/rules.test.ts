@@ -19,6 +19,9 @@ const PIN_AVAILABLE = '4k3/8/2n5/8/8/8/8/4KB2 w - - 0 1';
 const FREE_ROOK = '4k3/8/8/3r4/8/8/8/3RK3 w - - 0 1';
 // White pawns e4 and d2; exd5 puts a second white pawn on the d-file
 const DOUBLES_PAWNS = '4k3/8/8/3p4/4P3/8/3P4/4K3 w - - 0 1';
+// White pawn d7 captures the black rook on e8 and promotes to a queen —
+// gains both the pawn-to-queen swing and the captured rook in one move
+const PROMOTION_CAPTURE = '4r3/3P4/1k6/8/8/8/8/K7 w - - 0 1';
 
 describe('rule set', () => {
   it('credits a move that grabs the centre', () => {
@@ -67,6 +70,13 @@ describe('rule set', () => {
       expect(reason.weight).toBeGreaterThan(0);
       expect(reason.weight).toBeLessThanOrEqual(100);
     }
+  });
+
+  it('caps the material weight at 100 even on a promotion-capture', () => {
+    const reasons = explainMove(buildContext(PROMOTION_CAPTURE, 'dxe8=Q', null, null), ALL_RULES);
+    const material = reasons.find((r) => r.tag === 'material');
+    expect(material).toBeDefined();
+    expect(material!.weight).toBeLessThanOrEqual(100);
   });
 
   it('says nothing about tactics that are not there', () => {
