@@ -46,13 +46,23 @@ export function CandidateRail() {
   // early returns below even though it's unused in the unavailable/thinking
   // states.
   const annotations = useMemo(() => {
+    // classifyMove compares one line against another, which is only
+    // meaningful at equal depth. Stockfish emits multipv 1,2,3 within each
+    // iteration, so mid-search there is always a render where lines[0] is a
+    // full iteration deeper than lines[1..2] — enough for the #2 and #3
+    // candidates to flicker through "Mistake" and "Blunder" before settling.
+    // The fix belongs here rather than in the engine: the engine is right to
+    // stream what it has, the rail is wrong to judge it. Ideas are withheld
+    // with the badges so a row does not half-appear.
+    if (status === 'analyzing') return [];
     if (!result || result.lines.length === 0) return [];
     const best = result.lines[0];
     return result.lines.map((line) => {
       try {
         const ctx = buildContext(node.fen, line.san, best, line);
         return {
-          idea: describeMove(ctx, 1),
+          // Spec §7: "the top two or three by weight are rendered as prose".
+          idea: describeMove(ctx, 2),
           quality: classifyMove(best, line, ctx.mover),
         };
       } catch {
@@ -60,7 +70,7 @@ export function CandidateRail() {
         return null;
       }
     });
-  }, [node.fen, result]);
+  }, [node.fen, result, status]);
 
   function playCandidate(san: string) {
     // Shares resolveDrop's classification (via resolveSan) so a candidate

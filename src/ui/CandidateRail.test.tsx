@@ -214,6 +214,49 @@ describe('CandidateRail', () => {
     expect(screen.getByRole('button', { name: /e4/ })).toHaveTextContent(/centre|center/i);
   });
 
+  it('shows the top two reasons under a candidate, not just the first', () => {
+    // Spec §7 renders "the top two or three by weight" as prose, and
+    // describeMove's own default is 2. One sentence per candidate is what
+    // makes every row read the same; 1.e4 has a second thing worth saying
+    // (it opens lines for the queen and the light-squared bishop).
+    analysis.value = {
+      status: 'idle',
+      result: {
+        depth: 20,
+        lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4', 'e5'] }],
+      },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.getByRole('button', { name: /e4/ })).toHaveTextContent(/opens lines/i);
+  });
+
+  it('withholds quality badges and ideas while the search is still running', () => {
+    // classifyMove compares one line against another, which only means
+    // something at equal depth. Stockfish emits multipv 1,2,3 per iteration,
+    // so mid-search there is always a render where lines[0] is a full
+    // iteration deeper than lines[1..2] — and the lower candidates flash
+    // through "Mistake"/"Blunder" before settling. The rail must not show a
+    // band it cannot yet stand behind.
+    analysis.value = {
+      status: 'analyzing',
+      result: {
+        depth: 20,
+        lines: [
+          { san: 'e4', cp: 30, mate: null, pv: ['e4'] },
+          { san: 'a3', cp: -80, mate: null, pv: ['a3'] },
+        ],
+      },
+    } as never;
+
+    render(<CandidateRail />);
+
+    expect(screen.getByRole('button', { name: /^e4/ })).toBeInTheDocument();
+    expect(screen.queryByText('Mistake')).not.toBeInTheDocument();
+    expect(screen.queryByText('Best move')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^e4/ })).not.toHaveTextContent(/centre|center/i);
+  });
+
   it('shows a quality badge relative to the best move', () => {
     analysis.value = {
       status: 'idle',
