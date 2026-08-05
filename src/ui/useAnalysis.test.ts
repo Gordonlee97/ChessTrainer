@@ -411,4 +411,37 @@ describe('transposition reuse', () => {
 
     unmount();
   });
+
+  it('caches a completed search by FEN even when the selection has already moved on', async () => {
+    // A depth-20 search that finishes a beat after the player navigates away
+    // is exactly what a global FEN cache exists to catch — the work is done
+    // and the answer is true of that position forever. Discarding it means
+    // navigating back re-runs the whole search. The stale-*render* guard
+    // below the write is a different concern and still applies.
+    const rootFen = useTreeStore.getState().tree.nodes.root.fen;
+    const nodeB = useTreeStore.getState().playMove('e4');
+    expect(nodeB).not.toBeNull();
+    useTreeStore.getState().selectNode('root');
+
+    const { result, unmount } = renderHook(() => useAnalysis());
+    expect(fake.sent).toContain(`go depth ${TARGET_DEPTH}`);
+
+    // Same race as the stale-render test above: selection flips to B, then
+    // root's own search resolves before React has run the effect cleanup.
+    act(() => {
+      useTreeStore.getState().selectNode(nodeB as string);
+      fake.emit(`info depth ${TARGET_DEPTH} multipv 1 score cp 42 pv e2e4`);
+      fake.emit('bestmove e2e4');
+    });
+
+    await act(async () => {
+      await flush();
+    });
+
+    expect(sharedEvalCache.get(rootFen)?.lines[0]?.cp).toBe(42);
+    // And it still must not be rendered as the newly selected node's result.
+    expect(result.current.result?.lines[0]?.cp).not.toBe(42);
+
+    unmount();
+  });
 });

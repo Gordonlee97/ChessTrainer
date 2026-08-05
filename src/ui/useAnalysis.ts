@@ -113,9 +113,15 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
         },
       })
       .then((final) => {
+        // The FEN cache is written before the stale-selection guard on
+        // purpose. A completed search is true of its position no matter
+        // where the selection has moved to in the meantime, and a depth-20
+        // result that lands just after the player navigates away is
+        // precisely the case a global cache exists to catch. Only the
+        // *render* is stale, so only the render is guarded.
+        sharedEvalCache.set(node.fen, final);
         if (useTreeStore.getState().tree.selectedId !== requestedFor) return;
         cacheEval(requestedFor, final);
-        sharedEvalCache.set(node.fen, final);
         setResult(final);
         setStatus('idle');
       })
