@@ -25,6 +25,19 @@ describe('toCentipawns', () => {
   it('scores a faster mate higher than a slower one', () => {
     expect(toCentipawns(line(null, 1))).toBeGreaterThan(toCentipawns(line(null, 5)));
   });
+
+  it('treats mate: +0 (White already mated) as worst case', () => {
+    // Positive zero means White is already mated — worst for White.
+    expect(toCentipawns(line(null, 0))).toBe(-100000);
+  });
+
+  it('treats mate: -0 (Black already mated) as best case', () => {
+    // Negative zero means Black is already mated — best for White.
+    // Explicitly construct -0 as 0 * -1 to ensure the value is -0.
+    const negZero = 0 * -1;
+    expect(Object.is(negZero, -0)).toBe(true); // Verify we have -0, not +0
+    expect(toCentipawns(line(null, negZero))).toBe(100000);
+  });
 });
 
 describe('centipawnLoss', () => {
