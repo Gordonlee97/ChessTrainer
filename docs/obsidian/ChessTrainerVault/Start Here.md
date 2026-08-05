@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-04
+updated: 2026-08-05
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,7 +10,7 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-04
+## Repo state as of 2026-08-05
 
 | | |
 |---|---|
@@ -18,39 +18,41 @@ can be reconstructed from the code, and this cannot.
 | Base | `master` (PR #1 merged 2026-08-04) |
 | PR | Not yet opened for this branch |
 | Working tree | Clean |
-| Suite | 223 passing, 1 skipped (expected — see below) |
+| Suite | 246 passing, 1 skipped (expected — see below) |
 | Last plan finished | Plan 2, the explainer and compare, 2026-08-04 (nine tasks) |
+| Last change | Whole-branch review fix wave, 2026-08-05 (nine items) |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
 second skip is a real failure.
 
+Plan 2 **has** now been exercised in a browser. That testing found the explainer
+and the compare verdict said roughly the same thing about every move; the
+2026-08-05 fix wave addressed it. [[Current State]] has the before/after table.
+
 ## Do this next
 
-**1. Manually verify the compare drawer, then open a PR for `feat/teaching-layer`.**
-Task 9 (the compare drawer) finished with the full suite, `tsc --noEmit`, and
-`npm run build` all clean, but the agent that built it had no browser-automation
-tool available and could not drive `npm run dev` by hand. Before calling Plan 2
-done:
+**1. Open a PR for `feat/teaching-layer`.** Nothing is outstanding on the
+branch: full suite, `tsc --noEmit`, and `npm run build` are all clean, and the
+browser verification that was blocking Plan 2 is done. `gh pr create` against
+`master`, following [[Workflow]].
 
-- Run `npm run dev`, open a position with 3 candidates, confirm the "Compare X
-  and Y" button appears, the drawer opens with two mini-boards and a verdict,
-  and two near-equal candidates show "practically equal."
-- Confirm `prefers-reduced-motion` suppresses the drawer's entrance animation
-  (DevTools → Rendering → emulate `prefers-reduced-motion: reduce`).
-- Then `gh pr create` against `master`, following [[Workflow]].
+One thing worth re-checking by hand first, because no test covers it: confirm
+`prefers-reduced-motion` still suppresses the compare drawer's entrance
+animation (DevTools → Rendering → emulate `prefers-reduced-motion: reduce`),
+and that a press still gives a visible signal.
 
-**2. Consider fixing the mate-verdict formatting bug before Plan 3 touches the
-same code.** `buildVerdict` in `src/explain/compare.ts` renders a decisive gap
-as `(gap / 100).toFixed(2)` pawns; a mate-vs-non-mate comparison produces a
-number like "998.00 better than" instead of naming the mate. It's cosmetic, not
-a crash, and now user-visible via the compare drawer. Full detail in
-[[Known Issues]].
-
-**3. Write Plan 3 — the lesson layer.** Do not start writing `src/content/` or
+**2. Write Plan 3 — the lesson layer.** Do not start writing `src/content/` or
 `src/lesson/` directly — see [[Workflow]]. The ordering is in [[Roadmap]]: the
 content pipeline (Zod schema, validating loader, v1 content) first, since the
 lesson runner depends on it.
+
+Two questions [[Roadmap]] says to settle while writing it, both design decisions
+rather than patches: how wide the comparison's contrast vocabulary should be
+(today two strong openings usually score identically on every feature
+`summarise` measures, so the honest verdict is "choose on feel"), and whether
+the compare drawer is really a modal — it claims `role="dialog"` with no
+`aria-modal`, focus trap, or Escape.
 
 ## Where to look for what
 

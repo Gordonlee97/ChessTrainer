@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-04
+updated: 2026-08-05
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -25,8 +25,13 @@ badges and one-line ideas on every candidate row (`src/ui/QualityBadge.tsx`,
 (`src/explain/compare.ts`); and the compare drawer itself
 (`src/ui/CompareDrawer.tsx`, `src/ui/MiniBoard.tsx`). `framer-motion` was
 removed as an unused dependency — the drawer's entrance animation is a CSS
-keyframe. See [[Current State]] for what this gets you, [[Known Issues]] for
-what's left rough, and [[Architecture]] for the new `src/explain/` layer.
+keyframe.
+
+**Browser-verified and fixed 2026-08-04/05.** Hands-on testing plus a
+whole-branch review found that the output layer said roughly the same thing
+about every move; one fix wave of nine items closed it (suite 223 → 246). See
+[[Current State]] for the before/after table, [[Known Issues]] for what was
+deliberately left, and [[Architecture]] for the `src/explain/` layer.
 
 ## Next: Plan 3 — the lesson layer
 
@@ -75,14 +80,22 @@ Small, and each has a stated reason for existing:
 - No end-to-end suite in v1 — deferred on purpose.
 - Everything in the out-of-scope list in [[Project Overview]].
 
-## Before Plan 3 starts
+## Decide before Plan 3 is written
 
-Nothing gating, unlike Plan 2. Worth a look before writing the plan:
+Nothing gating, unlike Plan 2. Two things want a decision rather than a patch:
 
-- **The mate-vs-non-mate verdict formatting bug** in `buildVerdict` (see
-  [[Known Issues]]) is now user-facing via the compare drawer. Not a blocker,
-  but cheap to fix early rather than carry it into more UI.
-- **Task 9's compare drawer was not manually verified in a browser** — the
-  agent that built it had no browser-automation tool available. Tests, build,
-  and typecheck all pass; a human should exercise it once before treating Plan
-  2 as fully done. See [[Current State]].
+- **The comparison's contrast vocabulary.** `summarise` can distinguish two
+  lines on five features, and two strong openings usually score identically on
+  all of them — so the honest verdict is "these are the same, choose on feel."
+  Widening that (pawn structure, open vs closed, which minor came out, space) is
+  what makes compare teach rather than describe. Decide the *shape* of the
+  vocabulary before adding another feature to `summarise`. Detail in
+  [[Known Issues]].
+- **Whether the compare drawer is really a modal.** It claims `role="dialog"`
+  without `aria-modal`, a focus trap, or Escape. Either implement those or make
+  it a labelled section. Cheapest while `App.tsx` is still a placeholder and the
+  layout is about to be rebuilt anyway.
+
+Also queued and small: `MiniBoard` gives screen-reader users no position
+information, and compare is hardwired to the top two candidates. Both in
+[[Known Issues]].

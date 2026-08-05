@@ -1,19 +1,20 @@
 ---
-updated: 2026-08-04
+updated: 2026-08-05
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-08-04.** Plan 1 (foundation and line explorer) and Plan 2 (the
+**As of 2026-08-05.** Plan 1 (foundation and line explorer) and Plan 2 (the
 explainer and compare) are both complete. Plan 2 landed as nine tasks on
-`feat/teaching-layer`, not yet merged.
+`feat/teaching-layer`, followed by one fix wave from a whole-branch review.
+Not yet merged.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **223 passing, 1 skipped**, 28 test files. `tsc --noEmit` clean,
+Suite: **246 passing, 1 skipped**, 29 test files. `tsc --noEmit` clean,
 `npm run build` succeeds. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 
@@ -24,9 +25,10 @@ Run `npm run dev`, open the local URL, and you can:
 | Action | Behaviour |
 |---|---|
 | Drag a piece | Legal moves land, illegal ones snap back. From/to squares stay highlighted. |
-| Read the right-hand rail | Top 3 engine moves at depth 20, each with score, eval bar, a quality badge (Best/Good/Inaccuracy/Mistake/Blunder relative to the top line), a one-line idea sentence, and the first 6 plies of its line |
+| Read the right-hand rail | Top 3 engine moves at depth 20, each with score, eval bar, a quality badge (Best/Good/Inaccuracy/Mistake/Blunder relative to the top line), the **top two** explainer sentences, and the first 6 plies of its line |
+| Watch the rail mid-search | Scores and eval bars stream; **badges and ideas are withheld until the search settles**, because comparing two lines only means something at equal depth |
 | Click a candidate | Plays it — identical result to dragging the same move |
-| Click "Compare X and Y" | Opens a drawer with two mini-boards (position after ~8 plies of each line), eval bars, pros/cons, and a verdict — "practically equal" under a ~30cp gap, otherwise a plain "X is stronger by N" |
+| Click "Compare X and Y" | Opens a drawer with two mini-boards (each captioned with the plies actually walked, at most 8), eval bars, pros/cons, and a verdict — mate distances when either line mates, "practically equal" under a 30cp gap, otherwise "X is stronger by N pawns" |
 | Click a breadcrumb chip | Jumps back to that position |
 | Play a different move from an earlier position | **Branches the tree.** The original line survives and is one click away. |
 | Reach checkmate or stalemate | The rail says so rather than spinning |
@@ -39,10 +41,26 @@ walks either.
 
 **Verified 2026-08-04:** dev server starts in ~300 ms and serves `/`,
 `/engine/stockfish.js`, `/engine/stockfish.wasm`, and the Nunito font correctly.
-Compare-drawer manual verification for Task 9 could not be completed in this
-session — no browser-automation tool was available to the agent that built it.
-The build, typecheck, and full suite passed; a human should exercise the drawer
-by hand before treating Plan 2 as fully verified. See [[Known Issues]].
+
+**The compare drawer has now been exercised in a browser (2026-08-04)**, closing
+the gap Task 9 left open. It works — and the testing found that the *output
+layer* said roughly the same thing about every move, which is the one failure
+mode this feature cannot afford. A whole-branch review turned that into a fix
+list, applied 2026-08-05:
+
+| Was | Now |
+|---|---|
+| Every sensible opening move led with "Stakes a claim in the centre" — `centerControl` counts attackers, so a developing knight outscored `developmentRule` | Occupation (a pawn on a central square) and pressure are separate rules with separate text; e4 leads with the centre, Nf3 with development |
+| One explainer sentence per candidate | Two, per spec §7 |
+| Quality badges flickered through "Mistake"/"Blunder" mid-search | Badges and ideas are withheld while `status === 'analyzing'` |
+| "Practically equal — the real difference is character… e4 develops 1 more piece; d4 develops 1 more piece" | When both lines lead with the same pro, the verdict says so instead of asserting a difference that isn't there |
+| A mate comparison rendered "about 998.00 better than" | Mate is handled before the centipawn logic and names the distance; the centipawn gap now says "pawns" |
+| The drawer captioned a board "after 26 plies" when it walked 8 | `LineSummary.plies` carries the real count; score and position are two separate claims |
+| Mini-boards drew both armies from the black glyph set, separated by CSS `color` | Colour-keyed glyphs — survives `forced-colors` |
+| The eval cache keyed on the whole FEN, so the Queen's Gambit transposition missed | Keyed on placement + side + castling + en passant |
+| A search finishing just after navigation was discarded | Written to the FEN cache first, then the render is guarded |
+
+What that fix wave deliberately did **not** do is in [[Known Issues]].
 
 ## What is scaffolding, not feature
 
@@ -80,6 +98,9 @@ Everything below is Plan 3. See [[Roadmap]] for ordering.
 
 ## Recent history
 
+- **2026-08-05** — One fix wave from the whole-branch review of Plan 2: nine
+  items across `src/explain/`, `src/ui/`, and `src/engine/evalCache.ts`. The
+  table above says what changed. Suite 223 → 246.
 - **2026-08-04** — Plan 2 (explainer and compare) finished: nine tasks, from
   pawn-structure feature extraction through the compare drawer. `framer-motion`
   removed as an unused dependency (Task 9); the drawer's animation is a CSS

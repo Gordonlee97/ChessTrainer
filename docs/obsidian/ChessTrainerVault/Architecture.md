@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-04
+updated: 2026-08-05
 status: current
 tags: [chesstrainer, architecture]
 ---
@@ -28,7 +28,7 @@ with no rendering involved.
 | Directory | Responsibility |
 |---|---|
 | `src/chess/` | Helpers over chess.js: position feature extraction (`features.ts`), pawn structure (`pawnStructure.ts`), fork/pin detection (`tactics.ts`), and drop resolution (`resolveDrop.ts`) |
-| `src/engine/` | UCI protocol parsing, the Stockfish Worker transport, the `Engine` class that serializes searches, and a FEN-keyed eval cache (`evalCache.ts`) shared across transposed positions |
+| `src/engine/` | UCI protocol parsing, the Stockfish Worker transport, the `Engine` class that serializes searches, and a position-keyed eval cache (`evalCache.ts`) shared across transposed positions. Its key is the first four FEN fields — placement, side to move, castling, en passant — deliberately excluding the move clocks, which are how a position was reached rather than what it is |
 | `src/explain/` | Pure functions over `PvLine`s and position features, no React: move-quality banding (`quality.ts`), the rule-based explainer with a FEN fixture table (`rules.ts`, `explain.ts`), and line comparison with a calibrated verdict (`compare.ts`) |
 | `src/tree/` | The immutable game tree (`tree.ts`) and its Zustand store (`store.ts`) |
 | `src/sound/` | Howler wrapper: preload, pooling, mute, graceful degradation |
