@@ -53,8 +53,8 @@ export const themeDevelopmentAndTempo = parseLesson({
           note: 'The queen moves a second time, still eyeing f7 together with the bishop — two moves spent doing a job one minor-piece move usually does.',
         },
         {
-          san: 'Qe7',
-          note: 'f7 is attacked twice now, by the bishop and by the queen along the f-file, and your king was defending it alone. Qe7 adds a second defender and finishes developing your queen in the same move.',
+          san: 'Nf6',
+          note: 'Three jobs in one move: it develops a piece, it blocks the queen\'s own path to f7 along the f-file, and it attacks the undefended e4 pawn. White\'s queen has now moved twice and achieved none of that.',
         },
       ],
     },
