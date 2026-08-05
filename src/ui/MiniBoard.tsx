@@ -1,7 +1,15 @@
-import { Chess } from 'chess.js';
+import { Chess, type Color, type PieceSymbol } from 'chess.js';
 
-const GLYPHS: Record<string, string> = {
-  p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚',
+/**
+ * Colour-keyed glyphs. Drawing both armies from the black set and separating
+ * them with CSS `color` would signal side by colour alone — and under Windows
+ * High Contrast (`forced-colors`) the OS overrides both `color` and
+ * `textShadow`, leaving thirty-two identical pieces. The fill and the shadow
+ * below stay as legibility aids on top of the glyph, not as the distinction.
+ */
+const GLYPHS: Record<Color, Record<PieceSymbol, string>> = {
+  w: { p: '♙', n: '♘', b: '♗', r: '♖', q: '♕', k: '♔' },
+  b: { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' },
 };
 
 export function MiniBoard({ fen, label }: { fen: string; label: string }) {
@@ -37,7 +45,7 @@ export function MiniBoard({ fen, label }: { fen: string; label: string }) {
                 cell?.color === 'w' ? '0 0 2px rgba(0,0,0,.8)' : '0 0 2px rgba(255,255,255,.8)',
             }}
           >
-            {cell ? GLYPHS[cell.type] : ''}
+            {cell ? GLYPHS[cell.color][cell.type] : ''}
           </div>
         )),
       )}
