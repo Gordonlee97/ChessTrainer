@@ -2,6 +2,7 @@ import { Chess } from 'chess.js';
 import { extractFeatures } from '../chess/features';
 import type { PvLine } from '../engine/types';
 import { centipawnLoss } from './quality';
+import { ALL_RULES } from './rules';
 import type { MoveContext, Reason, Rule } from './types';
 
 /**
@@ -71,8 +72,4 @@ export function describeMove(ctx: MoveContext, max = 2, rules: Rule[] = ALL_RULE
     .join(' ');
 }
 
-/**
- * Placeholder until Task 6 supplies the real rule set. Kept as a named export
- * so both default parameters above have something to point at.
- */
-export const ALL_RULES: Rule[] = [];
+export { ALL_RULES };
