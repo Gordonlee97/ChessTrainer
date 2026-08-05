@@ -64,4 +64,28 @@ describe('compareLines', () => {
     const long = compareLines(START, italian, scotch, 5);
     expect(short.a.endFen).not.toBe(long.a.endFen);
   });
+
+  it('names the line with the lower White-relative score as better when Black is to move', () => {
+    // After 1.e4, Black to move. Scores are White-relative, so -300 (good for
+    // Black) is the stronger line for the mover here, even though +50 is the
+    // larger number.
+    const AFTER_E4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
+    const strongForBlack: PvLine = {
+      san: 'e5',
+      cp: -300,
+      mate: null,
+      pv: ['e5', 'Nf3', 'Nc6', 'Bb5'],
+    };
+    const weakForBlack: PvLine = {
+      san: 'c5',
+      cp: 50,
+      mate: null,
+      pv: ['c5', 'Nf3', 'd6', 'd4'],
+    };
+
+    const result = compareLines(AFTER_E4, strongForBlack, weakForBlack);
+    expect(result.practicallyEqual).toBe(false);
+    expect(result.verdict).toContain('e5');
+    expect(result.verdict).not.toContain('c5 is clearly stronger');
+  });
 });

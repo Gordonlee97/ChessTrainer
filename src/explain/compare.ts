@@ -94,7 +94,11 @@ function buildVerdict(a: LineSummary, b: LineSummary, mover: Color): {
     };
   }
 
-  // Scores are White-relative, so the better line for Black is the lower one.
+  // scoreCp is always White-relative (positive favors White), regardless of
+  // whose turn it is. So "better" flips with the mover: White wants the
+  // higher score, Black wants the lower one. Collapsing this to a plain
+  // `a.scoreCp > b.scoreCp` would silently recommend Black's worse line
+  // whenever it is Black to move.
   const aIsBetter = mover === 'w' ? a.scoreCp > b.scoreCp : a.scoreCp < b.scoreCp;
   const better = aIsBetter ? a : b;
   const worse = aIsBetter ? b : a;
