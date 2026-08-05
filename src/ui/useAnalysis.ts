@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { Engine } from '../engine/engine';
+import { sharedEvalCache } from '../engine/evalCache';
 import type { EvalResult, PvLine } from '../engine/types';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 import { getSharedEngine, hasSharedEngineFailed, restartSharedEngine } from './sharedEngine';
@@ -75,7 +76,13 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
     // with { depth: 0, lines: [] } — below TARGET_DEPTH — so that re-trigger
     // would immediately kick off another search, cache another depth-0
     // result, and loop forever between React and the worker (Fix 1).
-    const cached = useTreeStore.getState().tree.nodes[node.id]?.eval ?? null;
+    const nodeCached = useTreeStore.getState().tree.nodes[node.id]?.eval ?? null;
+
+    // A transposed position may already have been analysed under a different
+    // node id, so consult the FEN cache as well as this node's own eval.
+    const fenCached = sharedEvalCache.get(node.fen);
+    const cached =
+      fenCached && (!nodeCached || fenCached.depth > nodeCached.depth) ? fenCached : nodeCached;
 
     // Show any cached result immediately so navigating back is instant.
     setResult(cached);
@@ -108,6 +115,7 @@ export function useAnalysis(): { result: EvalResult | null; status: AnalysisStat
       .then((final) => {
         if (useTreeStore.getState().tree.selectedId !== requestedFor) return;
         cacheEval(requestedFor, final);
+        sharedEvalCache.set(node.fen, final);
         setResult(final);
         setStatus('idle');
       })

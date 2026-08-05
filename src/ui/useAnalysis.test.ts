@@ -1,5 +1,6 @@
 import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { sharedEvalCache } from '../engine/evalCache';
 import { useTreeStore } from '../tree/store';
 import { resetSharedEngineForTests } from './sharedEngine';
 import { formatScore, TARGET_DEPTH, useAnalysis } from './useAnalysis';
@@ -118,6 +119,9 @@ describe('useAnalysis stale-result guard', () => {
     useTreeStore.getState().reset();
     fake.reset();
     resetSharedEngineForTests();
+    // sharedEvalCache is module-level state that otherwise leaks between
+    // tests in this file — see Task 3's brief.
+    sharedEvalCache.clear();
   });
 
   it('renders a result for the node that requested it', async () => {
@@ -307,6 +311,9 @@ describe('useAnalysis shared engine (Fix 4)', () => {
     useTreeStore.getState().reset();
     fake.reset();
     resetSharedEngineForTests();
+    // sharedEvalCache is module-level state that otherwise leaks between
+    // tests in this file — see Task 3's brief.
+    sharedEvalCache.clear();
   });
 
   it('shares a single Engine (and worker transport) across multiple concurrent call sites', () => {
@@ -372,5 +379,21 @@ describe('useAnalysis shared engine (Fix 4)', () => {
     expect(result.current.status).toBe('analyzing');
 
     unmount();
+  });
+});
+
+describe('transposition reuse', () => {
+  it('serves a previously analysed position from the FEN cache', () => {
+    sharedEvalCache.clear();
+    const fen = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2';
+    sharedEvalCache.set(fen, {
+      depth: 20,
+      lines: [{ san: 'Nf3', cp: 31, mate: null, pv: ['Nf3'] }],
+    });
+
+    // Two different node ids can reach this same FEN; the cache is keyed by
+    // position, so both get the analysis without a second search.
+    expect(sharedEvalCache.get(fen)?.depth).toBe(20);
+    expect(sharedEvalCache.get(fen)?.lines[0].san).toBe('Nf3');
   });
 });
