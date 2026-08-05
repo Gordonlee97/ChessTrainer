@@ -1,4 +1,5 @@
-import type { Color } from 'chess.js';
+import { Chess, type Color } from 'chess.js';
+import { CENTER_SQUARES } from '../chess/features';
 import { findFork, findPin } from '../chess/tactics';
 import type { MoveContext, Reason, Rule } from './types';
 
@@ -12,15 +13,50 @@ function materialEdge(ctx: MoveContext, when: 'featuresBefore' | 'featuresAfter'
   return f[ctx.mover] - f[other(ctx.mover)];
 }
 
-const centerRule: Rule = (ctx) => {
-  const gained =
-    ctx.featuresAfter.centerControl[ctx.mover] - ctx.featuresBefore.centerControl[ctx.mover];
-  if (gained <= 0) return null;
+/** True when this move lands one of the mover's pawns on d4/e4/d5/e5. */
+function occupiesCenter(ctx: MoveContext): boolean {
+  if (!CENTER_SQUARES.includes(ctx.to)) return false;
+  return new Chess(ctx.before).get(ctx.from)?.type === 'p';
+}
+
+/**
+ * Occupying the centre and pressuring it are two different claims, and they
+ * used to share one rule keyed on `centerControl` — which counts *attackers*
+ * on the four central squares, not occupation. A developing knight therefore
+ * scored 2 (weight 50) and outranked development (45), so from the start
+ * position e4, d4, Nf3, Nc3, c4 and e3 all led with the same sentence. The
+ * explainer's whole job is that they don't.
+ *
+ * Occupation is pawn-only on purpose: a pawn on a central square holds it
+ * against everything, while a piece there is a different (and often
+ * temporary) idea the rule set does not yet model.
+ */
+const centerOccupationRule: Rule = (ctx) => {
+  if (!occupiesCenter(ctx)) return null;
   return {
     tag: 'center',
     polarity: 'good',
-    weight: 40 + gained * 5,
-    text: 'Stakes a claim in the centre, the squares both sides need.',
+    weight: 50,
+    text: 'Puts a pawn in the centre, taking space both sides want.',
+  };
+};
+
+/**
+ * The lesser claim, and deliberately capped below `developmentRule`'s 45 — a
+ * knight coming out is a developing move first and a central one second.
+ */
+const centerPressureRule: Rule = (ctx) => {
+  const gained =
+    ctx.featuresAfter.centerControl[ctx.mover] - ctx.featuresBefore.centerControl[ctx.mover];
+  if (gained <= 0) return null;
+  // A move that occupies the centre already says so; adding "and also
+  // pressures it" is the same sentence twice.
+  if (occupiesCenter(ctx)) return null;
+  return {
+    tag: 'center-pressure',
+    polarity: 'good',
+    weight: Math.min(42, 28 + gained * 4),
+    text: 'Adds pressure to the centre without occupying it.',
   };
 };
 
@@ -150,7 +186,8 @@ export const ALL_RULES: Rule[] = [
   tempoRule,
   kingSafetyRule,
   pawnStructureRule,
+  centerOccupationRule,
   developmentRule,
-  centerRule,
+  centerPressureRule,
   mobilityRule,
 ];

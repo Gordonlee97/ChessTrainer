@@ -32,6 +32,36 @@ describe('rule set', () => {
     expect(tagsFor(START, 'Nf3')).toContain('development');
   });
 
+  it('separates occupying a central square from merely pressuring one', () => {
+    // 1.e4 puts a pawn on a central square. 1.Nf3 only attacks two of them
+    // — a real but lesser claim, and the one that used to make every
+    // sensible first move read as "stakes a claim in the centre".
+    expect(tagsFor(START, 'e4')).toContain('center');
+    expect(tagsFor(START, 'e4')).not.toContain('center-pressure');
+
+    expect(tagsFor(START, 'Nf3')).toContain('center-pressure');
+    expect(tagsFor(START, 'Nf3')).not.toContain('center');
+  });
+
+  it('gives e4 and Nf3 different top-ranked reasons', () => {
+    // The defect this rule set was shipped with: centerControl counts
+    // attackers, so a developing knight scored 2 (weight 50) and outranked
+    // development (45). Measured from the start position, e4, d4, Nf3, Nc3,
+    // c4 and e3 all led with the same sentence.
+    const top = (san: string) => explainMove(buildContext(START, san, null, null), ALL_RULES)[0];
+
+    expect(top('e4').tag).toBe('center');
+    expect(top('Nf3').tag).toBe('development');
+    expect(top('e4').text).not.toBe(top('Nf3').text);
+  });
+
+  it('leads with development for every knight move out of the start position', () => {
+    for (const san of ['Nf3', 'Nc3', 'Nh3', 'Na3']) {
+      const top = explainMove(buildContext(START, san, null, null), ALL_RULES)[0];
+      expect(top?.tag, `${san} should lead with development`).toBe('development');
+    }
+  });
+
   it('credits castling as king safety', () => {
     expect(tagsFor(CAN_CASTLE, 'O-O')).toContain('king-safety');
   });

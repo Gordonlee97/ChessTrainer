@@ -2,7 +2,10 @@ import type { Color, Square } from 'chess.js';
 import type { PositionFeatures } from '../chess/features';
 
 export type ReasonTag =
+  /** A pawn actually standing on d4/e4/d5/e5. */
   | 'center'
+  /** Attacking a central square without occupying one — a lesser claim. */
+  | 'center-pressure'
   | 'development'
   | 'king-safety'
   | 'material'

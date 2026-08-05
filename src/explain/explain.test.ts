@@ -46,6 +46,20 @@ describe('explainMove', () => {
     ]);
   });
 
+  it('breaks a weight tie by rule-set order rather than reshuffling', () => {
+    // With the centre rule split, ties are now the thing that decides which
+    // sentence a player reads, so the tie-break has to be defined. Array
+    // sort has been required to be stable since ES2019, which means equal
+    // weights keep the order the rules were listed in — and that order is
+    // ALL_RULES, deliberately most-decisive-first.
+    const forwards: Rule[] = [() => reason(50, 'first'), () => reason(50, 'second')];
+    const backwards: Rule[] = [() => reason(50, 'second'), () => reason(50, 'first')];
+    const ctx = buildContext(START, 'e4', null, null);
+
+    expect(explainMove(ctx, forwards).map((r) => r.text)).toEqual(['first', 'second']);
+    expect(explainMove(ctx, backwards).map((r) => r.text)).toEqual(['second', 'first']);
+  });
+
   it('flattens rules that return several reasons', () => {
     const rules: Rule[] = [() => [reason(10, 'a'), reason(20, 'b')]];
     expect(explainMove(buildContext(START, 'e4', null, null), rules)).toHaveLength(2);

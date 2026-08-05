@@ -200,18 +200,32 @@ describe('CandidateRail', () => {
     expect(status).toHaveTextContent(/no candidate moves available/i);
   });
 
-  it('shows a one-line idea under each candidate', () => {
+  it('gives two candidates genuinely different ideas, not the same sentence twice', () => {
+    // This used to assert only /centre|center/i on one row, which passed no
+    // matter what — the centre rule fired on every sensible opening move, so
+    // e4, d4, Nf3, Nc3, c4 and e3 all read "stakes a claim in the centre".
+    // The rail's whole purpose is that two candidates are described
+    // differently, so that is what is asserted.
     analysis.value = {
       status: 'idle',
       result: {
         depth: 20,
-        lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4', 'e5'] }],
+        lines: [
+          { san: 'e4', cp: 31, mate: null, pv: ['e4', 'e5'] },
+          { san: 'Nf3', cp: 28, mate: null, pv: ['Nf3', 'd5'] },
+        ],
       },
     } as never;
 
     render(<CandidateRail />);
-    // The explainer describes 1.e4 as a central claim.
-    expect(screen.getByRole('button', { name: /e4/ })).toHaveTextContent(/centre|center/i);
+    const e4Row = screen.getByRole('button', { name: /^e4/ });
+    const nf3Row = screen.getByRole('button', { name: /^Nf3/ });
+
+    // e4 puts a pawn in the centre; Nf3 develops and only pressures it.
+    expect(e4Row).toHaveTextContent(/pawn in the centre/i);
+    expect(nf3Row).not.toHaveTextContent(/pawn in the centre/i);
+    expect(nf3Row).toHaveTextContent(/brings a new piece into the game/i);
+    expect(e4Row).not.toHaveTextContent(/brings a new piece into the game/i);
   });
 
   it('shows the top two reasons under a candidate, not just the first', () => {
