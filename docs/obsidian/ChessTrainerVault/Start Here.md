@@ -14,12 +14,12 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| Branch | `feat/foundation-and-line-explorer` |
-| Base | `master` |
-| PR | [#1](https://github.com/Gordonlee97/ChessTrainer/pull/1) — **open, unmerged** |
+| Branch | `feat/teaching-layer` |
+| Base | `master` (PR #1 merged 2026-08-04) |
+| PR | Not yet opened for this branch |
 | Working tree | Clean |
-| Suite | 138 passing, 1 skipped (expected — see below) |
-| Last plan finished | Plan 1, foundation and line explorer, 2026-08-03 |
+| Suite | 223 passing, 1 skipped (expected — see below) |
+| Last plan finished | Plan 2, the explainer and compare, 2026-08-04 (nine tasks) |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
@@ -27,31 +27,30 @@ second skip is a real failure.
 
 ## Do this next
 
-**1. Merge PR #1 first.** Plan 2 branches off `master`, not off the Plan 1
-branch. Stacking would put 43 unreviewed commits underneath new work.
+**1. Manually verify the compare drawer, then open a PR for `feat/teaching-layer`.**
+Task 9 (the compare drawer) finished with the full suite, `tsc --noEmit`, and
+`npm run build` all clean, but the agent that built it had no browser-automation
+tool available and could not drive `npm run dev` by hand. Before calling Plan 2
+done:
 
-```bash
-gh pr merge 1 --merge          # --merge, not --squash: the commit-by-commit
-                               # trail of the engine's six revisions is
-                               # genuinely useful history
-git checkout master && git pull
-```
+- Run `npm run dev`, open a position with 3 candidates, confirm the "Compare X
+  and Y" button appears, the drawer opens with two mini-boards and a verdict,
+  and two near-equal candidates show "practically equal."
+- Confirm `prefers-reduced-motion` suppresses the drawer's entrance animation
+  (DevTools → Rendering → emulate `prefers-reduced-motion: reduce`).
+- Then `gh pr create` against `master`, following [[Workflow]].
 
-**2. Settle the two blockers in [[Known Issues]] before writing Plan 2.** Both
-change what the plan should say:
+**2. Consider fixing the mate-verdict formatting bug before Plan 3 touches the
+same code.** `buildVerdict` in `src/explain/compare.ts` renders a decisive gap
+as `(gap / 100).toFixed(2)` pawns; a mate-vs-non-mate comparison produces a
+number like "998.00 better than" instead of naming the mate. It's cosmetic, not
+a crash, and now user-visible via the compare drawer. Full detail in
+[[Known Issues]].
 
-- **Node identity and transpositions.** Ids are SAN paths, so the same position
-  reached by a different move order duplicates. Lesson content and "My Lines"
-  both key off node identity. Decide whether to widen it or to design Plan 2
-  around the limitation — but decide before writing the plan, not during it.
-- **The spec says React 18; the build is React 19.** Amend
-  `docs/superpowers/specs/2026-08-01-chesstrainer-design.md` §3. Specs are what
-  plans get written against, so this drift propagates if left.
-
-**3. Write Plan 2.** Do not start writing `src/explain/` directly — see
-[[Workflow]]. The ordering and the fixed constraints are in [[Roadmap]]; the
-first item is pawn-structure feature extraction, because the explainer depends
-on it.
+**3. Write Plan 3 — the lesson layer.** Do not start writing `src/content/` or
+`src/lesson/` directly — see [[Workflow]]. The ordering is in [[Roadmap]]: the
+content pipeline (Zod schema, validating loader, v1 content) first, since the
+lesson runner depends on it.
 
 ## Where to look for what
 

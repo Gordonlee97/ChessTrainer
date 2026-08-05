@@ -52,13 +52,24 @@ there is no defensive bound.
 Silently no-ops on an unknown node, while `insertMove` and `select` throw. This
 was plan-specified, but the inconsistency is a trap.
 
+### `buildVerdict` mis-formats a mate-vs-non-mate comparison
+
+**Where:** `src/explain/compare.ts` — `buildVerdict`
+The decisive-gap branch renders `(gap / 100).toFixed(2)` pawns. `toCentipawns`
+scores mate lines near ±100000 (`MATE_SCORE` minus distance), so comparing a
+mate line against a non-mate line produces a gap in the hundreds of thousands —
+rendered as something like "M4 is clearly stronger here — about 998.00 better
+than Nc3." The number is nonsensical; nothing else about the verdict breaks.
+
+Found during Task 8 (`compareLines`), deferred as out of scope for that task's
+brief. Task 9 (the compare drawer, `src/ui/CompareDrawer.tsx`) renders
+`comparison.verdict` directly, so this is now user-facing rather than only
+reachable in tests — worth fixing before Plan 3, not urgently. A fix needs a
+branch in `buildVerdict` for "either side has `mate !== null`" that names the
+mate distance instead of formatting the raw gap.
+
 ## Dead code and cleanup
 
-- **`framer-motion` is installed but imported nowhere.** Found 2026-08-04. The
-  spec listed it for "springs and drawer transitions", but Plan 1 delivered all
-  motion in CSS. Plan 2 must either use it for the compare drawer or remove the
-  dependency — an unused runtime dependency that ships in the bundle is worse
-  than either.
 - **`Engine.stop()` has no callers** and does no bookkeeping.
   `src/engine/engine.ts`
 - **`tsconfig.json` includes `types: ["node"]`**, which is unnecessary —

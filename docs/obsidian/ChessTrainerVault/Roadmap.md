@@ -14,45 +14,26 @@ engine wrapper, the sound layer, and the theme. See [[Current State]] for what
 that actually gets you. **Merged to `master` 2026-08-04 as PR #1** (merge commit,
 not squash — the engine's revision-by-revision history is worth keeping).
 
-## Next: Plan 2 — the teaching layer
+**Plan 2 — The explainer and compare.** Nine tasks, complete 2026-08-04 on
+`feat/teaching-layer` (not yet merged). Pawn-structure features and fork/pin
+detection (`src/chess/pawnStructure.ts`, `src/chess/tactics.ts`); a FEN-keyed
+eval cache so transposed positions are analysed once (`src/engine/evalCache.ts`);
+move-quality banding (`src/explain/quality.ts`); the rule-based explainer with a
+FEN fixture table (`src/explain/rules.ts`, `src/explain/explain.ts`); quality
+badges and one-line ideas on every candidate row (`src/ui/QualityBadge.tsx`,
+`CandidateRail.tsx`); line comparison with a calibrated verdict
+(`src/explain/compare.ts`); and the compare drawer itself
+(`src/ui/CompareDrawer.tsx`, `src/ui/MiniBoard.tsx`). `framer-motion` was
+removed as an unused dependency — the drawer's entrance animation is a CSS
+keyframe. See [[Current State]] for what this gets you, [[Known Issues]] for
+what's left rough, and [[Architecture]] for the new `src/explain/` layer.
 
-Not yet written as a plan document. This is the ordering the design spec implies,
-with the highest-risk item first.
+## Next: Plan 3 — the lesson layer
 
-### 1. The rule-based explainer — `src/explain/`
+Not yet written as a plan document. This is the ordering the design spec
+implies.
 
-The single highest-value and highest-risk piece of remaining work, and the reason
-the core was kept React-free: it is testable against a table of FEN fixtures, and
-that is where the TDD effort belongs.
-
-Turns a before/after feature pair plus an eval delta into ordered `Reason[]`,
-tagged `center | development | king-safety | material | fork | pin | hanging |
-tempo | pawn-structure | mobility | space`. The top two or three by weight render
-as prose.
-
-Depends on **pawn-structure features**, which `extractFeatures` does not yet
-have. Do that first.
-
-Move-quality banding is fixed by the spec:
-
-| Centipawn loss vs best | Band |
-|---|---|
-| ≤ 20 | Best / excellent |
-| ≤ 50 | Good |
-| ≤ 100 | Inaccuracy |
-| ≤ 250 | Mistake |
-| > 250 | Blunder |
-
-### 2. The compare drawer
-
-Walk two sibling PVs out ~8 plies, extract features at both endpoints, contrast
-them. Two mini-boards, eval bars, pros and cons, and a verdict line.
-
-The verdict is deliberately calibrated: **under ~0.3 difference it must say
-"practically equal — the real difference is character"** and lead with the
-structural contrast. This is a teaching decision, not a display detail.
-
-### 3. Content pipeline — `src/content/`
+### 1. Content pipeline — `src/content/`
 
 Zod schema plus a validating loader. A test replays every authored `san` through
 chess.js, so a typo fails the suite instead of blanking the board at runtime.
@@ -60,7 +41,7 @@ chess.js, so a typo fails the suite instead of blanking the board at runtime.
 Then the v1 content itself: 3 openings and 4 theme lessons, listed in
 [[Project Overview]].
 
-### 4. Lesson runner — `src/lesson/`
+### 2. Lesson runner — `src/lesson/`
 
 Derives the current step from the tree selection; grades checkpoints; serves
 three hint tiers. Behaviour the spec pins down:
@@ -70,7 +51,7 @@ three hint tiers. Behaviour the spec pins down:
 - Going off-script is **not an error state** — a "return to lesson" pill waits in
   the rail until taken.
 
-### 5. Progress persistence — `src/progress/`
+### 3. Progress persistence — `src/progress/`
 
 Versioned localStorage: lesson completions, checkpoint accuracy, saved lines.
 Two schema decisions already made and worth not re-litigating:
@@ -80,7 +61,7 @@ Two schema decisions already made and worth not re-litigating:
 - Saved lines are stored as **PGN**, not node paths — portable, replayable, and
   immune to changes in the tree's addressing scheme.
 
-## Also queued for Plan 2
+## Also queued for Plan 3
 
 Small, and each has a stated reason for existing:
 
@@ -94,16 +75,14 @@ Small, and each has a stated reason for existing:
 - No end-to-end suite in v1 — deferred on purpose.
 - Everything in the out-of-scope list in [[Project Overview]].
 
-## Before Plan 2 starts
+## Before Plan 3 starts
 
-**Settled 2026-08-04.** Both gating items are closed:
+Nothing gating, unlike Plan 2. Worth a look before writing the plan:
 
-- **Transpositions** — the tree stays path-addressed; Plan 2 dedupes
-  *evaluations* by FEN instead of unifying nodes. See
-  [[Decisions/Transposition Identity]]. This adds a task to Plan 2: a FEN-keyed
-  eval cache with its own bound, read on node selection rather than only written
-  after a search.
-- **React 18 in the spec** — amended to React 19.
-
-One item found while checking: **`framer-motion` is installed and imported
-nowhere.** Plan 2 either uses it for the compare drawer or removes it.
+- **The mate-vs-non-mate verdict formatting bug** in `buildVerdict` (see
+  [[Known Issues]]) is now user-facing via the compare drawer. Not a blocker,
+  but cheap to fix early rather than carry it into more UI.
+- **Task 9's compare drawer was not manually verified in a browser** — the
+  agent that built it had no browser-automation tool available. Tests, build,
+  and typecheck all pass; a human should exercise it once before treating Plan
+  2 as fully done. See [[Current State]].
