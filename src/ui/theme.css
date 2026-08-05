@@ -98,3 +98,12 @@ body {
     filter: brightness(0.92);
   }
 }
+
+.quality-badge {
+  border: 2px solid currentColor;
+}
+.quality-badge[data-band='best'] { color: #1d6b39; background: #e9fbef; }
+.quality-badge[data-band='good'] { color: #2f6b52; background: #eef7f2; }
+.quality-badge[data-band='inaccuracy'] { color: #8a6d0b; background: #fdf6e3; }
+.quality-badge[data-band='mistake'] { color: #a2521c; background: #fdf0e6; }
+.quality-badge[data-band='blunder'] { color: #a12126; background: #fdecec; }

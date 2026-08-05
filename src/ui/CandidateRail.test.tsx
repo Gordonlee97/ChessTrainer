@@ -195,4 +195,47 @@ describe('CandidateRail', () => {
     expect(status).not.toHaveTextContent(/thinking/i);
     expect(status).toHaveTextContent(/no candidate moves available/i);
   });
+
+  it('shows a one-line idea under each candidate', () => {
+    analysis.value = {
+      status: 'idle',
+      result: {
+        depth: 20,
+        lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4', 'e5'] }],
+      },
+    } as never;
+
+    render(<CandidateRail />);
+    // The explainer describes 1.e4 as a central claim.
+    expect(screen.getByRole('button', { name: /e4/ })).toHaveTextContent(/centre|center/i);
+  });
+
+  it('shows a quality badge relative to the best move', () => {
+    analysis.value = {
+      status: 'idle',
+      result: {
+        depth: 20,
+        lines: [
+          { san: 'e4', cp: 30, mate: null, pv: ['e4'] },
+          { san: 'a3', cp: -80, mate: null, pv: ['a3'] },
+        ],
+      },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.getByText('Best move')).toBeInTheDocument();
+    // 110cp worse than the best move lands in the "mistake" band.
+    expect(screen.getByText('Mistake')).toBeInTheDocument();
+  });
+
+  it('still renders the candidate when the explainer cannot describe it', () => {
+    // A move the rules have nothing to say about must not blank the row.
+    analysis.value = {
+      status: 'idle',
+      result: { depth: 20, lines: [{ san: 'a3', cp: 5, mate: null, pv: ['a3'] }] },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.getByRole('button', { name: /a3/ })).toBeInTheDocument();
+  });
 });

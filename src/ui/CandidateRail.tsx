@@ -1,10 +1,14 @@
 import { Chess } from 'chess.js';
 import type { CSSProperties } from 'react';
+import { useMemo } from 'react';
 import { resolveSan } from '../chess/resolveDrop';
+import { buildContext, describeMove } from '../explain/explain';
+import { classifyMove } from '../explain/quality';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 import { Button } from './Button';
 import { EvalBar } from './EvalBar';
+import { QualityBadge } from './QualityBadge';
 import { formatScore, useAnalysis } from './useAnalysis';
 
 /**
@@ -25,6 +29,28 @@ export function CandidateRail() {
   const { result, status, retry } = useAnalysis();
   const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
+
+  // Building a context runs chess.js twice per candidate, so this is
+  // memoised on the position and the analysis result rather than recomputed
+  // on every render. Hooks must run unconditionally, so this sits above the
+  // early returns below even though it's unused in the unavailable/thinking
+  // states.
+  const annotations = useMemo(() => {
+    if (!result || result.lines.length === 0) return [];
+    const best = result.lines[0];
+    return result.lines.map((line) => {
+      try {
+        const ctx = buildContext(node.fen, line.san, best, line);
+        return {
+          idea: describeMove(ctx, 1),
+          quality: classifyMove(best, line, ctx.mover),
+        };
+      } catch {
+        // A PV whose first move is not legal here must not take the rail down.
+        return null;
+      }
+    });
+  }, [node.fen, result]);
 
   function playCandidate(san: string) {
     // Shares resolveDrop's classification (via resolveSan) so a candidate
@@ -125,14 +151,27 @@ export function CandidateRail() {
             } as CSSProperties
           }
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center' }}>
             <span style={{ fontFamily: 'ui-monospace, Consolas, monospace' }}>{line.san}</span>
-            <span>{formatScore(line)}</span>
+            <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              {annotations[index] && (
+                <QualityBadge
+                  band={annotations[index]!.quality.band}
+                  label={annotations[index]!.quality.label}
+                />
+              )}
+              <span>{formatScore(line)}</span>
+            </span>
           </div>
           <div style={{ marginTop: 6 }}>
             <EvalBar cp={line.cp} mate={line.mate} />
           </div>
-          <div style={{ marginTop: 6, fontWeight: 600, fontSize: 12, color: 'var(--ink-soft)' }}>
+          {annotations[index]?.idea ? (
+            <div style={{ marginTop: 6, fontWeight: 600, fontSize: 12, color: 'var(--ink)' }}>
+              {annotations[index]!.idea}
+            </div>
+          ) : null}
+          <div style={{ marginTop: 4, fontWeight: 600, fontSize: 12, color: 'var(--ink-soft)' }}>
             {line.pv.slice(0, 6).join(' ')}
           </div>
         </Button>
