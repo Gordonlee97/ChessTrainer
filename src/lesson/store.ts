@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { ALL_LESSONS, lessonById } from '../content/lessons/index';
-import type { Lesson, Segment } from '../content/schema';
+import type { Checkpoint, Lesson, Segment } from '../content/schema';
 import { useTreeStore } from '../tree/store';
 import { pathTo } from '../tree/tree';
 import { gradeMove, type Grade } from './grade';
@@ -9,35 +9,79 @@ import { deriveLessonState, type LessonState } from './lessonState';
 interface LessonStore {
   lessonId: string | null;
   segmentIndex: number;
-  hintsShown: number;
+  /**
+   * How many hints have been revealed, keyed by the checkpoint's authored id.
+   * Per checkpoint rather than per lesson: a lesson-wide counter carried the
+   * three hints taken at one checkpoint straight into the next, printing the
+   * tier that names the answer before the player had seen the question. The
+   * per-checkpoint counts are also what a later plan needs to tell
+   * solved-cold from solved-after-three-hints.
+   */
+  hintsShown: Record<string, number>;
   startLesson: (id: string) => void;
   stopLesson: () => void;
-  revealHint: () => void;
+  nextSegment: () => void;
+  revealHint: (checkpointId: string) => void;
 }
 
-export const useLessonStore = create<LessonStore>((set) => ({
+/**
+ * Points the tree at a segment's opening position. Seeding the tree rather
+ * than storing a position is what lets the runner derive its state from the
+ * tree; both `startLesson` and `nextSegment` go through here so a segment
+ * reached by advancing opens exactly the way segment 0 does.
+ */
+function seedTree(segment: Segment): void {
+  useTreeStore.getState().reset(segment.startFen ?? undefined);
+}
+
+export const useLessonStore = create<LessonStore>((set, get) => ({
   lessonId: null,
   segmentIndex: 0,
-  hintsShown: 0,
+  hintsShown: {},
 
   startLesson: (id) => {
     const lesson = lessonById(id);
     if (!lesson) return;
-    // Seeding the tree from the lesson's own opening position is what lets the
-    // runner derive its state from the tree rather than tracking a second one.
-    useTreeStore.getState().reset(lesson.segments[0].startFen ?? undefined);
-    set({ lessonId: id, segmentIndex: 0, hintsShown: 0 });
+    seedTree(lesson.segments[0]);
+    set({ lessonId: id, segmentIndex: 0, hintsShown: {} });
   },
 
-  stopLesson: () => set({ lessonId: null, segmentIndex: 0, hintsShown: 0 }),
+  stopLesson: () => set({ lessonId: null, segmentIndex: 0, hintsShown: {} }),
 
-  revealHint: () => set((prior) => ({ hintsShown: prior.hintsShown + 1 })),
+  nextSegment: () => {
+    const { lessonId, segmentIndex } = get();
+    const lesson = lessonId ? lessonById(lessonId) : undefined;
+    const next = lesson?.segments[segmentIndex + 1];
+    // The last segment has nowhere to go: the completion message stands.
+    if (!next) return;
+    seedTree(next);
+    // Hint counts are keyed by checkpoint id, which is unique across every
+    // lesson, so they survive the move without leaking into the next segment.
+    set({ segmentIndex: segmentIndex + 1 });
+  },
+
+  revealHint: (checkpointId) =>
+    set((prior) => ({
+      hintsShown: { ...prior.hintsShown, [checkpointId]: (prior.hintsShown[checkpointId] ?? 0) + 1 },
+    })),
 }));
 
 export interface ActiveLesson {
   lesson: Lesson;
   segment: Segment;
+  /** Which segment of the lesson is running, 0-based. */
+  segmentIndex: number;
+  /** True while a further segment remains, so the UI can offer to move on. */
+  hasNextSegment: boolean;
   state: LessonState;
+  /**
+   * The checkpoint a divergence was graded against — the one that was pending
+   * at the moment the player answered. Null while on script and while off
+   * script at a point with no checkpoint. The UI keeps the prompt and the
+   * hint control on screen from this, so a graded attempt does not unmount
+   * the very controls its reply talks about.
+   */
+  attemptedCheckpoint: Checkpoint | null;
   /**
    * The grade of the move that took the path off script, but only when that
    * divergence happened *at* a pending checkpoint — i.e. an attempted answer,
@@ -77,5 +121,13 @@ export function useActiveLesson(): ActiveLesson | null {
   const attemptedCheckpoint = state.offScript ? (segment.moves[state.ply]?.checkpoint ?? null) : null;
   const attemptedGrade = attemptedCheckpoint ? gradeMove(attemptedCheckpoint, pathSan[state.ply]) : null;
 
-  return { lesson, segment, state, attemptedGrade };
+  return {
+    lesson,
+    segment,
+    segmentIndex,
+    hasNextSegment: segmentIndex + 1 < lesson.segments.length,
+    state,
+    attemptedCheckpoint,
+    attemptedGrade,
+  };
 }
