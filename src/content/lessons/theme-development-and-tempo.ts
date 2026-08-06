@@ -42,8 +42,9 @@ export const themeDevelopmentAndTempo = parseLesson({
     },
     {
       startFen: 'rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 1 2',
+      side: 'black',
       intro:
-        'White\'s second move sends the queen out early, aiming at f7 alongside the bishop that\'s coming to c4 anyway. A queen out this soon just gets chased around the board, and every tempo Black gains chasing it is a tempo White never gets back. One more term for this segment: files are the board\'s vertical columns, running from a to h, and a piece standing on one blocks anything else trying to move along it.',
+        'You are Black. White\'s second move sends the queen out early, aiming at f7 alongside the bishop that\'s coming to c4 anyway. A queen out this soon just gets chased around the board, and every tempo you gain chasing it is a tempo White never gets back. One more term for this segment: files are the board\'s vertical columns, running from a to h, and a piece standing on one blocks anything else trying to move along it.',
       moves: [
         { san: 'Nc6', note: 'You develop a knight and defend e5 — White\'s early queen move hasn\'t changed your normal plan at all.' },
         { san: 'Bc4', note: 'White develops the bishop to its usual square — the one real developing move in this whole sequence so far.' },

@@ -58,4 +58,17 @@ describe('Board', () => {
     render(<Board />);
     expect(chessboardOptions.current?.boardOrientation).toBe('black');
   });
+
+  it('orients from the segment when it overrides the lesson', () => {
+    useLessonStore.getState().startLesson('theme-development-and-tempo');
+    useLessonStore.getState().nextSegment();
+    render(<Board />);
+    expect(chessboardOptions.current?.boardOrientation).toBe('black');
+  });
+
+  it('falls back to the lesson side when the segment does not override', () => {
+    useLessonStore.getState().startLesson('italian-game');
+    render(<Board />);
+    expect(chessboardOptions.current?.boardOrientation).toBe('white');
+  });
 });

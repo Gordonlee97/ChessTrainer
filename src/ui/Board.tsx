@@ -13,7 +13,7 @@ export function Board() {
   const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
   const activeLesson = useActiveLesson();
-  const orientation = activeLesson?.lesson.side ?? 'white';
+  const orientation = activeLesson?.segment.side ?? activeLesson?.lesson.side ?? 'white';
 
   const highlight = useMemo(() => {
     if (!node.move) return {};

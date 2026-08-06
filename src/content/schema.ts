@@ -31,6 +31,12 @@ export const segmentSchema = z.object({
   /** null means the standard starting position. */
   startFen: z.string().nullable(),
   intro: z.string().min(1).optional(),
+  /**
+   * Overrides the lesson's `side` for this segment. A theme lesson draws
+   * positions from different games, so which side the player takes can
+   * legitimately differ per position.
+   */
+  side: z.enum(['white', 'black']).optional(),
   moves: z.array(lessonMoveSchema).min(1),
 });
 

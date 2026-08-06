@@ -114,6 +114,28 @@ describe('validateLessonChess', () => {
   });
 });
 
+describe('segment side override', () => {
+  it('accepts a segment with no side, leaving it undefined', () => {
+    expect(parseLesson(minimal).segments[0].side).toBeUndefined();
+  });
+
+  it('accepts a segment that overrides the side', () => {
+    const overridden = structuredClone(minimal) as typeof minimal & {
+      segments: { side?: string }[];
+    };
+    overridden.segments[0].side = 'black';
+    expect(parseLesson(overridden).segments[0].side).toBe('black');
+  });
+
+  it('rejects a segment side that is not a colour', () => {
+    const bad = structuredClone(minimal) as typeof minimal & {
+      segments: { side?: string }[];
+    };
+    bad.segments[0].side = 'green';
+    expect(() => parseLesson(bad)).toThrow();
+  });
+});
+
 describe('checkpointIds', () => {
   it('lists every checkpoint id in order', () => {
     const withCheckpoints = structuredClone(minimal) as Lesson;
