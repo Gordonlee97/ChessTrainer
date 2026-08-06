@@ -38,25 +38,34 @@ export const themeForksAndPins = parseLesson({
     {
       startFen: 'r1bqkbnr/pppp1ppp/8/4p3/2BnP3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',
       intro:
-        'Black\'s knight jumps to d4, attacking your knight on f3 and your c2 pawn at once — a fork, threatening two targets so you can only save one. But the jump abandons e5, and your own knight was already attacking it.',
+        'Black\'s knight has jumped to d4, attacking your knight on f3 and your c2 pawn at once — a fork, one move hitting two things so you can only save one. It also left the e5 pawn free, and taking that pawn looks like a fork straight back, because your knight would land on e5 eyeing f7 alongside your bishop.',
       moves: [
         {
-          san: 'Nxe5',
-          note: 'Takes the undefended pawn and lands the knight on a square that attacks f7 together with your bishop — a threat of its own.',
+          san: 'Nxd4',
+          note: 'Take the knight that is causing the trouble: after Black recaptures, the pawn that lands on d4 sits in the open with nothing defending it. A fork that hands your opponent a bigger one is not a fork worth having.',
           checkpoint: {
-            id: 'theme-fork-punish-nd4',
-            prompt: 'Punish the knight on d4 for abandoning e5. Which move takes a pawn and threatens f7 at the same time?',
-            accept: ['Nxe5'],
+            id: 'theme-fork-decline-the-bait',
+            prompt: 'The free pawn on e5 is bait. Which capture takes the forking knight instead?',
+            accept: ['Nxd4'],
             hints: [
-              'Black\'s knight left e5 undefended when it jumped to d4.',
-              'Your knight on f3 can capture on e5, landing on a square that also eyes f7.',
-              'Play Nxe5.',
+              'Before you grab a free pawn, ask what your opponent gets to play next.',
+              'The knight on d4 is the piece causing the trouble, and your knight on f3 attacks it.',
+              'Play Nxd4.',
             ],
             nearMiss: {
-              Nxd4: 'Natural, but it releases the tension and gives Black exactly the trade they wanted.',
-              c3: 'Attacks the knight on d4 and forces it to retreat, but the free pawn on e5 gets away in the meantime.',
+              Nxe5:
+                'This wins the pawn and forks f7, but Black answers Qg5, hitting your knight on e5 and the g2 pawn at once — the bigger fork. Grab f7 as well and it can end fast: Nxf7 Qxg2, Rf1 Qxe4+, Be2 Nf3 is checkmate.',
+              c3: 'Attacking the knight is playable, but Black replies Nxf3+ with check and trades it off anyway, keeping a healthy pawn on e5. Taking on d4 yourself gets the same trade and leaves Black\'s pawns worse.',
             },
           },
+        },
+        {
+          san: 'exd4',
+          note: 'Black recaptures, and that pawn is now stranded on d4 with no piece of Black\'s defending it.',
+        },
+        {
+          san: 'O-O',
+          note: 'Your king is safe, your rook joins in, and the stranded pawn is still there to be attacked later.',
         },
       ],
     },
