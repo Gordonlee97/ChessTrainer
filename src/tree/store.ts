@@ -20,7 +20,7 @@ interface TreeStore {
   playMove: (san: string) => NodeId | null;
   selectNode: (nodeId: NodeId) => void;
   cacheEval: (nodeId: NodeId, evaluation: EvalResult) => void;
-  reset: () => void;
+  reset: (startFen?: string) => void;
 }
 
 export const useTreeStore = create<TreeStore>((set, get) => ({
@@ -42,7 +42,7 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
 
   cacheEval: (nodeId, evaluation) => set({ tree: setEval(get().tree, nodeId, evaluation) }),
 
-  reset: () => set({ tree: createTree() }),
+  reset: (startFen) => set({ tree: createTree(startFen) }),
 }));
 
 export function useSelectedNode(): TreeNode {

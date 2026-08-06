@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useLessonStore } from '../lesson/store';
 import { useTreeStore } from '../tree/store';
 import { createTree } from '../tree/tree';
 import { sounds } from '../sound';
@@ -19,6 +20,7 @@ vi.mock('./useAnalysis', async (importOriginal) => ({
 
 describe('CandidateRail', () => {
   beforeEach(() => {
+    useLessonStore.getState().stopLesson();
     useTreeStore.getState().reset();
     analysis.value = { result: null, status: 'idle', retry: () => {} } as never;
     mocks.play.mockClear();
@@ -298,5 +300,17 @@ describe('CandidateRail', () => {
 
     render(<CandidateRail />);
     expect(screen.getByRole('button', { name: /a3/ })).toBeInTheDocument();
+  });
+
+  it('hides engine suggestions while a checkpoint is pending', () => {
+    useLessonStore.getState().startLesson('italian-game');
+    analysis.value = {
+      status: 'idle',
+      result: { depth: 20, lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4'] }] },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.queryByRole('button', { name: /^e4/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(/hidden while the lesson/i);
   });
 });

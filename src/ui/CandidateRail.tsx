@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { resolveSan } from '../chess/resolveDrop';
 import { buildContext, describeMove } from '../explain/explain';
 import { classifyMove } from '../explain/quality';
+import { useActiveLesson } from '../lesson/store';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 import { Button } from './Button';
@@ -31,6 +32,7 @@ export function CandidateRail() {
   const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
   const [comparing, setComparing] = useState(false);
+  const activeLesson = useActiveLesson();
 
   // Without this, leaving the drawer open and navigating to a position with
   // fewer than 2 candidates (which unmounts it) and then back to one with 2+
@@ -135,6 +137,17 @@ export function CandidateRail() {
     return (
       <div role="status" style={{ padding: 12, color: 'var(--ink-soft)', fontSize: 13 }}>
         Thinking…
+      </div>
+    );
+  }
+
+  if (activeLesson?.state.pendingCheckpoint) {
+    return (
+      <div
+        role="status"
+        style={{ padding: 12, borderRadius: 'var(--radius)', border: '2px solid var(--border)', fontSize: 13 }}
+      >
+        Engine suggestions are hidden while the lesson is asking you for a move.
       </div>
     );
   }
