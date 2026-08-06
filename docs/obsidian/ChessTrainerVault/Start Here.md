@@ -32,31 +32,44 @@ unreachable, and the picker never rendered the summaries it was given.
 
 ## Do this next
 
-**1. Run Plan 3 in a browser. It has never been opened.** The suite is green and
-proves a lot, but nobody has watched a lesson run. Specifically worth doing by
-hand:
+**Browser verification is done — 2026-08-05.** Plan 3 was driven by hand in
+Chrome after the fix wave. Everything the fix wave claimed to fix was confirmed
+working, and the console was clean throughout:
 
-- Start **Forks and Pins**, finish the pin segment, take "Next part", and check
-  the fork segment reads as intended — it now teaches declining the Blackburne
-  Shilling bait, and its near-miss reply quotes a mating line.
-- Take all three hints at the Italian's first checkpoint, answer it, and confirm
-  the second checkpoint starts with none showing and its own Hint button.
-- Answer a checkpoint wrongly and confirm the question, the hints, and the
-  Return control are all still on screen and all do what the copy says.
-- At the Italian's `Bc4` checkpoint, confirm the Compare button appears and
-  compares `Bb5` and `d4` — never `Bc4`. It depends on the engine's three lines
-  containing both authored moves, so watch whether it flickers mid-search.
-- Still unobserved from Plan 2: that `prefers-reduced-motion` suppresses the
-  compare drawer's entrance animation while leaving a visible press signal
-  (DevTools → Rendering → emulate). The CSS is right by inspection.
+- The picker lists three openings and four ideas, each with its summary.
+- At a checkpoint the candidate rail is replaced by "Engine suggestions are
+  hidden…" and the answer appears nowhere on the page.
+- Playing `d4` at the Italian's first checkpoint returns its **authored**
+  near-miss reply, with the prompt, the Hint button and "Return to the lesson"
+  all still on screen — no error wording.
+- Notes that used to vanish before a checkpoint now render.
+- At the `Bc4` checkpoint the Compare button offers **`Bb5` and `d4`**, and a
+  page-wide scan confirmed `Bc4` appears nowhere. The drawer opens as a
+  `role="region"` and shows the authored Ruy Lopez and Scotch pros and cons.
+- **Forks and Pins**: the pin segment completes, "Next part" advances, and the
+  fork segment now asks *"The free pawn on e5 is bait. Which capture takes the
+  forking knight instead?"* — the corrected lesson.
 
-**2. Open a PR for this branch** once that is done. It sits on top of `master`
-with PR #2 already merged in. Merge with `--merge`, not `--squash`, for the same
-reason PR #1 was: the fix history is worth reading commit by commit.
+**One thing still unobserved**, carried from Plan 2: that
+`prefers-reduced-motion` suppresses the compare drawer's entrance animation
+while leaving a visible press signal (DevTools → Rendering → emulate). The CSS
+is right by inspection and a reviewer has checked it twice, but nobody has
+watched it with the emulation on.
 
-**3. Then Plan 4 — progress persistence.** [[Roadmap]] has the ordering and the
+## Do this next
+
+**1. Open a PR for this branch.** It sits on top of `master` with PR #2 already
+merged in. Merge with `--merge`, not `--squash`, for the same reason PR #1 was:
+the fix history is worth reading commit by commit.
+
+**2. Then Plan 4 — progress persistence.** [[Roadmap]] has the ordering and the
 two schema decisions already made. Do not start writing `src/progress/` directly;
 see [[Workflow]].
+
+Decide the board-orientation question before Plan 4 touches lessons:
+`theme-development-and-tempo`'s second segment is played from Black's side of a
+White-oriented board, because `side` lives on the lesson rather than the
+segment. [[Known Issues]] has both honest fixes.
 
 ## Where to look for what
 
