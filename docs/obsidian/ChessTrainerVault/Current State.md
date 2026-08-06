@@ -6,17 +6,21 @@ tags: [chesstrainer, state]
 
 # Current State
 
-**As of 2026-08-05.** Plan 1 (foundation and line explorer) and Plan 2 (the
-explainer and compare) are both complete. Plan 2 landed as nine tasks on
-`feat/teaching-layer`, followed by one fix wave from a whole-branch review.
-Not yet merged.
+**As of 2026-08-05.** Plans 1 (foundation and line explorer), 2 (the explainer
+and compare) and 3 (the teaching layer) are all complete in code. Plan 2 is
+merged to `master` (PR #2, 2026-08-05). Plan 3 landed as eight tasks on
+`feat/content-and-lessons`, followed by one fix wave from a whole-branch review;
+that branch is not merged.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **246 passing, 1 skipped**, 29 test files. `tsc --noEmit` clean,
+Suite: **343 passing, 1 skipped**, 36 test files. `tsc --noEmit` clean,
 `npm run build` succeeds. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
+
+**Plan 3 has never been run in a browser.** Everything below about lessons is
+true of the test suite; none of it has been watched on a board.
 
 ## What works today
 
@@ -62,6 +66,40 @@ list, applied 2026-08-05:
 
 What that fix wave deliberately did **not** do is in [[Known Issues]].
 
+## The lesson layer (Plan 3)
+
+Seven authored lessons — three openings (`italian-game`, `london-system`,
+`black-vs-e4`) and four themes (centre control, development and tempo, forks and
+pins, kingside attack) — live in `src/content/lessons/`, validated by a Zod
+schema and replayed move by move through chess.js in `src/content/load.ts`. The
+runner in `src/lesson/` stores no position: it derives where you are from the
+tree's path (`deriveLessonState`), and the lesson store holds only the lesson id,
+the segment index, and hint counts.
+
+| Action | Behaviour |
+|---|---|
+| Open the app with no lesson running | The picker lists every lesson under OPENINGS and IDEAS, each with its `summary` |
+| Start a lesson | The tree is re-seeded from the segment's `startFen`, the board orients to `lesson.side`, and the rail shows the segment intro |
+| Follow the line | "Play the next move" advances it, with the move sound; the note for the move just played stays on screen |
+| Reach a checkpoint | The rail asks instead of telling, and the candidate rail hides its rows, scores and ordering so the engine cannot leak the answer |
+| Ask for a hint | One tier at a time, up to three, counted **per checkpoint id** |
+| Answer wrongly | The authored `nearMiss` reply if there is one, otherwise a non-punishing line; the question and the Hint button stay up, and "Return to the lesson" goes back |
+| Wander off the line | Not an error — the rail says the lesson waits, and the tree keeps the branch |
+| Finish a segment | "Next part" appears when another segment follows; the last one says the lesson is complete |
+| Compare at a checkpoint | Where the lesson authored `alternatives` (today only the Italian's `Bc4`), the rail offers a comparison of those alternatives — chosen from content, never from the engine's ordering, and never including an accepted answer |
+
+### The 2026-08-05 fix wave (whole-branch review of Plan 3)
+
+| Was | Now |
+|---|---|
+| The fork segment accepted `4.Nxe5`, which loses by force to `4...Qg5`, and listed the two correct moves as near misses | Accepts `Nxd4`; `Nxe5` is a near miss that names the refutation and the mate; the segment teaches that a fork inviting a bigger one is no fork at all |
+| `segmentIndex` was never written past 0, so segment 1 of three lessons was unreachable | "Next part" advances it and re-seeds the tree through the same helper `startLesson` uses |
+| One lesson-wide hint counter printed the answer tier before the second checkpoint was read | Counts are keyed by the checkpoint's authored id |
+| The wrong-answer copy named a Hint button that had just been unmounted | The question and hints stay mounted while an attempt is graded |
+| Notes before a checkpoint, and every lesson's last note, never rendered | The note for the move just played renders on its own condition |
+| `lesson.summary` was never rendered anywhere | Rendered in the picker, outside the button so the control keeps its name |
+| The one authored comparison in the corpus was unreachable in the app | Reachable at the checkpoint, engine ordering excluded |
+
 ## What is scaffolding, not feature
 
 - **Sound is wired but silent.** Every call site exists — pickup, move, capture,
@@ -69,18 +107,21 @@ What that fix wave deliberately did **not** do is in [[Known Issues]].
   for. No audio files are committed. A missing file plays nothing and logs
   nothing, so this is a working degraded state, not a bug. Drop MP3s in and they
   light up with no code change.
-- **`src/App.tsx` is a placeholder shell** — an inline-styled flex layout, not
-  the designed layout. It exists to host the components; Plan 3 replaces it.
-- **The store has a `reset` action that nothing calls.** There is no new-game
-  button; refreshing the page starts over.
+- **`src/App.tsx` is a placeholder shell** — an inline-styled flex layout that
+  now hosts the picker and the lesson rail as well. Still not the designed
+  layout.
+- **There is no new-game control.** The tree's `reset` is called by
+  `startLesson` and `nextSegment`; nothing else exposes it, so refreshing the
+  page is still the only way to start over outside a lesson.
+- **`alternatives` exists on one move in the whole corpus.** The comparison
+  feature works; the content to feed it barely exists.
 
 ## What does not exist yet
 
-Everything below is Plan 3. See [[Roadmap]] for ordering.
+See [[Roadmap]] for ordering.
 
-- **Lessons.** No `content/`, no `lesson/`, no lesson rail, no checkpoints,
-  hints, or `nearMiss` replies.
 - **Progress persistence.** No `progress/`, no localStorage, no "My Lines".
+  Checkpoint hint counts live in memory and die with the tab.
 - **Mute toggle UI.** `SoundManager` honours mute internally; nothing exposes it.
 - **Keyboard board navigation.** Called for by the spec's accessibility section.
 - **A real `App.tsx` layout and a new-game control.**
@@ -98,6 +139,11 @@ Everything below is Plan 3. See [[Roadmap]] for ordering.
 
 ## Recent history
 
+- **2026-08-05** — Plan 3 (the teaching layer) finished on
+  `feat/content-and-lessons`: eight tasks, the content pipeline through the
+  lesson picker and authored comparisons. One fix wave from the whole-branch
+  review followed the same day — nine items, including a lesson that was
+  teaching a losing move. Suite 246 → 343.
 - **2026-08-05** — One fix wave from the whole-branch review of Plan 2: nine
   items across `src/explain/`, `src/ui/`, and `src/engine/evalCache.ts`. The
   table above says what changed. Suite 223 → 246.

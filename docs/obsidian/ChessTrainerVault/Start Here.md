@@ -14,50 +14,49 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| Branch | `feat/teaching-layer` |
-| Base | `master` (PR #1 merged 2026-08-04) |
-| PR | [#2](https://github.com/Gordonlee97/ChessTrainer/pull/2) — **open, unmerged** |
+| Branch | `feat/content-and-lessons` |
+| Base | `master` — PR #1 merged 2026-08-04, PR #2 (Plan 2) merged 2026-08-05 |
 | Working tree | Clean |
-| Suite | 246 passing, 1 skipped (expected — see below) |
-| Last plan finished | Plan 2, the explainer and compare, 2026-08-04 (nine tasks) |
+| Suite | 343 passing, 1 skipped (expected — see below) |
+| Last plan finished | Plan 3, the teaching layer, 2026-08-05 (eight tasks) |
 | Last change | Whole-branch review fix wave, 2026-08-05 (nine items) |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
 second skip is a real failure.
 
-Plan 2 **has** now been exercised in a browser. That testing found the explainer
-and the compare verdict said roughly the same thing about every move; the
-2026-08-05 fix wave addressed it. [[Current State]] has the before/after table.
+The fix wave that closed Plan 3's review is the reason to read [[Current State]]
+before trusting anything written about lessons earlier in the branch: one lesson
+was accepting a move that loses by force, three shipped half their content
+unreachable, and the picker never rendered the summaries it was given.
 
 ## Do this next
 
-**1. Review and merge [PR #2](https://github.com/Gordonlee97/ChessTrainer/pull/2).**
-Opened 2026-08-05 against `master`. Nothing is outstanding on the branch: full
-suite, `tsc --noEmit`, and `npm run build` are all clean, and the browser
-verification that was blocking Plan 2 is done.
+**1. Run Plan 3 in a browser. It has never been opened.** The suite is green and
+proves a lot, but nobody has watched a lesson run. Specifically worth doing by
+hand:
 
-One thing to check by hand while reviewing, because no test covers it: confirm
-`prefers-reduced-motion` still suppresses the compare drawer's entrance
-animation (DevTools → Rendering → emulate `prefers-reduced-motion: reduce`),
-and that a press still gives a visible signal. The CSS is right by inspection
-(`theme.css`, `animation: none` inside the media query) but it has never been
-observed with the emulation on.
+- Start **Forks and Pins**, finish the pin segment, take "Next part", and check
+  the fork segment reads as intended — it now teaches declining the Blackburne
+  Shilling bait, and its near-miss reply quotes a mating line.
+- Take all three hints at the Italian's first checkpoint, answer it, and confirm
+  the second checkpoint starts with none showing and its own Hint button.
+- Answer a checkpoint wrongly and confirm the question, the hints, and the
+  Return control are all still on screen and all do what the copy says.
+- At the Italian's `Bc4` checkpoint, confirm the Compare button appears and
+  compares `Bb5` and `d4` — never `Bc4`. It depends on the engine's three lines
+  containing both authored moves, so watch whether it flickers mid-search.
+- Still unobserved from Plan 2: that `prefers-reduced-motion` suppresses the
+  compare drawer's entrance animation while leaving a visible press signal
+  (DevTools → Rendering → emulate). The CSS is right by inspection.
 
-Merge with `--merge`, not `--squash`, for the same reason PR #1 was: the fix
-history is worth reading commit by commit.
+**2. Open a PR for this branch** once that is done. It sits on top of `master`
+with PR #2 already merged in. Merge with `--merge`, not `--squash`, for the same
+reason PR #1 was: the fix history is worth reading commit by commit.
 
-**2. Write Plan 3 — the lesson layer.** Do not start writing `src/content/` or
-`src/lesson/` directly — see [[Workflow]]. The ordering is in [[Roadmap]]: the
-content pipeline (Zod schema, validating loader, v1 content) first, since the
-lesson runner depends on it.
-
-Two questions [[Roadmap]] says to settle while writing it, both design decisions
-rather than patches: how wide the comparison's contrast vocabulary should be
-(today two strong openings usually score identically on every feature
-`summarise` measures, so the honest verdict is "choose on feel"), and whether
-the compare drawer is really a modal — it claims `role="dialog"` with no
-`aria-modal`, focus trap, or Escape.
+**3. Then Plan 4 — progress persistence.** [[Roadmap]] has the ordering and the
+two schema decisions already made. Do not start writing `src/progress/` directly;
+see [[Workflow]].
 
 ## Where to look for what
 

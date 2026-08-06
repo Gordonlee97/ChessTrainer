@@ -15,7 +15,7 @@ that actually gets you. **Merged to `master` 2026-08-04 as PR #1** (merge commit
 not squash — the engine's revision-by-revision history is worth keeping).
 
 **Plan 2 — The explainer and compare.** Nine tasks, complete 2026-08-04 on
-`feat/teaching-layer` (not yet merged). Pawn-structure features and fork/pin
+`feat/teaching-layer`, **merged to `master` 2026-08-05 as PR #2**. Pawn-structure features and fork/pin
 detection (`src/chess/pawnStructure.ts`, `src/chess/tactics.ts`); a FEN-keyed
 eval cache so transposed positions are analysed once (`src/engine/evalCache.ts`);
 move-quality banding (`src/explain/quality.ts`); the rule-based explainer with a
@@ -33,56 +33,61 @@ about every move; one fix wave of nine items closed it (suite 223 → 246). See
 [[Current State]] for the before/after table, [[Known Issues]] for what was
 deliberately left, and [[Architecture]] for the `src/explain/` layer.
 
-## Next: Plan 3 — the lesson layer
+**Plan 3 — the teaching layer.** Eight tasks, complete 2026-08-05 on
+`feat/content-and-lessons` (not yet merged). The content pipeline
+(`src/content/schema.ts`, `load.ts`) with a validator that replays every
+authored move, checkpoint answer, near-miss key and alternative through
+chess.js; seven authored lessons; the runner (`src/lesson/`) that derives its
+state from the tree and stores no position; the lesson rail with tiered hints
+and graded near misses; the picker; and authored pros and cons feeding the
+compare drawer. Plan:
+`docs/superpowers/plans/2026-08-05-content-and-lessons.md`.
 
-Not yet written as a plan document. This is the ordering the design spec
-implies.
+**Reviewed and fixed 2026-08-05.** The whole-branch review found the lessons
+delivered less than they claimed and one taught a move that loses by force. One
+fix wave of nine items closed it (suite 246 → 343). [[Current State]] has the
+before/after table; three findings were left, in [[Known Issues]].
 
-### 1. Content pipeline — `src/content/`
+## Next: browser verification, then Plan 4
 
-Zod schema plus a validating loader. A test replays every authored `san` through
-chess.js, so a typo fails the suite instead of blanking the board at runtime.
+**Nothing in Plan 3 has been watched in a browser.** That is the next action —
+see [[Start Here]] for what to look at.
 
-Then the v1 content itself: 3 openings and 4 theme lessons, listed in
-[[Project Overview]].
-
-### 2. Lesson runner — `src/lesson/`
-
-Derives the current step from the tree selection; grades checkpoints; serves
-three hint tiers. Behaviour the spec pins down:
-
-- At a checkpoint the **candidate rail hides** so it cannot leak the answer.
-- `nearMiss` moves get their authored reply, not a generic "wrong".
-- Going off-script is **not an error state** — a "return to lesson" pill waits in
-  the rail until taken.
-
-### 3. Progress persistence — `src/progress/`
+### Plan 4 — Progress persistence — `src/progress/`
 
 Versioned localStorage: lesson completions, checkpoint accuracy, saved lines.
 Two schema decisions already made and worth not re-litigating:
 
 - Checkpoints are keyed by their **authored `id`**, not by position index, so
-  inserting a move into a lesson does not silently reassign past results.
+  inserting a move into a lesson does not silently reassign past results. The
+  lesson store already counts hints this way, so accuracy can record
+  solved-cold separately from solved-after-three-hints.
 - Saved lines are stored as **PGN**, not node paths — portable, replayable, and
   immune to changes in the tree's addressing scheme.
 
-## Also queued for Plan 3
+## Also queued
 
 Small, and each has a stated reason for existing:
 
 - **Mute toggle UI.** `SoundManager` already honours mute; nothing exposes it.
 - **Keyboard board navigation.** Spec accessibility requirement.
-- **A real `App.tsx` layout.** Currently a placeholder shell.
-- **A new-game control.** The store's `reset` action has no caller.
+- **A real `App.tsx` layout.** Currently a placeholder shell, now hosting the
+  picker and the lesson rail too.
+- **A new-game control.** Nothing outside a lesson clears the board.
+- **More authored `alternatives`.** One move in the corpus carries them.
 
 ## Deliberately not planned
 
 - No end-to-end suite in v1 — deferred on purpose.
 - Everything in the out-of-scope list in [[Project Overview]].
 
-## Decide before Plan 3 is written
+## Still undecided
 
-Nothing gating, unlike Plan 2. Two things want a decision rather than a patch:
+Nothing gating. Three things want a decision rather than a patch — the third is
+new from Plan 3's review and is in [[Known Issues]]: whether board orientation
+belongs on the lesson or on the segment, since
+`theme-development-and-tempo`'s second segment is played from Black's side of a
+White-oriented board.
 
 - **The comparison's contrast vocabulary.** `summarise` can distinguish two
   lines on five features, and two strong openings usually score identically on

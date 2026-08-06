@@ -21,6 +21,47 @@ None. Both prior blockers were settled on 2026-08-04:
 - **React 18 in the spec** — amended to React 19, with a dated note in §3
   recording the correction.
 
+## Lessons — found in the 2026-08-05 fix wave, left unfixed
+
+### `theme-development-and-tempo` segment 1 is played from Black's side on a White-oriented board
+
+**Where:** `src/content/lessons/theme-development-and-tempo.ts`, `src/ui/Board.tsx`
+**Severity:** medium once seen; blocks nothing, breaks nothing.
+
+The lesson declares `side: 'white'` and `Board.tsx` orients from
+`lesson.side`, but segment 1 starts after `1.e4 e5 2.Qh5` with **Black** to move
+and its notes address the player as Black ("You develop a knight…"). That
+segment was unreachable until segment advancement landed on 2026-08-05, so this
+is newly visible rather than newly broken.
+
+Two honest fixes: move orientation onto the segment (a schema change), or split
+the segment into its own `side: 'black'` lesson. Rewriting the prose to White's
+voice is not one of them — the segment's whole point is punishing the early
+queen, which is Black's job.
+
+### One authored comparison in the whole corpus
+
+**Where:** `src/content/lessons/`
+**Severity:** low, but it is why the feature nearly shipped unreachable.
+
+`alternatives` appears on exactly one move, the Italian's `Bc4`. The rail's
+authored-contrast path is now reachable and tested, but a single data point is
+not evidence the shape of the field is right. Author two or three more before
+trusting it.
+
+### Compare at a checkpoint depends on the engine returning the authored moves
+
+**Where:** `src/ui/CandidateRail.tsx` — `checkpointComparison`
+**Severity:** low.
+
+The pair is picked from authored alternatives *found among the current lines*,
+which is what keeps the answer from leaking. If a search's three lines happen
+not to include two of them, the Compare button simply is not offered — no
+comparison, no error. At the Italian's `Bc4` position Stockfish 18 ranks `Bb5`,
+`d4`, `Bc4` at depth 18, so both authored moves are there; shallower or
+differently-ordered searches may not have them, and mid-search the button can
+appear and disappear.
+
 ## Correctness — low consequence
 
 ### Grace-timer cleanup covers only the pending search
@@ -154,7 +195,9 @@ grows endgame content.
   `node:fs` resolves via `@types/node` regardless. Drop it next time that file is
   touched.
 - **`src/App.tsx` is an inline-styled placeholder**, not the designed layout.
-- **The store's `reset` action has no caller.** No new-game control exists.
+- **No new-game control exists.** The tree's `reset` is now called by the lesson
+  store (`startLesson`, `nextSegment`), but nothing outside a lesson clears the
+  board.
 
 ## Test coverage gaps
 
