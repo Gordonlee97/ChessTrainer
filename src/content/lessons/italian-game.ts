@@ -53,7 +53,7 @@ export const italianGame = parseLesson({
             nearMiss: {
               Bb5: 'Also strong — that is the Ruy Lopez, and a fine opening. But we are learning the Italian, where c4 hits f7 directly.',
               Be2: 'Safe but passive. The bishop does nothing from e2; on c4 it eyes Black\'s weakest square.',
-              d4: 'Sharp, and a real opening called the Scotch. Compare it with the Compare button — but for now, develop.',
+              d4: 'Sharp, and a real opening called the Scotch — it resolves the centre at once instead of developing a piece. For this lesson, get the bishop out first and leave the central pawns facing each other.',
             },
           },
           alternatives: [

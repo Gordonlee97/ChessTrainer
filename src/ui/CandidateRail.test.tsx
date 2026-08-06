@@ -302,6 +302,89 @@ describe('CandidateRail', () => {
     expect(screen.getByRole('button', { name: /a3/ })).toBeInTheDocument();
   });
 
+  describe('the authored comparison at a checkpoint', () => {
+    // The Italian's Bc4 is the only move in the corpus carrying
+    // `alternatives`, and it is also a checkpoint. Stockfish 18 at depth 18
+    // ranks this position Bb5, d4, Bc4 — so the two authored alternatives are
+    // in the lines, and neither of them is the answer.
+    function atTheBishopCheckpoint() {
+      useLessonStore.getState().startLesson('italian-game');
+      for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
+      analysis.value = {
+        status: 'idle',
+        result: {
+          depth: 18,
+          lines: [
+            { san: 'Bb5', cp: 42, mate: null, pv: ['Bb5', 'a6'] },
+            { san: 'd4', cp: 36, mate: null, pv: ['d4', 'exd4'] },
+            { san: 'Bc4', cp: 31, mate: null, pv: ['Bc4', 'Nf6'] },
+          ],
+        },
+      } as never;
+    }
+
+    it('offers the comparison the lesson authored, over the alternatives rather than the engine ordering', async () => {
+      atTheBishopCheckpoint();
+      render(<CandidateRail />);
+
+      await userEvent.click(screen.getByRole('button', { name: /compare bb5 and d4/i }));
+      // Authored pros, not the heuristic ones compareLines would invent.
+      // (The verdict quotes one of them too, hence getAllByText.)
+      expect(screen.getAllByText(/applies long-term pressure/i).length).toBeGreaterThan(0);
+      expect(screen.getAllByText(/opens lines for your pieces straight away/i).length).toBeGreaterThan(0);
+    });
+
+    it('still hides the candidate rows, the scores and the answer itself', () => {
+      atTheBishopCheckpoint();
+      render(<CandidateRail />);
+
+      expect(screen.queryByRole('button', { name: /^Bb5/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^d4/ })).not.toBeInTheDocument();
+      expect(screen.queryByText(/\+0\.42/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Bc4/)).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent(/hidden while the lesson/i);
+    });
+
+    it('never offers a comparison that includes the accepted answer', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
+      // A shallower search that has Bc4 in it: Bc4 is authored nowhere, but
+      // guard the ordering anyway — only one eligible line is left, so there
+      // is nothing to compare.
+      analysis.value = {
+        status: 'idle',
+        result: {
+          depth: 8,
+          lines: [
+            { san: 'Bc4', cp: 40, mate: null, pv: ['Bc4'] },
+            { san: 'Bb5', cp: 38, mate: null, pv: ['Bb5'] },
+          ],
+        },
+      } as never;
+
+      render(<CandidateRail />);
+      expect(screen.queryByRole('button', { name: /compare/i })).not.toBeInTheDocument();
+    });
+
+    it('offers no comparison at a checkpoint whose move authored no alternatives', () => {
+      // The Italian's opening checkpoint (e4) carries none.
+      useLessonStore.getState().startLesson('italian-game');
+      analysis.value = {
+        status: 'idle',
+        result: {
+          depth: 18,
+          lines: [
+            { san: 'e4', cp: 31, mate: null, pv: ['e4'] },
+            { san: 'd4', cp: 28, mate: null, pv: ['d4'] },
+          ],
+        },
+      } as never;
+
+      render(<CandidateRail />);
+      expect(screen.queryByRole('button', { name: /compare/i })).not.toBeInTheDocument();
+    });
+  });
+
   it('hides engine suggestions while a checkpoint is pending', () => {
     useLessonStore.getState().startLesson('italian-game');
     analysis.value = {
