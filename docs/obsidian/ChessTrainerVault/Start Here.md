@@ -30,9 +30,9 @@ before trusting anything written about lessons earlier in the branch: one lesson
 was accepting a move that loses by force, three shipped half their content
 unreachable, and the picker never rendered the summaries it was given.
 
-## Do this next
+## Plan 3 was verified in a browser
 
-**Browser verification is done — 2026-08-05.** Plan 3 was driven by hand in
+**2026-08-05.** Plan 3 was driven by hand in
 Chrome after the fix wave. Everything the fix wave claimed to fix was confirmed
 working, and the console was clean throughout:
 
@@ -58,18 +58,16 @@ watched it with the emulation on.
 
 ## Do this next
 
-**1. Open a PR for this branch.** It sits on top of `master` with PR #2 already
-merged in. Merge with `--merge`, not `--squash`, for the same reason PR #1 was:
-the fix history is worth reading commit by commit.
+**1. Settle the board-orientation question.** It gates Plan 4, because Plan 4
+touches lesson data. `theme-development-and-tempo`'s second segment is played
+from Black's side of a White-oriented board, because `side` lives on the lesson
+rather than the segment. The two honest fixes — move orientation onto the
+segment, or split the segment into its own `side: 'black'` lesson — are in
+[[Known Issues]]. Rewriting the prose to White's voice is not one of them.
 
-**2. Then Plan 4 — progress persistence.** [[Roadmap]] has the ordering and the
+**2. Write Plan 4 — progress persistence.** [[Roadmap]] has the ordering and the
 two schema decisions already made. Do not start writing `src/progress/` directly;
 see [[Workflow]].
-
-Decide the board-orientation question before Plan 4 touches lessons:
-`theme-development-and-tempo`'s second segment is played from Black's side of a
-White-oriented board, because `side` lives on the lesson rather than the
-segment. [[Known Issues]] has both honest fixes.
 
 ## Where to look for what
 
