@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLessonStore } from '../lesson/store';
+import { useProgressStore } from '../progress/store';
 import { useTreeStore } from '../tree/store';
 import { LessonRail } from './LessonRail';
 
@@ -23,6 +24,13 @@ describe('LessonRail', () => {
     useTreeStore.getState().reset();
     mocks.play.mockClear();
     mocks.soundPlay.mockClear();
+    // The recording effect now writes real localStorage on every render, and
+    // node ids are deterministic (`root/d4`), so without this, an attempt
+    // written by one test is indistinguishable from the same attempt in the
+    // next and leaks across tests via `useProgressStore`'s reset(), which
+    // reloads from storage rather than to empty progress.
+    localStorage.clear();
+    useProgressStore.getState().reset();
   });
 
   it('renders nothing when no lesson is running', () => {
@@ -263,6 +271,49 @@ describe('LessonRail', () => {
       useTreeStore.getState().playMove('a3');
       render(<LessonRail />);
       expect(screen.queryByText(/wrong|incorrect|error/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('recording progress', () => {
+    it('records a wrong answer against the checkpoint', () => {
+      useProgressStore.getState().reset();
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('d4');
+      render(<LessonRail />);
+
+      const record =
+        useProgressStore.getState().progress.lessons['italian-game']
+          ?.checkpoints['italian-open-with-e4'];
+      expect(record?.attempts).toBe(1);
+      expect(record?.solved).toBe(false);
+    });
+
+    it('records a solved checkpoint with the hints it took', () => {
+      useProgressStore.getState().reset();
+      useLessonStore.getState().startLesson('italian-game');
+      useLessonStore.getState().revealHint('italian-open-with-e4');
+      useTreeStore.getState().playMove('e4');
+      render(<LessonRail />);
+
+      const record =
+        useProgressStore.getState().progress.lessons['italian-game']
+          ?.checkpoints['italian-open-with-e4'];
+      expect(record?.solved).toBe(true);
+      expect(record?.hintsUsed).toBe(1);
+    });
+
+    it('does not double-count a re-render of the same attempt', () => {
+      useProgressStore.getState().reset();
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('d4');
+      const { rerender } = render(<LessonRail />);
+      rerender(<LessonRail />);
+      rerender(<LessonRail />);
+
+      expect(
+        useProgressStore.getState().progress.lessons['italian-game']
+          .checkpoints['italian-open-with-e4'].attempts,
+      ).toBe(1);
     });
   });
 });
