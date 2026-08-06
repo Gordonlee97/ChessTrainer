@@ -92,4 +92,59 @@ describe('LessonRail', () => {
     render(<LessonRail />);
     expect(screen.getByText(/finished|complete/i)).toBeInTheDocument();
   });
+
+  describe('grading an attempted checkpoint answer', () => {
+    // The Italian's first move is a checkpoint (accept: ['e4']) with d4 and
+    // Nf3 authored as near misses — the natural fixture for this.
+    it('shows the authored reply for a near-miss move, not the generic line', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('d4');
+      render(<LessonRail />);
+      expect(
+        screen.getByText(/that is the Queen's Gambit family/i),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/not this time/i)).not.toBeInTheDocument();
+    });
+
+    it('shows the generic non-punishing line for a move that is neither accepted nor a near miss', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('a3');
+      render(<LessonRail />);
+      expect(screen.getByText(/not this time/i)).toBeInTheDocument();
+      expect(
+        screen.queryByText(/that is the Queen's Gambit family/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it('advances the lesson and shows no grade at all for an accepted move', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('e4');
+      render(<LessonRail />);
+      expect(screen.queryByText(/not this time/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/that is the Queen's Gambit family/i),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/which pawn move claims the centre/i),
+      ).not.toBeInTheDocument();
+    });
+
+    it('shows the ordinary exploring text, not a grade, when diverging at a ply with no checkpoint', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      // e4 is accepted; e5 (Black's reply) carries no checkpoint, so playing
+      // something else there is exploring, not a graded attempt.
+      useTreeStore.getState().playMove('e4');
+      useTreeStore.getState().playMove('c5');
+      render(<LessonRail />);
+      expect(screen.getByText(/explore as long as you like/i)).toBeInTheDocument();
+      expect(screen.queryByText(/not this time/i)).not.toBeInTheDocument();
+    });
+
+    it('does not treat a wrong checkpoint answer as an error', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('a3');
+      render(<LessonRail />);
+      expect(screen.queryByText(/wrong|incorrect|error/i)).not.toBeInTheDocument();
+    });
+  });
 });

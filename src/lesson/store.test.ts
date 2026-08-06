@@ -38,13 +38,6 @@ describe('lesson store', () => {
     expect(useLessonStore.getState().hintsShown).toBe(0);
   });
 
-  it('records and clears the last grade', () => {
-    useLessonStore.getState().recordGrade({ kind: 'wrong' });
-    expect(useLessonStore.getState().lastGrade).toEqual({ kind: 'wrong' });
-    useLessonStore.getState().clearGrade();
-    expect(useLessonStore.getState().lastGrade).toBeNull();
-  });
-
   it('clears everything when the lesson stops', () => {
     useLessonStore.getState().startLesson('italian-game');
     useLessonStore.getState().revealHint();

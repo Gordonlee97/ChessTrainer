@@ -3,26 +3,22 @@ import { ALL_LESSONS, lessonById } from '../content/lessons/index';
 import type { Lesson, Segment } from '../content/schema';
 import { useTreeStore } from '../tree/store';
 import { pathTo } from '../tree/tree';
+import { gradeMove, type Grade } from './grade';
 import { deriveLessonState, type LessonState } from './lessonState';
-import type { Grade } from './grade';
 
 interface LessonStore {
   lessonId: string | null;
   segmentIndex: number;
   hintsShown: number;
-  lastGrade: Grade | null;
   startLesson: (id: string) => void;
   stopLesson: () => void;
   revealHint: () => void;
-  recordGrade: (grade: Grade) => void;
-  clearGrade: () => void;
 }
 
 export const useLessonStore = create<LessonStore>((set) => ({
   lessonId: null,
   segmentIndex: 0,
   hintsShown: 0,
-  lastGrade: null,
 
   startLesson: (id) => {
     const lesson = lessonById(id);
@@ -30,22 +26,32 @@ export const useLessonStore = create<LessonStore>((set) => ({
     // Seeding the tree from the lesson's own opening position is what lets the
     // runner derive its state from the tree rather than tracking a second one.
     useTreeStore.getState().reset(lesson.segments[0].startFen ?? undefined);
-    set({ lessonId: id, segmentIndex: 0, hintsShown: 0, lastGrade: null });
+    set({ lessonId: id, segmentIndex: 0, hintsShown: 0 });
   },
 
-  stopLesson: () => set({ lessonId: null, segmentIndex: 0, hintsShown: 0, lastGrade: null }),
+  stopLesson: () => set({ lessonId: null, segmentIndex: 0, hintsShown: 0 }),
 
   revealHint: () => set((prior) => ({ hintsShown: prior.hintsShown + 1 })),
-
-  recordGrade: (grade) => set({ lastGrade: grade }),
-
-  clearGrade: () => set({ lastGrade: null }),
 }));
 
 export interface ActiveLesson {
   lesson: Lesson;
   segment: Segment;
   state: LessonState;
+  /**
+   * The grade of the move that took the path off script, but only when that
+   * divergence happened *at* a pending checkpoint — i.e. an attempted answer,
+   * not ordinary exploration. Null while on script, while off script at a
+   * point with no checkpoint, and once the lesson is not running.
+   *
+   * Derived, not stored: the checkpoint that was pending is
+   * `segment.moves[state.ply].checkpoint`, and the move actually played is
+   * `pathSan[state.ply]` (defined whenever `state.offScript`, since offScript
+   * means `state.ply < pathSan.length`). Nothing needs to call a setter for
+   * this to be right after branching, replaying, or returning to the lesson —
+   * it falls out of the tree the same way `state` does.
+   */
+  attemptedGrade: Grade | null;
 }
 
 /** Null when no lesson is running. Recomputed from the tree on every render. */
@@ -66,5 +72,10 @@ export function useActiveLesson(): ActiveLesson | null {
     .slice(1)
     .map((node) => node.move!.san);
 
-  return { lesson, segment, state: deriveLessonState(segment, pathSan) };
+  const state = deriveLessonState(segment, pathSan);
+
+  const attemptedCheckpoint = state.offScript ? (segment.moves[state.ply]?.checkpoint ?? null) : null;
+  const attemptedGrade = attemptedCheckpoint ? gradeMove(attemptedCheckpoint, pathSan[state.ply]) : null;
+
+  return { lesson, segment, state, attemptedGrade };
 }

@@ -6,7 +6,6 @@ import { Button } from './Button';
 export function LessonRail() {
   const active = useActiveLesson();
   const hintsShown = useLessonStore((store) => store.hintsShown);
-  const lastGrade = useLessonStore((store) => store.lastGrade);
   const revealHint = useLessonStore((store) => store.revealHint);
   const stopLesson = useLessonStore((store) => store.stopLesson);
   const playMove = useTreeStore((store) => store.playMove);
@@ -14,7 +13,7 @@ export function LessonRail() {
   const tree = useTreeStore((store) => store.tree);
 
   if (!active) return null;
-  const { lesson, segment, state } = active;
+  const { lesson, segment, state, attemptedGrade } = active;
 
   /**
    * Select the last node still on the lesson's line. `state.ply` counts the
@@ -42,9 +41,19 @@ export function LessonRail() {
 
       {state.offScript && (
         <>
-          <p style={{ fontSize: 13 }}>
-            You have stepped off the lesson line. Explore as long as you like — the lesson waits.
-          </p>
+          {attemptedGrade?.kind === 'near-miss' ? (
+            <p role="status" style={{ fontSize: 13 }}>
+              {attemptedGrade.reply}
+            </p>
+          ) : attemptedGrade?.kind === 'wrong' ? (
+            <p role="status" style={{ fontSize: 13 }}>
+              Not this time — try another move, or take a hint.
+            </p>
+          ) : (
+            <p style={{ fontSize: 13 }}>
+              You have stepped off the lesson line. Explore as long as you like — the lesson waits.
+            </p>
+          )}
           <Button variant="ghost" onClick={returnToLesson}>
             Return to the lesson
           </Button>
@@ -65,17 +74,6 @@ export function LessonRail() {
             <Button variant="ghost" onClick={revealHint}>
               Hint
             </Button>
-          )}
-
-          {lastGrade?.kind === 'near-miss' && (
-            <p role="status" style={{ fontSize: 13 }}>
-              {lastGrade.reply}
-            </p>
-          )}
-          {lastGrade?.kind === 'wrong' && (
-            <p role="status" style={{ fontSize: 13 }}>
-              Not this time — try another move, or take a hint.
-            </p>
           )}
         </div>
       )}
