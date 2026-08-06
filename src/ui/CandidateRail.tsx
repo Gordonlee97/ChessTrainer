@@ -74,6 +74,22 @@ export function CandidateRail() {
     });
   }, [node.fen, result, status]);
 
+  // Only fires when the lesson's current move carries `alternatives` and
+  // those alternatives' SANs match the two lines actually being compared —
+  // an off-book candidate pair falls back to the heuristic in compareLines.
+  const authoredContrast = useMemo(() => {
+    const alternatives = activeLesson?.state.nextMove?.alternatives;
+    if (!alternatives || !result || result.lines.length < 2) return undefined;
+    const find = (san: string) => alternatives.find((entry) => entry.san === san);
+    const a = find(result.lines[0].san);
+    const b = find(result.lines[1].san);
+    if (!a && !b) return undefined;
+    return {
+      a: a ? { pros: a.pros, cons: a.cons } : undefined,
+      b: b ? { pros: b.pros, cons: b.cons } : undefined,
+    };
+  }, [activeLesson, result]);
+
   function playCandidate(san: string) {
     // Shares resolveDrop's classification (via resolveSan) so a candidate
     // click and the equivalent drag-and-drop move sound identical.
@@ -224,6 +240,7 @@ export function CandidateRail() {
               b={result.lines[1]}
               baseFen={node.fen}
               onClose={() => setComparing(false)}
+              authored={authoredContrast}
             />
           )}
         </>

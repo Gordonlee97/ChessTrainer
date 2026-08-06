@@ -191,3 +191,34 @@ describe('compareLines', () => {
     expect(result.verdict).not.toContain('c5 is clearly stronger');
   });
 });
+
+describe('authored contrast', () => {
+  const authored = {
+    a: { pros: ['Opens lines at once'], cons: ['Releases the central tension'] },
+    b: { pros: ['Keeps a bind on the centre'], cons: ['Slower to get going'] },
+  };
+
+  it('prefers authored pros and cons over the computed ones', () => {
+    const result = compareLines(START, italian, scotch, 8, authored);
+    expect(result.a.pros).toEqual(['Opens lines at once']);
+    expect(result.a.cons).toEqual(['Releases the central tension']);
+    expect(result.b.pros).toEqual(['Keeps a bind on the centre']);
+  });
+
+  it('falls back to computed contrast for a line with no authored entry', () => {
+    const result = compareLines(START, italian, scotch, 8, { a: authored.a });
+    expect(result.a.pros).toEqual(['Opens lines at once']);
+    expect(result.b.pros.length).toBeGreaterThan(0);
+    expect(result.b.pros).not.toEqual(authored.b.pros);
+  });
+
+  it('uses the authored contrast in the verdict', () => {
+    const result = compareLines(START, italian, scotch, 8, authored);
+    expect(result.verdict).toMatch(/opens lines at once/i);
+    expect(result.verdict).toMatch(/keeps a bind on the centre/i);
+  });
+
+  it('behaves exactly as before when nothing is authored', () => {
+    expect(compareLines(START, italian, scotch, 8)).toEqual(compareLines(START, italian, scotch));
+  });
+});

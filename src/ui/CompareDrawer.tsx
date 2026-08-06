@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { PvLine } from '../engine/types';
-import { compareLines, type LineSummary } from '../explain/compare';
+import { compareLines, type AuthoredContrastPair, type LineSummary } from '../explain/compare';
 import { formatScore } from './useAnalysis';
 import { Button } from './Button';
 import { EvalBar } from './EvalBar';
@@ -65,16 +65,21 @@ export function CompareDrawer({
   b,
   baseFen,
   onClose,
+  authored,
 }: {
   a: PvLine;
   b: PvLine;
   baseFen: string;
   onClose: () => void;
+  authored?: AuthoredContrastPair;
 }) {
-  const comparison = useMemo(() => compareLines(baseFen, a, b), [baseFen, a, b]);
+  const comparison = useMemo(
+    () => compareLines(baseFen, a, b, undefined, authored),
+    [baseFen, a, b, authored],
+  );
 
   return (
-    <div role="dialog" aria-label={`Compare ${a.san} and ${b.san}`} className="compare-drawer">
+    <div role="region" aria-label={`Compare ${a.san} and ${b.san}`} className="compare-drawer">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: 16, margin: 0 }}>
           Compare {a.san} and {b.san}
