@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -13,10 +13,15 @@ vi.mock('howler', () => ({
 }));
 
 import { useLessonStore } from '../lesson/store';
+import { useProgressStore } from '../progress/store';
 import { LessonPicker } from './LessonPicker';
 
 describe('LessonPicker', () => {
-  beforeEach(() => useLessonStore.getState().stopLesson());
+  beforeEach(() => {
+    useLessonStore.getState().stopLesson();
+    localStorage.clear();
+    useProgressStore.getState().reset();
+  });
 
   it('lists every lesson', () => {
     render(<LessonPicker />);
@@ -54,5 +59,43 @@ describe('LessonPicker', () => {
     useLessonStore.getState().startLesson('italian-game');
     const { container } = render(<LessonPicker />);
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it('shows nothing for a lesson never started', () => {
+    useProgressStore.getState().reset();
+    render(<LessonPicker />);
+    // Deliberately specific: lesson summaries are free to contain the word
+    // "checkpoint", so match the progress line's actual shape instead.
+    expect(screen.queryByText(/\d+ of \d+ checkpoints/i)).not.toBeInTheDocument();
+  });
+
+  it('shows how many checkpoints are solved once some are', () => {
+    useProgressStore.getState().reset();
+    useProgressStore
+      .getState()
+      .noteAttempt('italian-game', 'italian-open-with-e4', { solved: true, hintsUsed: 0 }, 'k');
+    render(<LessonPicker />);
+    expect(screen.getByText(/1 of 3 checkpoints/i)).toBeInTheDocument();
+  });
+
+  it('marks a completed lesson as done in text, not colour alone', () => {
+    useProgressStore.getState().reset();
+    useProgressStore.getState().noteLessonComplete('london-system');
+    render(<LessonPicker />);
+    expect(screen.getByText(/done/i)).toBeInTheDocument();
+  });
+
+  it('tells the player when stored progress could not be read', () => {
+    useProgressStore.setState({ recovered: true });
+    render(<LessonPicker />);
+    expect(screen.getByRole('status')).toHaveTextContent(/could not be read|starting fresh/i);
+    act(() => useProgressStore.getState().dismissNotice());
+  });
+
+  it('tells the player when progress cannot be saved', () => {
+    useProgressStore.setState({ saveFailed: true });
+    render(<LessonPicker />);
+    expect(screen.getByRole('status')).toHaveTextContent(/not being saved/i);
+    act(() => useProgressStore.getState().dismissNotice());
   });
 });

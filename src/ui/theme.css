@@ -137,3 +137,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .compare-drawer { animation: none; }
 }
+
+.lesson-progress {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  margin: 4px 0 0;
+}
+
+.progress-notice {
+  font-size: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  margin: 0 0 12px;
+}
