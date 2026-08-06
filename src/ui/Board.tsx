@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { resolveDrop } from '../chess/resolveDrop';
+import { useActiveLesson } from '../lesson/store';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 
@@ -11,6 +12,8 @@ const prefersReducedMotion =
 export function Board() {
   const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
+  const activeLesson = useActiveLesson();
+  const orientation = activeLesson?.lesson.side ?? 'white';
 
   const highlight = useMemo(() => {
     if (!node.move) return {};
@@ -46,6 +49,7 @@ export function Board() {
       options={{
         id: 'main-board',
         position: node.fen,
+        boardOrientation: orientation,
         onPieceDrop,
         onPieceDrag,
         squareStyles: highlight,
