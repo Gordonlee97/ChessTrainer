@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-const PURE_DIRS = ['src/chess', 'src/engine', 'src/tree', 'src/explain', 'src/content', 'src/lesson'];
+const PURE_DIRS = ['src/chess', 'src/engine', 'src/tree', 'src/explain', 'src/content', 'src/lesson', 'src/progress'];
 const FORBIDDEN_PACKAGES = ['react', 'react-dom', 'zustand'];
 
 // Matches every form a forbidden package could be pulled in by: a static
@@ -30,7 +30,11 @@ const FORBIDDEN = FORBIDDEN_PACKAGES.flatMap(packagePatterns);
 // exemption is deliberate, not that any file called `store.ts` is exempt.
 // Built with `join` (not literals) so entries match regardless of the path
 // separator `tsFilesIn`'s walk produces on the current platform.
-const STORE_EXEMPTIONS = new Set([join('src', 'tree', 'store.ts'), join('src', 'lesson', 'store.ts')]);
+const STORE_EXEMPTIONS = new Set([
+  join('src', 'tree', 'store.ts'),
+  join('src', 'lesson', 'store.ts'),
+  join('src', 'progress', 'store.ts'),
+]);
 
 function isScannableSourceFile(path: string): boolean {
   const isSource = path.endsWith('.ts') || path.endsWith('.tsx');
