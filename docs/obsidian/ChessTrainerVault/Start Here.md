@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-05
+updated: 2026-08-06
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,16 +10,16 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-05
+## Repo state as of 2026-08-06
 
 | | |
 |---|---|
-| Branch | `feat/content-and-lessons` |
-| Base | `master` — PR #1 merged 2026-08-04, PR #2 (Plan 2) merged 2026-08-05 |
+| Branch | `master` |
+| Merged | PR #1 (Plan 1) 2026-08-04 · PR #2 (Plan 2) 2026-08-05 · PR #3 (Plan 3) 2026-08-06 |
 | Working tree | Clean |
 | Suite | 343 passing, 1 skipped (expected — see below) |
 | Last plan finished | Plan 3, the teaching layer, 2026-08-05 (eight tasks) |
-| Last change | Whole-branch review fix wave, 2026-08-05 (nine items) |
+| Last change | Plan 3 merged to `master`, 2026-08-06 |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
