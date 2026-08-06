@@ -25,6 +25,19 @@ describe('LessonPicker', () => {
     expect(screen.getByRole('button', { name: /forks and pins/i })).toBeInTheDocument();
   });
 
+  it('shows each lesson summary, which is what the field exists for', () => {
+    render(<LessonPicker />);
+    expect(screen.getByText(/the most natural opening in chess/i)).toBeInTheDocument();
+    expect(screen.getByText(/two of the sharpest tactics in chess/i)).toBeInTheDocument();
+  });
+
+  it('keeps the button named by its title alone, so the summary is not read out as the control', () => {
+    render(<LessonPicker />);
+    expect(
+      screen.getByRole('button', { name: /^the italian game$/i }),
+    ).toBeInTheDocument();
+  });
+
   it('separates openings from themes', () => {
     render(<LessonPicker />);
     expect(screen.getByRole('heading', { name: /openings/i })).toBeInTheDocument();
