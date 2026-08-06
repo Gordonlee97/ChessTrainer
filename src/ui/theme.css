@@ -108,6 +108,17 @@ body {
 .quality-badge[data-band='mistake'] { color: #a2521c; background: #fdf0e6; }
 .quality-badge[data-band='blunder'] { color: #a12126; background: #fdecec; }
 
+.lesson-rail {
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
 .compare-drawer {
   margin-top: 18px;
   padding: 16px;

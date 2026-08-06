@@ -2,8 +2,11 @@ import { Chess } from 'chess.js';
 import type { CSSProperties } from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import { resolveSan } from '../chess/resolveDrop';
+import type { Alternative } from '../content/schema';
+import type { AuthoredContrastPair } from '../explain/compare';
 import { buildContext, describeMove } from '../explain/explain';
 import { classifyMove } from '../explain/quality';
+import { useActiveLesson } from '../lesson/store';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 import { Button } from './Button';
@@ -26,11 +29,33 @@ function noCandidatesMessage(fen: string): string {
   return 'No candidate moves available.';
 }
 
+/**
+ * The authored pros and cons for a pair of moves, or undefined when the
+ * lesson has nothing to say about either — in which case `compareLines`
+ * falls back to its own heuristic summary.
+ */
+function authoredContrastFor(
+  alternatives: Alternative[] | undefined,
+  aSan: string,
+  bSan: string,
+): AuthoredContrastPair | undefined {
+  if (!alternatives) return undefined;
+  const find = (san: string) => alternatives.find((entry) => entry.san === san);
+  const a = find(aSan);
+  const b = find(bSan);
+  if (!a && !b) return undefined;
+  return {
+    a: a ? { pros: a.pros, cons: a.cons } : undefined,
+    b: b ? { pros: b.pros, cons: b.cons } : undefined,
+  };
+}
+
 export function CandidateRail() {
   const { result, status, retry } = useAnalysis();
   const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
   const [comparing, setComparing] = useState(false);
+  const activeLesson = useActiveLesson();
 
   // Without this, leaving the drawer open and navigating to a position with
   // fewer than 2 candidates (which unmounts it) and then back to one with 2+
@@ -71,6 +96,43 @@ export function CandidateRail() {
       }
     });
   }, [node.fen, result, status]);
+
+  const alternatives = activeLesson?.state.nextMove?.alternatives;
+
+  // Only fires when the lesson's current move carries `alternatives` and
+  // those alternatives' SANs match the two lines actually being compared —
+  // an off-book candidate pair falls back to the heuristic in compareLines.
+  const authoredContrast = useMemo(() => {
+    if (!result || result.lines.length < 2) return undefined;
+    return authoredContrastFor(alternatives, result.lines[0].san, result.lines[1].san);
+  }, [alternatives, result]);
+
+  /**
+   * The comparison offered while a checkpoint is pending.
+   *
+   * Every move in the corpus that carries `alternatives` is also a
+   * checkpoint, so without this the authored contrast was unreachable: the
+   * rail hides itself at a checkpoint, and stepping off the line to un-hide
+   * it moves the position past the move the alternatives belong to.
+   *
+   * The constraint is that the engine must not leak the answer, not that
+   * comparison is forbidden — so the pair here is chosen from the authored
+   * alternatives found among the lines, never from the engine's ordering,
+   * and any line the checkpoint would accept is excluded. What the player
+   * sees is two moves the lesson itself wanted contrasted, neither of which
+   * is the answer.
+   */
+  const checkpointComparison = useMemo(() => {
+    const checkpoint = activeLesson?.state.pendingCheckpoint;
+    if (!checkpoint || !alternatives || !result) return null;
+    const eligible = result.lines.filter(
+      (line) =>
+        alternatives.some((entry) => entry.san === line.san) && !checkpoint.accept.includes(line.san),
+    );
+    if (eligible.length < 2) return null;
+    const [a, b] = eligible;
+    return { a, b, authored: authoredContrastFor(alternatives, a.san, b.san) };
+  }, [activeLesson, alternatives, result]);
 
   function playCandidate(san: string) {
     // Shares resolveDrop's classification (via resolveSan) so a candidate
@@ -136,6 +198,47 @@ export function CandidateRail() {
       <div role="status" style={{ padding: 12, color: 'var(--ink-soft)', fontSize: 13 }}>
         Thinking…
       </div>
+    );
+  }
+
+  if (activeLesson?.state.pendingCheckpoint) {
+    return (
+      <section aria-label="Candidate moves">
+        <p
+          role="status"
+          style={{
+            padding: 12,
+            margin: 0,
+            borderRadius: 'var(--radius)',
+            border: '2px solid var(--border)',
+            fontSize: 13,
+          }}
+        >
+          Engine suggestions are hidden while the lesson is asking you for a move.
+        </p>
+        {checkpointComparison && (
+          <>
+            <Button
+              variant="secondary"
+              style={{ width: '100%', marginTop: 8 }}
+              onClick={() => setComparing((open) => !open)}
+            >
+              {comparing
+                ? 'Hide comparison'
+                : `Compare ${checkpointComparison.a.san} and ${checkpointComparison.b.san}`}
+            </Button>
+            {comparing && (
+              <CompareDrawer
+                a={checkpointComparison.a}
+                b={checkpointComparison.b}
+                baseFen={node.fen}
+                onClose={() => setComparing(false)}
+                authored={checkpointComparison.authored}
+              />
+            )}
+          </>
+        )}
+      </section>
     );
   }
 
@@ -211,6 +314,7 @@ export function CandidateRail() {
               b={result.lines[1]}
               baseFen={node.fen}
               onClose={() => setComparing(false)}
+              authored={authoredContrast}
             />
           )}
         </>

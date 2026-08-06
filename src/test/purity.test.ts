@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-const PURE_DIRS = ['src/chess', 'src/engine', 'src/tree', 'src/explain'];
+const PURE_DIRS = ['src/chess', 'src/engine', 'src/tree', 'src/explain', 'src/content', 'src/lesson'];
 const FORBIDDEN_PACKAGES = ['react', 'react-dom', 'zustand'];
 
 // Matches every form a forbidden package could be pulled in by: a static
@@ -23,16 +23,19 @@ function packagePatterns(pkg: string): RegExp[] {
 
 const FORBIDDEN = FORBIDDEN_PACKAGES.flatMap(packagePatterns);
 
-// The Zustand binding layer over the pure game tree. This one file is allowed
-// to import zustand; everything else under PURE_DIRS must stay framework-free.
-// Built with `join` (not a literal) so it matches regardless of the path
+// The Zustand binding layers over the otherwise-pure chess/, engine/ and
+// tree/ code. These files are allowed to import zustand; everything else
+// under PURE_DIRS must stay framework-free. An explicit, enumerated allowlist
+// rather than a basename or glob match — the point of the guard is that every
+// exemption is deliberate, not that any file called `store.ts` is exempt.
+// Built with `join` (not literals) so entries match regardless of the path
 // separator `tsFilesIn`'s walk produces on the current platform.
-const STORE_EXEMPTION = join('src', 'tree', 'store.ts');
+const STORE_EXEMPTIONS = new Set([join('src', 'tree', 'store.ts'), join('src', 'lesson', 'store.ts')]);
 
 function isScannableSourceFile(path: string): boolean {
   const isSource = path.endsWith('.ts') || path.endsWith('.tsx');
   const isTest = path.endsWith('.test.ts') || path.endsWith('.test.tsx');
-  return isSource && !isTest && path !== STORE_EXEMPTION;
+  return isSource && !isTest && !STORE_EXEMPTIONS.has(path);
 }
 
 function tsFilesIn(dir: string): string[] {

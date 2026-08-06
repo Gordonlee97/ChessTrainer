@@ -40,6 +40,22 @@ export interface Comparison {
   verdict: string;
 }
 
+export interface AuthoredContrast {
+  pros: string[];
+  cons: string[];
+}
+
+export interface AuthoredContrastPair {
+  a?: AuthoredContrast;
+  b?: AuthoredContrast;
+}
+
+/** Authored content wins over the heuristic — a human wrote it for this exact line. */
+function applyAuthored(summary: LineSummary, authored?: AuthoredContrast): LineSummary {
+  if (!authored) return summary;
+  return { ...summary, pros: authored.pros, cons: authored.cons };
+}
+
 /**
  * Plays a principal variation out, stopping at the ply limit or the first
  * illegal move. Reports how many plies it managed, which can be below the cap.
@@ -274,12 +290,13 @@ export function compareLines(
   a: PvLine,
   b: PvLine,
   plies: number = DEFAULT_PLIES,
+  authored?: AuthoredContrastPair,
 ): Comparison {
   const mover = new Chess(baseFen).turn();
   const baseFeatures = extractFeatures(baseFen);
 
-  const summaryA = summarise(a, baseFen, baseFeatures, mover, plies);
-  const summaryB = summarise(b, baseFen, baseFeatures, mover, plies);
+  const summaryA = applyAuthored(summarise(a, baseFen, baseFeatures, mover, plies), authored?.a);
+  const summaryB = applyAuthored(summarise(b, baseFen, baseFeatures, mover, plies), authored?.b);
   const { practicallyEqual, verdict } = buildVerdict(summaryA, summaryB, mover);
 
   return { a: summaryA, b: summaryB, practicallyEqual, verdict };

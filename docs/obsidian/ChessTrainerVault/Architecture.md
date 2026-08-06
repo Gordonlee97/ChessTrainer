@@ -32,14 +32,19 @@ with no rendering involved.
 | `src/explain/` | Pure functions over `PvLine`s and position features, no React: move-quality banding (`quality.ts`), the rule-based explainer with a FEN fixture table (`rules.ts`, `explain.ts`), and line comparison with a calibrated verdict (`compare.ts`) |
 | `src/tree/` | The immutable game tree (`tree.ts`) and its Zustand store (`store.ts`) |
 | `src/sound/` | Howler wrapper: preload, pooling, mute, graceful degradation |
-| `src/ui/` | Board, EvalBar, Breadcrumb, CandidateRail, QualityBadge, CompareDrawer, MiniBoard, Button, the analysis hook, theme tokens |
+| `src/content/` | The authored corpus: the Zod schema (`schema.ts`), the parsing and chess-validating loader (`load.ts`), and seven lessons under `lessons/`. Validation replays every authored move, every accepted checkpoint answer, every `nearMiss` key and every `alternative` through chess.js — legality only; it cannot tell a legal move from a good one |
+| `src/lesson/` | The runner. `lessonState.ts` derives where the player is by matching the tree's path against the segment's moves; `grade.ts` judges an attempted answer; `store.ts` is the only stateful piece and holds just the lesson id, the segment index, and per-checkpoint hint counts |
+| `src/ui/` | Board, EvalBar, Breadcrumb, CandidateRail, QualityBadge, CompareDrawer, MiniBoard, Button, LessonPicker, LessonRail, the analysis hook, theme tokens |
+
+**The lesson layer stores no position.** `useActiveLesson` recomputes everything
+from the tree's path on every render, which is why branching off a lesson and
+coming back needs no special handling — and why a second source of position
+state would break it silently rather than loudly.
 
 ### Planned
 
 | Directory | Responsibility | Status |
 |---|---|---|
-| `src/content/` | Opening and theme data, Zod schema, validating loader | Not started |
-| `src/lesson/` | Current step from tree selection; checkpoint grading; hint tiers | Not started |
 | `src/progress/` | Versioned localStorage | Not started |
 
 ## Data flow

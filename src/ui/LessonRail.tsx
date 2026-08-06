@@ -1,0 +1,136 @@
+import { resolveSan } from '../chess/resolveDrop';
+import { useActiveLesson, useLessonStore } from '../lesson/store';
+import { sounds } from '../sound';
+import { useTreeStore } from '../tree/store';
+import { pathTo } from '../tree/tree';
+import { Button } from './Button';
+
+export function LessonRail() {
+  const active = useActiveLesson();
+  const hintsShown = useLessonStore((store) => store.hintsShown);
+  const revealHint = useLessonStore((store) => store.revealHint);
+  const stopLesson = useLessonStore((store) => store.stopLesson);
+  const nextSegment = useLessonStore((store) => store.nextSegment);
+  const playMove = useTreeStore((store) => store.playMove);
+  const selectNode = useTreeStore((store) => store.selectNode);
+  const tree = useTreeStore((store) => store.tree);
+
+  if (!active) return null;
+  const { lesson, segment, state, attemptedCheckpoint, attemptedGrade, hasNextSegment } = active;
+
+  /**
+   * The question currently in front of the player. Normally the pending
+   * checkpoint; while an answer is being graded `pendingCheckpoint` is null
+   * (the path has left the line), but the question — and the hints for it —
+   * must stay on screen, because the reply beside them talks about taking a
+   * hint.
+   */
+  const asking = state.pendingCheckpoint ?? attemptedCheckpoint;
+  const revealed = asking ? (hintsShown[asking.id] ?? 0) : 0;
+
+  /** The note attached to the move the lesson has just walked past. */
+  const lastNote = !state.offScript && state.ply > 0 ? segment.moves[state.ply - 1]?.note : undefined;
+
+  /**
+   * Select the last node still on the lesson's line. `state.ply` counts the
+   * moves that matched, and `pathTo` includes the root at index 0, so the node
+   * after `ply` matching moves sits at index `ply`. The branch the player
+   * explored stays in the tree — this only moves the selection.
+   */
+  function returnToLesson() {
+    const path = pathTo(tree, tree.selectedId);
+    const target = path[Math.min(state.ply, path.length - 1)];
+    selectNode(target.id);
+  }
+
+  /**
+   * Plays the lesson's next move with the same sound a drag or a candidate
+   * click would make, rather than the generic button press — the board is
+   * moving, so it should sound like the board moving.
+   */
+  function playNextMove(san: string) {
+    const fen = tree.nodes[tree.selectedId].fen;
+    const resolved = resolveSan(fen, san);
+    const played = playMove(san);
+    if (played && resolved) {
+      sounds.play(resolved.sound === 'quiet' ? 'move' : resolved.sound);
+    }
+  }
+
+  return (
+    <section aria-label="Lesson" className="lesson-rail">
+      <h2 style={{ fontSize: 16, margin: '0 0 6px' }}>{lesson.title}</h2>
+
+      {state.ply === 0 && segment.intro && (
+        <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{segment.intro}</p>
+      )}
+
+      {/*
+        The note belongs to the move just played, so it renders whenever the
+        path is on the line past ply 0 — including when the next move carries
+        a checkpoint (the note is usually what justifies the question) and
+        when the line has finished (otherwise every lesson drops its last
+        note).
+      */}
+      {lastNote && <p style={{ fontSize: 13 }}>{lastNote}</p>}
+
+      {state.complete && !state.offScript && (
+        <>
+          <p style={{ fontSize: 14, fontWeight: 800 }}>
+            {hasNextSegment ? 'That part is done — nicely played.' : 'Lesson complete — nicely done.'}
+          </p>
+          {hasNextSegment && <Button onClick={nextSegment}>Next part</Button>}
+        </>
+      )}
+
+      {state.offScript && (
+        <>
+          {attemptedGrade?.kind === 'near-miss' ? (
+            <p role="status" style={{ fontSize: 13 }}>
+              {attemptedGrade.reply}
+            </p>
+          ) : attemptedGrade?.kind === 'wrong' ? (
+            <p role="status" style={{ fontSize: 13 }}>
+              Not this time — take a hint, or use Return to the lesson to go back and try again.
+            </p>
+          ) : (
+            <p style={{ fontSize: 13 }}>
+              You have stepped off the lesson line. Explore as long as you like — the lesson waits.
+            </p>
+          )}
+          <Button variant="ghost" onClick={returnToLesson}>
+            Return to the lesson
+          </Button>
+        </>
+      )}
+
+      {asking && (
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 700 }}>{asking.prompt}</p>
+
+          <ol style={{ fontSize: 13, paddingLeft: 18 }}>
+            {asking.hints.slice(0, revealed).map((hint) => (
+              <li key={hint}>{hint}</li>
+            ))}
+          </ol>
+
+          {revealed < asking.hints.length && (
+            <Button variant="ghost" onClick={() => revealHint(asking.id)}>
+              Hint
+            </Button>
+          )}
+        </div>
+      )}
+
+      {!state.offScript && !state.complete && !state.pendingCheckpoint && state.nextMove && (
+        <Button onClick={() => playNextMove(state.nextMove!.san)} sound={false}>
+          Play the next move
+        </Button>
+      )}
+
+      <Button variant="ghost" onClick={stopLesson}>
+        Leave lesson
+      </Button>
+    </section>
+  );
+}

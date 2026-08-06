@@ -22,7 +22,7 @@ const b: PvLine = { san: 'd4', cp: 28, mate: null, pv: ['d4', 'd5', 'Nf3'] };
 describe('CompareDrawer', () => {
   it('names both lines being compared', () => {
     render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('region');
 
     // The drawer's own <h2> ("Compare e4 and d4") and each LinePanel's <h3>
     // (its bare SAN) both legitimately contain "e4"/"d4" — querying by level
@@ -54,7 +54,7 @@ describe('CompareDrawer', () => {
       pv: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5', 'c3', 'Nf6', 'd4', 'exd4', 'cxd4', 'Bb4+'],
     };
     render(<CompareDrawer a={long} b={b} baseFen={START} onClose={vi.fn()} />);
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('region');
 
     expect(dialog).toHaveTextContent(/after 8 plies/i);
     expect(dialog).not.toHaveTextContent(/12 plies/i);
@@ -65,7 +65,7 @@ describe('CompareDrawer', () => {
     // truncated snapshot of it. "+0.31 after 8 plies" reads as one claim
     // about one position, and is wrong.
     render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
-    const dialog = screen.getByRole('dialog');
+    const dialog = screen.getByRole('region');
 
     expect(dialog).not.toHaveTextContent(/\+0\.31 after/i);
     expect(dialog).toHaveTextContent(/whole line/i);
@@ -83,8 +83,21 @@ describe('CompareDrawer', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('is announced as a dialog', () => {
+  it('is announced as a region, findable by its accessible name', () => {
     render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
-    expect(screen.getByRole('dialog')).toHaveAccessibleName(/compare/i);
+    expect(screen.getByRole('region')).toHaveAccessibleName(/compare/i);
+  });
+
+  it('renders authored pros when the lesson supplies them', () => {
+    render(
+      <CompareDrawer
+        a={a}
+        b={b}
+        baseFen={START}
+        onClose={vi.fn()}
+        authored={{ a: { pros: ['Authored pro'], cons: ['Authored con'] } }}
+      />,
+    );
+    expect(screen.getByText('Authored pro')).toBeInTheDocument();
   });
 });

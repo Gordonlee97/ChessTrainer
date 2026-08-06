@@ -18,6 +18,7 @@ vi.mock('react-chessboard', () => ({
   },
 }));
 
+import { useLessonStore } from '../lesson/store';
 import { sounds } from '../sound';
 import { useTreeStore } from '../tree/store';
 import { Board } from './Board';
@@ -26,6 +27,7 @@ type PieceDrag = (args: { isSparePiece: boolean; piece: { pieceType: string }; s
 
 describe('Board', () => {
   beforeEach(() => {
+    useLessonStore.getState().stopLesson();
     useTreeStore.getState().reset();
     mocks.play.mockClear();
     sounds.setMuted(false);
@@ -44,5 +46,16 @@ describe('Board', () => {
     const onPieceDrag = chessboardOptions.current?.onPieceDrag as PieceDrag;
     onPieceDrag({ isSparePiece: false, piece: { pieceType: 'wP' }, square: 'e2' });
     expect(mocks.play).not.toHaveBeenCalled();
+  });
+
+  it('defaults to the white orientation when no lesson is running', () => {
+    render(<Board />);
+    expect(chessboardOptions.current?.boardOrientation).toBe('white');
+  });
+
+  it('flips to the black orientation for a Black lesson', () => {
+    useLessonStore.getState().startLesson('black-vs-e4');
+    render(<Board />);
+    expect(chessboardOptions.current?.boardOrientation).toBe('black');
   });
 });
