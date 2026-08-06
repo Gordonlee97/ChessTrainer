@@ -56,6 +56,18 @@ describe('deriveLessonState', () => {
     expect(state.ply).toBe(0);
   });
 
+  it('suppresses the pending checkpoint once the player answers it, while still naming the move it wanted', () => {
+    // The `!offScript` guard: an answered checkpoint is no longer *pending*,
+    // or the UI would ask the question and grade the reply as if they were
+    // two unrelated states. `nextMove` still points at the authored move, so
+    // the grading path can find the checkpoint that was being answered.
+    const state = deriveLessonState(segment, ['e4', 'e5', 'Bc4']);
+    expect(state.offScript).toBe(true);
+    expect(state.ply).toBe(2);
+    expect(state.pendingCheckpoint).toBeNull();
+    expect(state.nextMove?.checkpoint?.id).toBe('cp-nf3');
+  });
+
   it('reports completion at the end of the line', () => {
     const state = deriveLessonState(segment, ['e4', 'e5', 'Nf3', 'Nc6']);
     expect(state.complete).toBe(true);
