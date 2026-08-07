@@ -31,34 +31,54 @@ line opened during a running lesson could record a checkpoint the player never
 answered, and a correct answer from a (currently hypothetical) multi-entry
 `accept` list was being written to durable storage as permanently unsolved.
 
-## Plan 4 has not been verified in a browser
+## Plan 4's browser pass — mostly done, one gap
 
-Nothing in Plan 4 — progress surviving reload, saved lines round-tripping, the
-mute toggle persisting, the corrected board orientation, a corrupted storage
-key recovering with a notice — has been driven by hand. The plan's own manual
-checklist (`docs/superpowers/plans/2026-08-06-progress-and-controls.md`, at
-the bottom) is the list to work through. It has not started.
+**2026-08-06.** Driven by hand in Chrome. Confirmed working, console clean:
+
+- The controls row renders; "Sound on" toggles to "Sound off" with
+  `aria-pressed` following it, and **the mute survives a reload**.
+- Saving a line stores name, PGN and `startFen`; it **survives a reload**, and
+  "Open" rebuilds the position (breadcrumb back to `start › e4 › e5`).
+- The picker shows "1 of 3 checkpoints" for partial progress and "Done" for a
+  completed lesson.
+- Board orientation follows the lesson: the London renders from White's side,
+  "Answering 1.e4 as Black" from Black's.
+- **Spec §10 holds**: with `chesstrainer.progress.v1` deliberately corrupted,
+  the app comes up fully with "Your saved progress could not be read, so it is
+  starting fresh" — not a blank screen.
+
+**The gap: nothing was verified that requires moving a piece on the board.**
+Neither a synthetic drag nor a click-to-move would drive `react-chessboard`
+through automation — the board only handles drops, and a synthetic pointer
+sequence froze the renderer. So these remain unobserved by hand:
+
+- answering a checkpoint and watching the record appear
+- the wrong-answer path showing its authored near-miss reply
+- "Next part" advancing to a segment, and with it the **segment-level board
+  orientation** that Plan 4's Task 1 added
+
+All three are covered by unit tests, and the segment-orientation test asserts
+the flipped value directly. A human with a mouse can close this in two minutes:
+start **Development and Tempo**, answer the `Nf3` checkpoint, take "Next part",
+and confirm the board flips to Black's side.
 
 ## Do this next
 
-**1. Verify Plan 4 in a browser**, using the checklist at the bottom of
-`docs/superpowers/plans/2026-08-06-progress-and-controls.md`. In particular:
-solve a checkpoint, reload, and confirm the picker still shows it solved;
-save a line, start "New game", and reopen it; toggle sound off, reload, and
-confirm it stayed off; corrupt the `chesstrainer.progress.v1` key in
-DevTools and reload to confirm the app comes up with a notice, not a blank
-screen, per spec §10.
+**1. Spend two minutes on the gap above**, then finish the branch. It is
+otherwise ready to merge per [[Workflow]] — six tasks each reviewed
+individually, plus a whole-branch review and its fix wave, both clean, and
+zero `act()` warnings. See [[Current State]] for the before/after.
 
-**2. Finish the branch.** Once verified, this is ready to merge per
-[[Workflow]] — six tasks, each reviewed individually, plus a whole-branch
-review and its fix wave, both clean. See [[Current State]] for the full
-before/after.
-
-**3. Write Plan 5 — app shell and keyboard navigation.** [[Roadmap]] has what
+**2. Write Plan 5 — app shell and keyboard navigation.** [[Roadmap]] has what
 it covers: a properly designed `App.tsx` (currently an inline-styled shell
-stacking four components with no design pass) and the spec's outstanding
+stacking five components with no design pass) and the spec's outstanding
 keyboard board-navigation requirement. Do not start writing either directly;
 see [[Workflow]].
+
+Worth knowing for Plan 5: **keyboard board navigation would also make the
+board testable**. Every by-hand gap above exists because the only way to move
+a piece is a mouse drag. Building keyboard moves buys accessibility and an
+automatable input path in the same change.
 
 ## Where to look for what
 
