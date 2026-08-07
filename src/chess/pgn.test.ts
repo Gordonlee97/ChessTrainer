@@ -30,4 +30,15 @@ describe('lineToPgn', () => {
   it('returns an empty list rather than throwing on unreadable pgn', () => {
     expect(pgnToSans('this is not pgn at all', START)).toEqual([]);
   });
+
+  it('replays from the given startFen rather than any header embedded in the pgn', () => {
+    // Written from the standard start, so this pgn carries no SetUp/FEN
+    // header at all. At AFTER_E4_E5 it is White to move with e4/e5 already
+    // played, so replaying 'e4' from there is illegal on the first token.
+    // An implementation that ignores startFen (delegating to loadPgn, or a
+    // stub that always assumes the standard start) would return ['e4', 'e5']
+    // instead.
+    const pgn = lineToPgn(START, ['e4', 'e5']);
+    expect(pgnToSans(pgn, AFTER_E4_E5)).toEqual([]);
+  });
 });
