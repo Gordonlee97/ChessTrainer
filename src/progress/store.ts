@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import {
   addSavedLine,
-  lessonProgress,
   recordAttempt,
   recordLessonComplete,
   removeSavedLine,
@@ -74,7 +73,3 @@ export const useProgressStore = create<ProgressStore>((set, get) => {
     },
   };
 });
-
-// Re-exported rather than wrapped in a hook: consumers (Task 4) call this
-// once per lesson inside a `map`, and a hook cannot be called in a loop.
-export { lessonProgress };
