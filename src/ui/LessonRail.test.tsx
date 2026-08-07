@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLessonStore } from '../lesson/store';
@@ -129,7 +129,9 @@ describe('LessonRail', () => {
       expect(screen.getByText(/play e4\./i)).toBeInTheDocument();
 
       // ...then walk to the second one (Bc4).
-      for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
+      act(() => {
+        for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
+      });
       rerender(<LessonRail />);
 
       expect(screen.getByText(/most aggressive square/i)).toBeInTheDocument();
