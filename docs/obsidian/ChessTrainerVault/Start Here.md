@@ -14,59 +14,50 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| Branch | `master` |
-| Merged | PR #1 (Plan 1) 2026-08-04 · PR #2 (Plan 2) 2026-08-05 · PR #3 (Plan 3) 2026-08-06 |
+| Branch | `feat/progress-and-controls` |
+| Merged to `master` | PR #1 (Plan 1) 2026-08-04 · PR #2 (Plan 2) 2026-08-05 · PR #3 (Plan 3) 2026-08-06 |
 | Working tree | Clean |
-| Suite | 343 passing, 1 skipped (expected — see below) |
-| Last plan finished | Plan 3, the teaching layer, 2026-08-05 (eight tasks) |
-| Last change | Plan 3 merged to `master`, 2026-08-06 |
+| Suite | 410 passing, 1 skipped (expected — see below), zero `act()` warnings |
+| Last plan finished | Plan 4, progress/saved lines/controls, 2026-08-06 (six tasks + one whole-branch review fix wave) |
+| Last change | The Plan 4 fix wave, on `feat/progress-and-controls`, not yet merged |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
 second skip is a real failure.
 
-The fix wave that closed Plan 3's review is the reason to read [[Current State]]
-before trusting anything written about lessons earlier in the branch: one lesson
-was accepting a move that loses by force, three shipped half their content
-unreachable, and the picker never rendered the summaries it was given.
+The fix wave that closed Plan 4's review is the reason to read [[Current State]]
+before trusting anything written about progress earlier in the branch: a saved
+line opened during a running lesson could record a checkpoint the player never
+answered, and a correct answer from a (currently hypothetical) multi-entry
+`accept` list was being written to durable storage as permanently unsolved.
 
-## Plan 3 was verified in a browser
+## Plan 4 has not been verified in a browser
 
-**2026-08-05.** Plan 3 was driven by hand in
-Chrome after the fix wave. Everything the fix wave claimed to fix was confirmed
-working, and the console was clean throughout:
-
-- The picker lists three openings and four ideas, each with its summary.
-- At a checkpoint the candidate rail is replaced by "Engine suggestions are
-  hidden…" and the answer appears nowhere on the page.
-- Playing `d4` at the Italian's first checkpoint returns its **authored**
-  near-miss reply, with the prompt, the Hint button and "Return to the lesson"
-  all still on screen — no error wording.
-- Notes that used to vanish before a checkpoint now render.
-- At the `Bc4` checkpoint the Compare button offers **`Bb5` and `d4`**, and a
-  page-wide scan confirmed `Bc4` appears nowhere. The drawer opens as a
-  `role="region"` and shows the authored Ruy Lopez and Scotch pros and cons.
-- **Forks and Pins**: the pin segment completes, "Next part" advances, and the
-  fork segment now asks *"The free pawn on e5 is bait. Which capture takes the
-  forking knight instead?"* — the corrected lesson.
-
-**One thing still unobserved**, carried from Plan 2: that
-`prefers-reduced-motion` suppresses the compare drawer's entrance animation
-while leaving a visible press signal (DevTools → Rendering → emulate). The CSS
-is right by inspection and a reviewer has checked it twice, but nobody has
-watched it with the emulation on.
+Nothing in Plan 4 — progress surviving reload, saved lines round-tripping, the
+mute toggle persisting, the corrected board orientation, a corrupted storage
+key recovering with a notice — has been driven by hand. The plan's own manual
+checklist (`docs/superpowers/plans/2026-08-06-progress-and-controls.md`, at
+the bottom) is the list to work through. It has not started.
 
 ## Do this next
 
-**1. Settle the board-orientation question.** It gates Plan 4, because Plan 4
-touches lesson data. `theme-development-and-tempo`'s second segment is played
-from Black's side of a White-oriented board, because `side` lives on the lesson
-rather than the segment. The two honest fixes — move orientation onto the
-segment, or split the segment into its own `side: 'black'` lesson — are in
-[[Known Issues]]. Rewriting the prose to White's voice is not one of them.
+**1. Verify Plan 4 in a browser**, using the checklist at the bottom of
+`docs/superpowers/plans/2026-08-06-progress-and-controls.md`. In particular:
+solve a checkpoint, reload, and confirm the picker still shows it solved;
+save a line, start "New game", and reopen it; toggle sound off, reload, and
+confirm it stayed off; corrupt the `chesstrainer.progress.v1` key in
+DevTools and reload to confirm the app comes up with a notice, not a blank
+screen, per spec §10.
 
-**2. Write Plan 4 — progress persistence.** [[Roadmap]] has the ordering and the
-two schema decisions already made. Do not start writing `src/progress/` directly;
+**2. Finish the branch.** Once verified, this is ready to merge per
+[[Workflow]] — six tasks, each reviewed individually, plus a whole-branch
+review and its fix wave, both clean. See [[Current State]] for the full
+before/after.
+
+**3. Write Plan 5 — app shell and keyboard navigation.** [[Roadmap]] has what
+it covers: a properly designed `App.tsx` (currently an inline-styled shell
+stacking four components with no design pass) and the spec's outstanding
+keyboard board-navigation requirement. Do not start writing either directly;
 see [[Workflow]].
 
 ## Where to look for what

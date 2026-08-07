@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-05
+updated: 2026-08-06
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -23,22 +23,6 @@ None. Both prior blockers were settled on 2026-08-04:
 
 ## Lessons — found in the 2026-08-05 fix wave, left unfixed
 
-### `theme-development-and-tempo` segment 1 is played from Black's side on a White-oriented board
-
-**Where:** `src/content/lessons/theme-development-and-tempo.ts`, `src/ui/Board.tsx`
-**Severity:** medium once seen; blocks nothing, breaks nothing.
-
-The lesson declares `side: 'white'` and `Board.tsx` orients from
-`lesson.side`, but segment 1 starts after `1.e4 e5 2.Qh5` with **Black** to move
-and its notes address the player as Black ("You develop a knight…"). That
-segment was unreachable until segment advancement landed on 2026-08-05, so this
-is newly visible rather than newly broken.
-
-Two honest fixes: move orientation onto the segment (a schema change), or split
-the segment into its own `side: 'black'` lesson. Rewriting the prose to White's
-voice is not one of them — the segment's whole point is punishing the early
-queen, which is Black's job.
-
 ### One authored comparison in the whole corpus
 
 **Where:** `src/content/lessons/`
@@ -61,6 +45,92 @@ comparison, no error. At the Italian's `Bc4` position Stockfish 18 ranks `Bb5`,
 `d4`, `Bc4` at depth 18, so both authored moves are there; shallower or
 differently-ordered searches may not have them, and mid-search the button can
 appear and disappear.
+
+## Progress and controls — found in the 2026-08-06 whole-branch review, left unfixed
+
+### `AppControls` mirrors `sounds.muted` in local `useState` without subscribing
+
+**Where:** `src/ui/AppControls.tsx`
+**Severity:** low today; a real trap for the next hand that touches it.
+
+The mute button reads `sounds.muted` once, into its own `useState`, rather than
+subscribing to it. Nothing else in production calls `SoundManager.setMuted`, so
+there is exactly one writer and it happens to be the same component that reads
+it — the local copy cannot go stale *yet*. A second mute control (a settings
+panel, a keyboard shortcut) would silently desync from this one the moment it
+existed, with no test able to catch it because there is only one today.
+
+### No production caller of `dismissNotice`, and no way to clear progress
+
+**Where:** `src/progress/store.ts`
+**Severity:** medium — a corrupted-storage notice, once shown, never goes away
+inside a session; there is also no player-facing way to reset lesson progress
+or saved lines short of clearing the browser's storage by hand.
+
+`dismissNotice()` exists and is tested, but nothing in `src/ui/` calls it —
+`LessonPicker`'s notice re-renders every time `recovered` or `saveFailed` is
+true, with no dismiss control on screen. Related but separate: there is no
+"reset my progress" affordance anywhere, authored or accidental.
+
+### Multi-tab writes are last-writer-wins on the whole blob
+
+**Where:** `src/progress/storage.ts`, `src/progress/store.ts`
+**Severity:** low; ChessTrainer is not designed for multiple tabs, but nothing
+stops a player from opening one.
+
+`saveProgress` overwrites `chesstrainer.progress.v1` wholesale, and the store
+never listens for the `storage` event. Two tabs each finishing a different
+lesson will have the second tab's save clobber the first's, silently — no
+merge, no conflict notice.
+
+### `loadProgress` discards everything on any single validation failure
+
+**Where:** `src/progress/storage.ts` — `loadProgress`
+**Severity:** medium. Matches spec §10 (degrade, never blank) at the level of
+"the app still works," but the blast radius is the whole progress object.
+
+`progressSchema.safeParse` validates `Progress` as one unit, so one malformed
+`SavedLine` — say, a future field that fails a tightened schema, or storage
+truncated mid-write — resets *every lesson's progress* along with the saved
+lines, not just the broken part. A per-collection or per-item recovery would
+be more forgiving, at the cost of a more complex loader.
+
+### Storage key conventions have drifted
+
+**Where:** `src/progress/storage.ts`, `src/sound/SoundManager.ts`
+**Severity:** low; a naming inconsistency, not a functional bug.
+
+`chesstrainer.progress.v1` versions both the key and the payload's own
+`version: 1` field — redundant, but at least explicit. `chesstrainer.muted` (added
+in Task 6) versions neither. Not a problem yet — a boolean has nowhere to drift
+to — but the next storage key added should pick one convention rather than a
+third.
+
+### `savedLines` is unbounded, with no duplicate guard
+
+**Where:** `src/progress/progress.ts` — `addSavedLine`
+**Severity:** low.
+
+Every "Save this line" click adds a new entry, even one identical in `pgn` and
+`startFen` to an existing one, and nothing caps the list length or the
+localStorage quota it eventually hits (at which point `saveFailed` is now
+surfaced — see the fix wave in `Current State.md` — but the list still grows
+unbounded up to that point).
+
+### The rail still says "stepped off the line" for a correct alternate answer
+
+**Where:** `src/ui/LessonRail.tsx`
+**Severity:** low; a display-only gap, now that the *recorded* outcome is
+correct (fixed 2026-08-06 — see `Current State.md`).
+
+`deriveLessonState` decides on/off-script by string equality against the
+checkpoint's single canonical `san`, so a move that matches a second entry in
+`checkpoint.accept` still renders the "You have stepped off the lesson line"
+copy even though it is now recorded as solved. No lesson today has a
+multi-entry `accept`, so nothing visible is wrong yet — but the fix that landed
+this review only closed the *durable-data* half of the bug. Making the display
+agree needs `deriveLessonState` (or the rail) to consult `accept`, not just
+`san`, which is a small design question, not a one-line patch.
 
 ## Correctness — low consequence
 
@@ -194,10 +264,18 @@ grows endgame content.
 - **`tsconfig.json` includes `types: ["node"]`**, which is unnecessary —
   `node:fs` resolves via `@types/node` regardless. Drop it next time that file is
   touched.
-- **`src/App.tsx` is an inline-styled placeholder**, not the designed layout.
-- **No new-game control exists.** The tree's `reset` is now called by the lesson
-  store (`startLesson`, `nextSegment`), but nothing outside a lesson clears the
-  board.
+- **`src/App.tsx` is an inline-styled placeholder**, not the designed layout —
+  now hosting the picker, lesson rail, saved lines, and controls on top of it.
+- **`tree.pinned` is never populated.** `src/tree/tree.ts` — it exists so a
+  node can keep its cached eval past the ~1000-node cap regardless of
+  recency, and the docstring on `evict()` still describes "pinned nodes" as
+  live machinery, but nothing in the app ever writes to it. Plan 4's saved
+  lines (2026-08-06) were the obvious candidate consumer and deliberately do
+  not use it — a saved line is PGN plus its starting FEN, replayed into
+  whatever tree exists when it is opened, never a set of node ids. Not a
+  correctness gap (eviction never removes a node, only its cached eval), just
+  unused machinery worth removing or wiring up next time the tree module is
+  touched.
 
 ## Test coverage gaps
 
