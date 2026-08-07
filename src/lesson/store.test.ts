@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { lessonById } from '../content/lessons/index';
 import { useTreeStore } from '../tree/store';
@@ -122,7 +122,7 @@ describe('useActiveLesson', () => {
   it('reports a further segment while one remains, and none on the last', () => {
     useLessonStore.getState().startLesson('theme-control-the-centre');
     expect(activeLesson()?.hasNextSegment).toBe(true);
-    useLessonStore.getState().nextSegment();
+    act(() => useLessonStore.getState().nextSegment());
     expect(activeLesson()?.hasNextSegment).toBe(false);
   });
 

@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { resolveSan } from '../chess/resolveDrop';
 import { useActiveLesson, useLessonStore } from '../lesson/store';
+import { useProgressStore } from '../progress/store';
 import { sounds } from '../sound';
 import { useTreeStore } from '../tree/store';
 import { pathTo } from '../tree/tree';
@@ -14,6 +16,62 @@ export function LessonRail() {
   const playMove = useTreeStore((store) => store.playMove);
   const selectNode = useTreeStore((store) => store.selectNode);
   const tree = useTreeStore((store) => store.tree);
+  const noteAttempt = useProgressStore((store) => store.noteAttempt);
+  const noteLessonComplete = useProgressStore((store) => store.noteLessonComplete);
+  // `tree` is already selected above; reusing `tree.selectedId` rather than
+  // adding a second `useTreeStore` subscription for the same underlying data.
+  const selectedId = tree.selectedId;
+
+  /**
+   * Records checkpoint outcomes and lesson completion. This runs on every
+   * render, deliberately: `useActiveLesson()` recomputes from the tree and
+   * returns a fresh object each time, so `active` never has stable identity
+   * and no dependency array can prevent re-runs. The dedupe key inside the
+   * store — `${lessonId}:${checkpointId}:${nodeId}` — is what makes that
+   * safe; a different wrong move is a different tree node, so each genuine
+   * attempt still records exactly once. Do not "fix" this by memoising
+   * `active`: a memo keyed on anything stable would go stale against the
+   * tree, which is precisely the bug this design avoids.
+   */
+  useEffect(() => {
+    if (!active) return;
+    const { lesson, segment, state, attemptedCheckpoint, attemptedGrade, hasNextSegment } = active;
+
+    // A graded attempt: the player answered, and it may or may not have been
+    // accepted. `deriveLessonState` decides on/off-script by string equality
+    // against the single canonical `san`, so a correct answer from a
+    // multi-entry `accept` list still lands here — `attemptedGrade.kind`
+    // is what tells the two apart.
+    if (attemptedCheckpoint && attemptedGrade) {
+      noteAttempt(
+        lesson.id,
+        attemptedCheckpoint.id,
+        {
+          solved: attemptedGrade.kind === 'correct',
+          hintsUsed: hintsShown[attemptedCheckpoint.id] ?? 0,
+        },
+        `${lesson.id}:${attemptedCheckpoint.id}:${selectedId}`,
+      );
+      return;
+    }
+
+    // Solved: the path walked past a checkpoint-bearing move while on script.
+    if (!state.offScript && state.ply > 0) {
+      const passed = segment.moves[state.ply - 1]?.checkpoint;
+      if (passed) {
+        noteAttempt(
+          lesson.id,
+          passed.id,
+          { solved: true, hintsUsed: hintsShown[passed.id] ?? 0 },
+          `${lesson.id}:${passed.id}:${selectedId}`,
+        );
+      }
+    }
+
+    if (state.complete && !state.offScript && !hasNextSegment) {
+      noteLessonComplete(lesson.id);
+    }
+  }, [active, hintsShown, selectedId, noteAttempt, noteLessonComplete]);
 
   if (!active) return null;
   const { lesson, segment, state, attemptedCheckpoint, attemptedGrade, hasNextSegment } = active;

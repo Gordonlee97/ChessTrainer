@@ -14,60 +14,71 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| Branch | `master` |
-| Merged | PR #1 (Plan 1) 2026-08-04 · PR #2 (Plan 2) 2026-08-05 · PR #3 (Plan 3) 2026-08-06 |
+| Branch | `feat/progress-and-controls` |
+| Merged to `master` | PR #1 (Plan 1) 2026-08-04 · PR #2 (Plan 2) 2026-08-05 · PR #3 (Plan 3) 2026-08-06 |
 | Working tree | Clean |
-| Suite | 343 passing, 1 skipped (expected — see below) |
-| Last plan finished | Plan 3, the teaching layer, 2026-08-05 (eight tasks) |
-| Last change | Plan 3 merged to `master`, 2026-08-06 |
+| Suite | 410 passing, 1 skipped (expected — see below), zero `act()` warnings |
+| Last plan finished | Plan 4, progress/saved lines/controls, 2026-08-06 (six tasks + one whole-branch review fix wave) |
+| Last change | The Plan 4 fix wave, on `feat/progress-and-controls`, not yet merged |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
 second skip is a real failure.
 
-The fix wave that closed Plan 3's review is the reason to read [[Current State]]
-before trusting anything written about lessons earlier in the branch: one lesson
-was accepting a move that loses by force, three shipped half their content
-unreachable, and the picker never rendered the summaries it was given.
+The fix wave that closed Plan 4's review is the reason to read [[Current State]]
+before trusting anything written about progress earlier in the branch: a saved
+line opened during a running lesson could record a checkpoint the player never
+answered, and a correct answer from a (currently hypothetical) multi-entry
+`accept` list was being written to durable storage as permanently unsolved.
 
-## Plan 3 was verified in a browser
+## Plan 4's browser pass — mostly done, one gap
 
-**2026-08-05.** Plan 3 was driven by hand in
-Chrome after the fix wave. Everything the fix wave claimed to fix was confirmed
-working, and the console was clean throughout:
+**2026-08-06.** Driven by hand in Chrome. Confirmed working, console clean:
 
-- The picker lists three openings and four ideas, each with its summary.
-- At a checkpoint the candidate rail is replaced by "Engine suggestions are
-  hidden…" and the answer appears nowhere on the page.
-- Playing `d4` at the Italian's first checkpoint returns its **authored**
-  near-miss reply, with the prompt, the Hint button and "Return to the lesson"
-  all still on screen — no error wording.
-- Notes that used to vanish before a checkpoint now render.
-- At the `Bc4` checkpoint the Compare button offers **`Bb5` and `d4`**, and a
-  page-wide scan confirmed `Bc4` appears nowhere. The drawer opens as a
-  `role="region"` and shows the authored Ruy Lopez and Scotch pros and cons.
-- **Forks and Pins**: the pin segment completes, "Next part" advances, and the
-  fork segment now asks *"The free pawn on e5 is bait. Which capture takes the
-  forking knight instead?"* — the corrected lesson.
+- The controls row renders; "Sound on" toggles to "Sound off" with
+  `aria-pressed` following it, and **the mute survives a reload**.
+- Saving a line stores name, PGN and `startFen`; it **survives a reload**, and
+  "Open" rebuilds the position (breadcrumb back to `start › e4 › e5`).
+- The picker shows "1 of 3 checkpoints" for partial progress and "Done" for a
+  completed lesson.
+- Board orientation follows the lesson: the London renders from White's side,
+  "Answering 1.e4 as Black" from Black's.
+- **Spec §10 holds**: with `chesstrainer.progress.v1` deliberately corrupted,
+  the app comes up fully with "Your saved progress could not be read, so it is
+  starting fresh" — not a blank screen.
 
-**One thing still unobserved**, carried from Plan 2: that
-`prefers-reduced-motion` suppresses the compare drawer's entrance animation
-while leaving a visible press signal (DevTools → Rendering → emulate). The CSS
-is right by inspection and a reviewer has checked it twice, but nobody has
-watched it with the emulation on.
+**The gap: nothing was verified that requires moving a piece on the board.**
+Neither a synthetic drag nor a click-to-move would drive `react-chessboard`
+through automation — the board only handles drops, and a synthetic pointer
+sequence froze the renderer. So these remain unobserved by hand:
+
+- answering a checkpoint and watching the record appear
+- the wrong-answer path showing its authored near-miss reply
+- "Next part" advancing to a segment, and with it the **segment-level board
+  orientation** that Plan 4's Task 1 added
+
+All three are covered by unit tests, and the segment-orientation test asserts
+the flipped value directly. A human with a mouse can close this in two minutes:
+start **Development and Tempo**, answer the `Nf3` checkpoint, take "Next part",
+and confirm the board flips to Black's side.
 
 ## Do this next
 
-**1. Settle the board-orientation question.** It gates Plan 4, because Plan 4
-touches lesson data. `theme-development-and-tempo`'s second segment is played
-from Black's side of a White-oriented board, because `side` lives on the lesson
-rather than the segment. The two honest fixes — move orientation onto the
-segment, or split the segment into its own `side: 'black'` lesson — are in
-[[Known Issues]]. Rewriting the prose to White's voice is not one of them.
+**1. Spend two minutes on the gap above**, then finish the branch. It is
+otherwise ready to merge per [[Workflow]] — six tasks each reviewed
+individually, plus a whole-branch review and its fix wave, both clean, and
+zero `act()` warnings. See [[Current State]] for the before/after.
 
-**2. Write Plan 4 — progress persistence.** [[Roadmap]] has the ordering and the
-two schema decisions already made. Do not start writing `src/progress/` directly;
+**2. Write Plan 5 — app shell and keyboard navigation.** [[Roadmap]] has what
+it covers: a properly designed `App.tsx` (currently an inline-styled shell
+stacking five components with no design pass) and the spec's outstanding
+keyboard board-navigation requirement. Do not start writing either directly;
 see [[Workflow]].
+
+Worth knowing for Plan 5: **keyboard board navigation would also make the
+board testable**. Every by-hand gap above exists because the only way to move
+a piece is a mouse drag. Building keyboard moves buys accessibility and an
+automatable input path in the same change.
 
 ## Where to look for what
 

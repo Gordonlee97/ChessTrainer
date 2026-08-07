@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLessonStore } from '../lesson/store';
+import { useProgressStore } from '../progress/store';
 import { useTreeStore } from '../tree/store';
 import { LessonRail } from './LessonRail';
 
@@ -17,12 +18,58 @@ vi.mock('../sound', () => ({
   sounds: { play: mocks.soundPlay, setMuted: vi.fn(), muted: false },
 }));
 
+// A synthetic lesson whose checkpoint accepts two different moves. No
+// authored lesson has a multi-entry `accept` today, so this is the only way
+// to exercise it: deriveLessonState decides on/off-script by string equality
+// against the single canonical `san`, so answering with the *other* accepted
+// move is off-script even though gradeMove correctly calls it correct.
+const multiAcceptLesson = vi.hoisted(() => ({
+  id: 'multi-accept-test',
+  title: 'Multi-Accept Test',
+  kind: 'opening' as const,
+  side: 'white' as const,
+  summary: 'A synthetic lesson for testing a multi-entry accept list.',
+  tags: [],
+  segments: [
+    {
+      startFen: null,
+      moves: [
+        {
+          san: 'e4',
+          checkpoint: {
+            id: 'multi-accept-cp',
+            prompt: 'Play a central pawn move.',
+            accept: ['e4', 'Nf3'],
+            hints: ['Central pawn moves open lines.'],
+          },
+        },
+      ],
+    },
+  ],
+}));
+vi.mock('../content/lessons/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../content/lessons/index')>();
+  return {
+    ...actual,
+    ALL_LESSONS: [...actual.ALL_LESSONS, multiAcceptLesson],
+    lessonById: (id: string) =>
+      id === multiAcceptLesson.id ? multiAcceptLesson : actual.lessonById(id),
+  };
+});
+
 describe('LessonRail', () => {
   beforeEach(() => {
     useLessonStore.getState().stopLesson();
     useTreeStore.getState().reset();
     mocks.play.mockClear();
     mocks.soundPlay.mockClear();
+    // The recording effect now writes real localStorage on every render, and
+    // node ids are deterministic (`root/d4`), so without this, an attempt
+    // written by one test is indistinguishable from the same attempt in the
+    // next and leaks across tests via `useProgressStore`'s reset(), which
+    // reloads from storage rather than to empty progress.
+    localStorage.clear();
+    useProgressStore.getState().reset();
   });
 
   it('renders nothing when no lesson is running', () => {
@@ -121,7 +168,9 @@ describe('LessonRail', () => {
       expect(screen.getByText(/play e4\./i)).toBeInTheDocument();
 
       // ...then walk to the second one (Bc4).
-      for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
+      act(() => {
+        for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
+      });
       rerender(<LessonRail />);
 
       expect(screen.getByText(/most aggressive square/i)).toBeInTheDocument();
@@ -263,6 +312,64 @@ describe('LessonRail', () => {
       useTreeStore.getState().playMove('a3');
       render(<LessonRail />);
       expect(screen.queryByText(/wrong|incorrect|error/i)).not.toBeInTheDocument();
+    });
+  });
+
+  describe('recording progress', () => {
+    it('records a wrong answer against the checkpoint', () => {
+      useProgressStore.getState().reset();
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('d4');
+      render(<LessonRail />);
+
+      const record =
+        useProgressStore.getState().progress.lessons['italian-game']
+          ?.checkpoints['italian-open-with-e4'];
+      expect(record?.attempts).toBe(1);
+      expect(record?.solved).toBe(false);
+    });
+
+    it('records a solved checkpoint with the hints it took', () => {
+      useProgressStore.getState().reset();
+      useLessonStore.getState().startLesson('italian-game');
+      useLessonStore.getState().revealHint('italian-open-with-e4');
+      useTreeStore.getState().playMove('e4');
+      render(<LessonRail />);
+
+      const record =
+        useProgressStore.getState().progress.lessons['italian-game']
+          ?.checkpoints['italian-open-with-e4'];
+      expect(record?.solved).toBe(true);
+      expect(record?.hintsUsed).toBe(1);
+    });
+
+    it('does not double-count a re-render of the same attempt', () => {
+      useProgressStore.getState().reset();
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('d4');
+      const { rerender } = render(<LessonRail />);
+      rerender(<LessonRail />);
+      rerender(<LessonRail />);
+
+      expect(
+        useProgressStore.getState().progress.lessons['italian-game']
+          .checkpoints['italian-open-with-e4'].attempts,
+      ).toBe(1);
+    });
+
+    it('records solved:true for a correct answer from a multi-entry accept list', () => {
+      useProgressStore.getState().reset();
+      useLessonStore.getState().startLesson('multi-accept-test');
+      // "Nf3" is accepted but is not the checkpoint's canonical `san` ("e4"),
+      // so deriveLessonState calls this off-script even though gradeMove
+      // correctly grades it as correct.
+      useTreeStore.getState().playMove('Nf3');
+      render(<LessonRail />);
+
+      const record =
+        useProgressStore.getState().progress.lessons['multi-accept-test']
+          ?.checkpoints['multi-accept-cp'];
+      expect(record?.solved).toBe(true);
     });
   });
 });

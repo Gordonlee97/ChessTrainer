@@ -1,26 +1,29 @@
 ---
-updated: 2026-08-05
+updated: 2026-08-06
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-08-05.** Plans 1 (foundation and line explorer), 2 (the explainer
-and compare) and 3 (the teaching layer) are all complete in code. Plan 2 is
-merged to `master` (PR #2, 2026-08-05). Plan 3 landed as eight tasks on
-`feat/content-and-lessons`, followed by one fix wave from a whole-branch review;
-that branch is not merged.
+**As of 2026-08-06.** Plans 1 (foundation and line explorer), 2 (the explainer
+and compare), 3 (the teaching layer) and 4 (progress, saved lines, and
+controls) are all complete in code. Plans 1–3 are merged to `master` (PR #1,
+#2, #3). Plan 4 landed as six tasks on `feat/progress-and-controls`, followed
+by one whole-branch review fix wave; that branch is not yet merged.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **343 passing, 1 skipped**, 36 test files. `tsc --noEmit` clean,
-`npm run build` succeeds. The skip is `src/engine/engine.smoke.test.ts`, which
-needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
+Suite: **410 passing, 1 skipped**, 42 test files, zero React `act()` warnings.
+`tsc --noEmit` clean, `npm run build` succeeds. The skip is
+`src/engine/engine.smoke.test.ts`, which needs a real `Worker`; jsdom has none,
+so the engine is verified in a browser.
 
-**Plan 3 has never been run in a browser.** Everything below about lessons is
-true of the test suite; none of it has been watched on a board.
+**Plan 4 has never been run in a browser.** Everything below about progress,
+saved lines, and controls is true of the test suite; none of it has been
+watched on a board. See [[Start Here]] for the manual checklist this needs
+before the branch is finished.
 
 ## What works today
 
@@ -79,7 +82,7 @@ the segment index, and hint counts.
 | Action | Behaviour |
 |---|---|
 | Open the app with no lesson running | The picker lists every lesson under OPENINGS and IDEAS, each with its `summary` |
-| Start a lesson | The tree is re-seeded from the segment's `startFen`, the board orients to `lesson.side`, and the rail shows the segment intro |
+| Start a lesson | The tree is re-seeded from the segment's `startFen`; the board orients to `segment.side` when the segment overrides it, otherwise `lesson.side`; the rail shows the segment intro |
 | Follow the line | "Play the next move" advances it, with the move sound; the note for the move just played stays on screen |
 | Reach a checkpoint | The rail asks instead of telling, and the candidate rail hides its rows, scores and ordering so the engine cannot leak the answer |
 | Ask for a hint | One tier at a time, up to three, counted **per checkpoint id** |
@@ -100,6 +103,45 @@ the segment index, and hint counts.
 | `lesson.summary` was never rendered anywhere | Rendered in the picker, outside the button so the control keeps its name |
 | The one authored comparison in the corpus was unreachable in the app | Reachable at the checkpoint, engine ordering excluded |
 
+Also fixed on this branch: `theme-development-and-tempo`'s second segment,
+previously played from Black's side of a White-oriented board, now carries its
+own `side: 'black'` override (Task 1) — the [[Known Issues]] entry for it is
+deleted, not tombstoned.
+
+## Progress, saved lines, and controls (Plan 4)
+
+`src/progress/` is a versioned object (`{ version: 1, lessons, savedLines }`)
+reduced by pure functions in `progress.ts`, read and written through a Zustand
+store (`store.ts`) at the UI edge — nothing in `src/lesson/` or `src/tree/`
+knows persistence exists. Storage itself (`storage.ts`) follows spec §10:
+corrupt or unreadable JSON resets to empty progress with a `recovered` flag; a
+failed write (quota or otherwise) reports `saveFailed` rather than throwing.
+
+| Action | Behaviour |
+|---|---|
+| Solve a checkpoint | Recorded once per distinct attempt (deduped by `lessonId:checkpointId:nodeId`), with the hint count it took; `solved` is sticky — a later wrong answer never un-solves it |
+| Finish a lesson | Stamped with the completion time on first finish only |
+| Open the picker | Shows "N of M checkpoints" per lesson once any are solved, or "Done" once complete |
+| Reload the page | Progress, saved lines, and the mute setting all survive it — read once at each store's construction |
+| Play a line, click "Save this line" | Stored as its starting FEN plus PGN movetext (`src/chess/pgn.ts`); listed newest-first under "MY LINES" with Open and Delete |
+| Open a saved line | Stops any running lesson first, then reseeds the tree and replays the PGN — matches what "New game" does, and for the same reason: a live lesson would otherwise misgrade the replayed moves against its own script |
+| Click "New game" | Stops any running lesson, then resets the tree to the true start |
+| Toggle sound | `aria-pressed` and button text ("Sound on"/"Sound off") carry the state — never colour alone; persists across reload via its own `chesstrainer.muted` key |
+| Storage is corrupt or full | A `role="status"` notice appears in the picker (corrupt/unreadable) and now also in "MY LINES" (failed save) — the two places that actually write |
+
+### The 2026-08-06 whole-branch review
+
+Six tasks each passed their own review; this fix wave closed what only a
+whole-branch view could see:
+
+| Was | Now |
+|---|---|
+| 10 React `act()` warnings from bare store mutations while a component was mounted | Wrapped in `act()`, matching the idiom already used elsewhere on this branch; count confirmed at zero |
+| `SavedLines.open()` reset the tree but not the lesson, so opening a saved line during a running lesson whose script it happened to match wrote a checkpoint as solved for an answer never given — durable and unrecoverable | `open()` calls `stopLesson()` first, matching `newGame()` |
+| The checkpoint-recording effect hard-coded `solved: false` whenever a grade existed, ignoring `attemptedGrade.kind` — dormant only because no lesson has a multi-entry `accept` yet | `solved: attemptedGrade.kind === 'correct'`; the *display* still says "stepped off the line" for this case, tracked separately in [[Known Issues]] |
+| `saveFailed` was shown only in `LessonPicker`, which is `null` while a lesson runs — so the one place a saved line actually gets written (`SavedLines`) could fail silently | A `role="status"` notice, not colour-only, added inside `SavedLines` |
+| `src/progress/store.ts` re-exported `lessonProgress` for a `map`-loop consumer that used a direct import instead | Dead re-export deleted |
+
 ## What is scaffolding, not feature
 
 - **Sound is wired but silent.** Every call site exists — pickup, move, capture,
@@ -108,11 +150,8 @@ the segment index, and hint counts.
   nothing, so this is a working degraded state, not a bug. Drop MP3s in and they
   light up with no code change.
 - **`src/App.tsx` is a placeholder shell** — an inline-styled flex layout that
-  now hosts the picker and the lesson rail as well. Still not the designed
-  layout.
-- **There is no new-game control.** The tree's `reset` is called by
-  `startLesson` and `nextSegment`; nothing else exposes it, so refreshing the
-  page is still the only way to start over outside a lesson.
+  now hosts the picker, the lesson rail, saved lines, and the app controls.
+  Still not the designed layout; that is Plan 5.
 - **`alternatives` exists on one move in the whole corpus.** The comparison
   feature works; the content to feed it barely exists.
 
@@ -120,11 +159,11 @@ the segment index, and hint counts.
 
 See [[Roadmap]] for ordering.
 
-- **Progress persistence.** No `progress/`, no localStorage, no "My Lines".
-  Checkpoint hint counts live in memory and die with the tab.
-- **Mute toggle UI.** `SoundManager` honours mute internally; nothing exposes it.
+- **A real `App.tsx` layout.** Currently a placeholder flex shell hosting four
+  components stacked with no design pass.
 - **Keyboard board navigation.** Called for by the spec's accessibility section.
-- **A real `App.tsx` layout and a new-game control.**
+- **A way for a player to clear their own progress**, and a dismiss control for
+  the recovered/save-failed notices. See [[Known Issues]].
 
 ## Engine behaviour worth knowing
 
@@ -139,6 +178,15 @@ See [[Roadmap]] for ordering.
 
 ## Recent history
 
+- **2026-08-06** — Plan 4 (progress, saved lines, and controls) finished on
+  `feat/progress-and-controls`: six tasks — segment-level board orientation,
+  the progress schema/reducers/storage, the progress store recording
+  checkpoint outcomes, progress in the picker, saved lines as PGN, and the
+  new-game control plus a persisted mute toggle. One whole-branch review fix
+  wave followed the same day — five items, including a durable-data bug in
+  checkpoint recording and a saved-line Open that could leave a lesson's
+  checkpoint wrongly marked solved. Suite 343 → 410, and the ten pre-existing
+  `act()` warnings the six tasks had carried without growing are now zero.
 - **2026-08-05** — Plan 3 (the teaching layer) finished on
   `feat/content-and-lessons`: eight tasks, the content pipeline through the
   lesson picker and authored comparisons. One fix wave from the whole-branch

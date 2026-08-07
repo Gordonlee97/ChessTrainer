@@ -19,6 +19,7 @@ describe('SoundManager', () => {
     mocks.play.mockClear();
     mocks.rate.mockClear();
     HowlMock.mockClear();
+    localStorage.clear();
   });
 
   it('plays the requested sound', () => {
@@ -79,5 +80,29 @@ describe('SoundManager', () => {
 
     expect(mocks.play).not.toHaveBeenCalled();
     expect(mocks.rate).not.toHaveBeenCalled();
+  });
+
+  it('starts muted when that was stored', () => {
+    localStorage.setItem('chesstrainer.muted', 'true');
+    expect(new SoundManager().muted).toBe(true);
+    localStorage.clear();
+  });
+
+  it('persists a mute change', () => {
+    const manager = new SoundManager();
+    manager.setMuted(true);
+    expect(localStorage.getItem('chesstrainer.muted')).toBe('true');
+    localStorage.clear();
+  });
+
+  it('still mutes when storage refuses to write', () => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = () => {
+      throw new Error('denied');
+    };
+    const manager = new SoundManager();
+    expect(() => manager.setMuted(true)).not.toThrow();
+    expect(manager.muted).toBe(true);
+    Storage.prototype.setItem = original;
   });
 });

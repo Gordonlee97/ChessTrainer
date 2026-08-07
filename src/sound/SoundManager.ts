@@ -1,10 +1,20 @@
 import { Howl } from 'howler';
 import { PITCH_RANGE_SEMITONES, PITCH_VARIED, SOUND_FILES, type SoundName } from './sounds';
 
+const MUTE_KEY = 'chesstrainer.muted';
+
+function readStoredMute(): boolean {
+  try {
+    return localStorage.getItem(MUTE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
 export class SoundManager {
   private readonly cache = new Map<SoundName, Howl>();
   private readonly failed = new Set<SoundName>();
-  private isMuted = false;
+  private isMuted = readStoredMute();
 
   get muted(): boolean {
     return this.isMuted;
@@ -12,6 +22,12 @@ export class SoundManager {
 
   setMuted(muted: boolean): void {
     this.isMuted = muted;
+    try {
+      localStorage.setItem(MUTE_KEY, String(muted));
+    } catch {
+      // A browser that refuses storage must still mute for the session —
+      // sound is optional by construction and this must never throw.
+    }
   }
 
   play(name: SoundName): void {
