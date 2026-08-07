@@ -18,6 +18,45 @@ vi.mock('../sound', () => ({
   sounds: { play: mocks.soundPlay, setMuted: vi.fn(), muted: false },
 }));
 
+// A synthetic lesson whose checkpoint accepts two different moves. No
+// authored lesson has a multi-entry `accept` today, so this is the only way
+// to exercise it: deriveLessonState decides on/off-script by string equality
+// against the single canonical `san`, so answering with the *other* accepted
+// move is off-script even though gradeMove correctly calls it correct.
+const multiAcceptLesson = vi.hoisted(() => ({
+  id: 'multi-accept-test',
+  title: 'Multi-Accept Test',
+  kind: 'opening' as const,
+  side: 'white' as const,
+  summary: 'A synthetic lesson for testing a multi-entry accept list.',
+  tags: [],
+  segments: [
+    {
+      startFen: null,
+      moves: [
+        {
+          san: 'e4',
+          checkpoint: {
+            id: 'multi-accept-cp',
+            prompt: 'Play a central pawn move.',
+            accept: ['e4', 'Nf3'],
+            hints: ['Central pawn moves open lines.'],
+          },
+        },
+      ],
+    },
+  ],
+}));
+vi.mock('../content/lessons/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../content/lessons/index')>();
+  return {
+    ...actual,
+    ALL_LESSONS: [...actual.ALL_LESSONS, multiAcceptLesson],
+    lessonById: (id: string) =>
+      id === multiAcceptLesson.id ? multiAcceptLesson : actual.lessonById(id),
+  };
+});
+
 describe('LessonRail', () => {
   beforeEach(() => {
     useLessonStore.getState().stopLesson();
@@ -316,6 +355,21 @@ describe('LessonRail', () => {
         useProgressStore.getState().progress.lessons['italian-game']
           .checkpoints['italian-open-with-e4'].attempts,
       ).toBe(1);
+    });
+
+    it('records solved:true for a correct answer from a multi-entry accept list', () => {
+      useProgressStore.getState().reset();
+      useLessonStore.getState().startLesson('multi-accept-test');
+      // "Nf3" is accepted but is not the checkpoint's canonical `san` ("e4"),
+      // so deriveLessonState calls this off-script even though gradeMove
+      // correctly grades it as correct.
+      useTreeStore.getState().playMove('Nf3');
+      render(<LessonRail />);
+
+      const record =
+        useProgressStore.getState().progress.lessons['multi-accept-test']
+          ?.checkpoints['multi-accept-cp'];
+      expect(record?.solved).toBe(true);
     });
   });
 });

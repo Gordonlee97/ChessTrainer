@@ -37,12 +37,19 @@ export function LessonRail() {
     if (!active) return;
     const { lesson, segment, state, attemptedCheckpoint, attemptedGrade, hasNextSegment } = active;
 
-    // A graded attempt: the player answered and it was not accepted.
+    // A graded attempt: the player answered, and it may or may not have been
+    // accepted. `deriveLessonState` decides on/off-script by string equality
+    // against the single canonical `san`, so a correct answer from a
+    // multi-entry `accept` list still lands here — `attemptedGrade.kind`
+    // is what tells the two apart.
     if (attemptedCheckpoint && attemptedGrade) {
       noteAttempt(
         lesson.id,
         attemptedCheckpoint.id,
-        { solved: false, hintsUsed: hintsShown[attemptedCheckpoint.id] ?? 0 },
+        {
+          solved: attemptedGrade.kind === 'correct',
+          hintsUsed: hintsShown[attemptedCheckpoint.id] ?? 0,
+        },
         `${lesson.id}:${attemptedCheckpoint.id}:${selectedId}`,
       );
       return;
