@@ -87,6 +87,7 @@ automatable input path in the same change.
 - **What's next and why** → [[Roadmap]]
 - **How the code fits together** → [[Architecture]]
 - **How work gets done here** → [[Workflow]]
+- **Mistakes not to make again** → [[Lessons]] — read this before writing a plan
 - **What's broken** → [[Known Issues]]
 - **Why something is the way it is** → `Decisions/`, indexed from [[Home]]
 
