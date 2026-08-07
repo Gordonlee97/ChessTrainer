@@ -3,6 +3,7 @@ import { Breadcrumb } from './ui/Breadcrumb';
 import { CandidateRail } from './ui/CandidateRail';
 import { LessonPicker } from './ui/LessonPicker';
 import { LessonRail } from './ui/LessonRail';
+import { SavedLines } from './ui/SavedLines';
 
 export function App() {
   return (
@@ -13,6 +14,7 @@ export function App() {
         <div style={{ flex: '0 1 260px', minWidth: 220 }}>
           <LessonPicker />
           <LessonRail />
+          <SavedLines />
         </div>
         <div style={{ flex: '1 1 420px', maxWidth: 520 }}>
           <Board />
