@@ -12,8 +12,10 @@ vi.mock('howler', () => ({
   Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
 }));
 
+import { useLessonStore } from '../lesson/store';
 import { useProgressStore } from '../progress/store';
 import { useTreeStore } from '../tree/store';
+import { LessonRail } from './LessonRail';
 import { SavedLines } from './SavedLines';
 
 describe('SavedLines', () => {
@@ -21,6 +23,7 @@ describe('SavedLines', () => {
     localStorage.clear();
     useProgressStore.getState().reset();
     useTreeStore.getState().reset();
+    useLessonStore.getState().stopLesson();
   });
 
   it('offers no save when no moves have been played', () => {
@@ -57,5 +60,27 @@ describe('SavedLines', () => {
     await userEvent.click(screen.getByRole('button', { name: /save this line/i }));
     await userEvent.click(screen.getByRole('button', { name: /delete/i }));
     expect(useProgressStore.getState().progress.savedLines).toHaveLength(0);
+  });
+
+  it('stops a running lesson when a saved line is opened', async () => {
+    // Save "e4" from the starting position before any lesson runs.
+    useTreeStore.getState().playMove('e4');
+    render(<SavedLines />);
+    await userEvent.click(screen.getByRole('button', { name: /save this line/i }));
+    act(() => useTreeStore.getState().reset());
+
+    // Now start the Italian, whose first checkpoint's accepted move is also
+    // "e4" — the saved line follows the running lesson's script exactly.
+    act(() => useLessonStore.getState().startLesson('italian-game'));
+    render(<LessonRail />);
+
+    await userEvent.click(screen.getByRole('button', { name: /open/i }));
+
+    expect(useLessonStore.getState().lessonId).toBeNull();
+    expect(
+      useProgressStore.getState().progress.lessons['italian-game']?.checkpoints[
+        'italian-open-with-e4'
+      ],
+    ).toBeUndefined();
   });
 });

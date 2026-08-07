@@ -1,4 +1,5 @@
 import { lineToPgn, pgnToSans } from '../chess/pgn';
+import { useLessonStore } from '../lesson/store';
 import { useProgressStore } from '../progress/store';
 import { useTreeStore } from '../tree/store';
 import { pathTo } from '../tree/tree';
@@ -8,6 +9,7 @@ export function SavedLines() {
   const tree = useTreeStore((store) => store.tree);
   const reset = useTreeStore((store) => store.reset);
   const playMove = useTreeStore((store) => store.playMove);
+  const stopLesson = useLessonStore((store) => store.stopLesson);
   const savedLines = useProgressStore((store) => store.progress.savedLines);
   const keepLine = useProgressStore((store) => store.keepLine);
   const dropLine = useProgressStore((store) => store.dropLine);
@@ -28,6 +30,11 @@ export function SavedLines() {
   }
 
   function open(line: (typeof savedLines)[number]) {
+    // A lesson stays live otherwise: useActiveLesson() re-derives from
+    // lessonId plus the tree, so if the opened line happens to follow the
+    // running lesson's script, its checkpoints would be recorded as solved
+    // without the player ever having answered them.
+    stopLesson();
     reset(line.startFen);
     for (const san of pgnToSans(line.pgn, line.startFen)) playMove(san);
   }
