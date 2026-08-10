@@ -17,9 +17,10 @@ can be reconstructed from the code, and this cannot.
 | Branch | `feat/app-shell-and-keyboard` |
 | Merged to `master` | PR #1 (Plan 1) · #2 (Plan 2) · #3 (Plan 3) · #4 (Plan 4) |
 | Working tree | Clean |
-| Suite | 434 passing, 1 skipped (expected — see below), **zero warnings** |
+| Suite | 443 passing, 1 skipped (expected — see below), **zero warnings** |
 | Last plan finished | Plan 5, app shell and keyboard navigation — eight tasks, each individually reviewed, plus a browser pass |
-| Not yet done | **No whole-branch review.** The branch is not finished. |
+| Whole-branch review | Run 2026-08-10. One Critical and three Importants; **all four fixed** in one wave — see `.superpowers/sdd/2026-08-09-app-shell-and-keyboard/fix-wave-report.md` |
+| Not yet done | The fix wave has not been re-reviewed, and its engine claim (one search per checkpoint) is proven by test, not on the wire |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
@@ -52,18 +53,24 @@ Do not burn time rediscovering this.
 
 ## Do this next
 
-**1. Run the whole-branch review, then finish the branch.** Point it at the
-seams. Every task passed its own review; what has not been asked is whether the
-tasks agree with each other. Feed it the deferred minors listed in the ledger at
-`.superpowers/sdd/2026-08-09-app-shell-and-keyboard/progress.md`.
+**1. Re-review the fix wave, then finish the branch.** The whole-branch review
+ran on 2026-08-10 and found one Critical (the checkpoint prompt and hints were
+gated behind engine status, making a lesson unanswerable with no engine) and
+three Importants (two engine searches per checkpoint, "Clear progress" undoing
+itself mid-lesson, and a deleted invariant assertion). All four are fixed; the
+findings and their mutation checks are in
+`.superpowers/sdd/2026-08-09-app-shell-and-keyboard/fix-wave-report.md`. What is
+*not* re-verified: the "one search per checkpoint" claim is proven by counting
+`useAnalysis` subscriptions in jsdom, not by watching UCI traffic, and no
+browser pass has run since the fix.
 
 **2. Merge PR #5 — and note that `Lessons.md` lives only on that branch.**
 `docs/learning-loop` has been open since 2026-08-07 and contains the whole
 learning-loop note. It is *not* on `master` and *not* on this branch, so the
 lessons below have nowhere to go until it lands. Merge it, then add them.
 
-**3. Add these to `Lessons.md` once PR #5 is merged.** Both were paid for on
-this branch:
+**3. Add these to `Lessons.md` once PR #5 is merged.** All three were paid for
+on this branch:
 
 - **A shared condition gets one definition, not two agreeing ones.** Plan 5's
   Task 5 was written as a single task specifically to prevent a shared-surface
@@ -81,11 +88,24 @@ this branch:
   empty definitely-positioned portal target stole row 1 from auto-placement. A
   reviewer found it only by starting the dev server and measuring. Deferring the
   browser pass to the end of the plan is not sufficient.
+- **Deleting an assertion deletes an invariant — count it as a code change.**
+  Moving the hint ladder out of `LessonRail` dropped
+  `getByRole('button', {name: /^hint$/i})` from the not-this-time test as
+  "no longer this component's control". It was the only encoding of *the reply
+  must not name a control the player cannot see*, and within the same branch
+  that invariant broke again through a different gate (the engine-status early
+  returns) with a green suite. When a moved feature makes an assertion homeless,
+  it moves to wherever both halves are on screen — not into the bin. Related, and
+  now with three sightings: **a test that renders a component directly never
+  exercises its mount gate.**
 
 **4. Two smaller things.** `docs/superpowers/plans/spike-results-shell.md`
-records four new minors from the browser pass (a stale-closure cursor update, a
-duplicated `role="status"` region, the cursor not resetting on New game, and a
-possible engine-gating of the checkpoint prompt). None block merge.
+records four minors from the browser pass. The fourth — "a possible engine
+gating of the checkpoint prompt" — turned out to be the review's Critical and is
+now fixed; the note there still calls it pre-existing and transient, which it
+was not. The other three (a stale-closure cursor update, a duplicated
+`role="status"` region, the cursor not resetting on New game) stand and none
+block merge.
 
 ## Where to look for what
 

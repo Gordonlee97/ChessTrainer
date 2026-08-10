@@ -63,6 +63,7 @@ Run `npm run dev`, open the local URL, and you can:
 | Look at the whole app | A one-screen shell: header, breadcrumb, then three columns — lesson region, board, candidates. The board never moves between modes; only the rails change contents. Below 1100x640 it flows as a single scrolling column, board first. |
 | Open a comparison | Opens as an overlay spanning the centre and right columns — real width for three mini-boards — closing on Escape and restoring focus. |
 | Reach a checkpoint | The candidate rail hands its column to a checkpoint panel: the prompt, the hint ladder, and the authored comparison. Hints live here, not in the lesson rail, and stay put while an answer is graded. |
+| Reach a checkpoint with no engine | The question and the hints still appear — they are lesson content and no longer sit behind the rail's "Thinking…"/"Engine unavailable" returns. Only the authored comparison is lost; the Retry control comes along into the panel. |
 | Have unreadable stored progress | The notice appears in the **header**, survives starting a lesson, and can be dismissed. |
 | Want a clean slate | "Clear progress" in the header wipes durable storage behind a two-click "Really clear?" confirmation — no blocking modal. |
 
@@ -144,6 +145,7 @@ failed write (quota or otherwise) reports `saveFailed` rather than throwing.
 | Action | Behaviour |
 |---|---|
 | Solve a checkpoint | Recorded once per distinct attempt (deduped by `lessonId:checkpointId:nodeId`), with the hint count it took; `solved` is sticky — a later wrong answer never un-solves it |
+| Clear progress mid-lesson | Stays cleared. The dedupe `Set` survives the clear on purpose, so the recording effect cannot re-derive the attempt the player just wiped; a genuinely new answer is a new tree node and still records |
 | Finish a lesson | Stamped with the completion time on first finish only |
 | Open the picker | Shows "N of M checkpoints" per lesson once any are solved, or "Done" once complete |
 | Reload the page | Progress, saved lines, and the mute setting all survive it — read once at each store's construction |

@@ -292,19 +292,6 @@ Pressing "New game" resets the tree but leaves the cursor wherever it was.
 Defensible — it is a selection cursor, not board state — but it should be a
 deliberate decision rather than an accident.
 
-### The checkpoint prompt may be gated behind the engine search
-
-**Where:** `src/ui/CandidateRail.tsx` — the `status` early returns precede the
-checkpoint branch
-**Severity:** unknown; **pre-existing**, not introduced by Plan 5.
-
-While a search is in flight, the rail returns "Thinking…" before it reaches the
-branch that renders `CheckpointPanel` — so at a pending checkpoint the prompt
-and hints may not appear until analysis settles. In the 2026-08-10 pass the tab
-was backgrounded and the worker throttled, so the search never completed and
-severity could not be judged. In a foreground tab the window is around a
-second. Worth a look; not a blocker.
-
 ## Test coverage gaps
 
 - No test covers queenside castled squares (c1/c8) in `extractFeatures`.

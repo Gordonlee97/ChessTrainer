@@ -49,7 +49,11 @@ watches the *derived* grade in an effect that deliberately re-runs on every
 render (`useActiveLesson()` returns a fresh object each time, so no dependency
 array can prevent that) and dedupes by
 `${lessonId}:${checkpointId}:${nodeId}` — a session-only `Set`, never
-persisted, because it is about render behaviour, not the player's history. Any
+persisted, because it is about render behaviour, not the player's history.
+**`clearAll` does not empty that `Set`** (2026-08-10): it used to, and the next
+render re-derived the in-flight attempt from the tree and wrote it straight
+back, so a twice-confirmed "Clear progress" silently undid itself mid-lesson.
+Any
 component that can change the tree while a lesson is running must stop the
 lesson first, or this effect will grade moves the player never chose to
 answer — `SavedLines.open()` and `AppControls.newGame()` both do.
@@ -192,6 +196,17 @@ opened it.
 asked". Both `CandidateRail`, which decides whether to mount the panel, and
 `CheckpointPanel`, which renders it, call it. They previously each held their
 own copy of the rule and drifted — see [[Known Issues]] and [[Start Here]].
+
+**A checkpoint outranks engine status, and there is only one search.**
+`CandidateRail`'s checkpoint gate sits *above* its `unavailable` and thinking
+returns (2026-08-10): the prompt and the hint ladder are lesson content and
+must reach the player whether or not a search ever returns. Only the authored
+comparison is engine-derived, and it degrades to absent. The panel takes
+`result`, `status` and `onRetry` as props rather than calling `useAnalysis()`
+itself — a second call meant two `go depth 20` searches on the same FEN, the
+second aborting the first, against **one search, three lines**. The
+engine-unavailable notice and its retry live in
+`src/ui/EngineUnavailableNotice.tsx` so both renderers share one copy.
 
 Keyboard board navigation is documented in
 [[Decisions/Keyboard Board Navigation Model]].

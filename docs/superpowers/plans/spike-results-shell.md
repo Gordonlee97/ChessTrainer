@@ -297,3 +297,14 @@ a pending checkpoint the prompt and hints do not render. In this throttled tab
 the search never completed, so severity could not be judged; in a foreground
 tab the window is ~1s. The ordering predates this branch. Worth a look, not a
 blocker.
+
+> **Corrected 2026-08-10.** Both halves of that call were wrong, and the
+> whole-branch review raised it as a Critical. It does **not** predate this
+> branch — before Plan 5 the prompt and hints lived in `LessonRail`, an
+> unconditional sibling with no engine dependency, and the `thinking` return
+> only ever hid the engine notice and the comparison. And it is not a ~1s
+> window: the `unavailable` early return precedes the same branch, so with no
+> engine the lesson was permanently unanswerable while the wrong-answer reply
+> went on naming a Hint control that was not on screen. Fixed by moving the
+> checkpoint gate above both status returns; see the fix-wave report in
+> `.superpowers/sdd/2026-08-09-app-shell-and-keyboard/`.
