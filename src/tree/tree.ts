@@ -29,8 +29,6 @@ export interface GameTree {
   rootId: NodeId;
   selectedId: NodeId;
   nodes: Record<NodeId, TreeNode>;
-  /** Node ids that must never be evicted (saved lines). */
-  pinned: NodeId[];
   /** Incremented on every selection; the source of `lastSelectedAt`. */
   clock: number;
 }
@@ -42,7 +40,6 @@ export function createTree(startFen: string = START_FEN): GameTree {
     rootId: ROOT_ID,
     selectedId: ROOT_ID,
     clock: 1,
-    pinned: [],
     nodes: {
       [ROOT_ID]: {
         id: ROOT_ID,
@@ -146,13 +143,12 @@ export function pathTo(tree: GameTree, nodeId: NodeId): TreeNode[] {
  * removes a node from the tree and never rewrites `childIds` — a position
  * the user can navigate to is never discarded, only the (re-computable, and
  * comparatively bulky — PV string arrays) analysis cached on it. Nodes on
- * the selected path, pinned nodes, and authored nodes keep their eval
- * regardless of the cap: clearing the eval of the position currently on
- * screen would trigger a pointless re-analysis.
+ * the selected path and authored nodes keep their eval regardless of the cap:
+ * clearing the eval of the position currently on screen would trigger a
+ * pointless re-analysis.
  */
 export function evict(tree: GameTree, maxCachedEvals: number): GameTree {
   const protectedIds = new Set<NodeId>([
-    ...tree.pinned,
     ...pathTo(tree, tree.selectedId).map((node) => node.id),
   ]);
 
