@@ -60,19 +60,10 @@ function LessonGroup({
 export function LessonPicker() {
   const lessonId = useLessonStore((store) => store.lessonId);
   const progress = useProgressStore((store) => store.progress);
-  const recovered = useProgressStore((store) => store.recovered);
-  const saveFailed = useProgressStore((store) => store.saveFailed);
   if (lessonId) return null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      {(recovered || saveFailed) && (
-        <p role="status" className="progress-notice">
-          {recovered
-            ? 'Your saved progress could not be read, so it is starting fresh.'
-            : 'Progress is not being saved — your browser storage is full or unavailable.'}
-        </p>
-      )}
       <LessonGroup heading="OPENINGS" kind="opening" progress={progress} />
       <LessonGroup heading="IDEAS" kind="theme" progress={progress} />
     </div>

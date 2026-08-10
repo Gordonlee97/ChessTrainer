@@ -13,6 +13,7 @@ vi.mock('howler', () => ({
 }));
 
 import { useLessonStore } from '../lesson/store';
+import { useProgressStore } from '../progress/store';
 import { sounds } from '../sound';
 import { useTreeStore } from '../tree/store';
 import { AppControls } from './AppControls';
@@ -22,6 +23,7 @@ describe('AppControls', () => {
     localStorage.clear();
     useTreeStore.getState().reset();
     useLessonStore.getState().stopLesson();
+    useProgressStore.getState().reset();
     sounds.setMuted(false);
   });
 
@@ -58,5 +60,23 @@ describe('AppControls', () => {
     render(<AppControls />);
     await userEvent.click(screen.getByRole('button', { name: /sound/i }));
     expect(screen.getByRole('button', { name: /sound off/i })).toBeInTheDocument();
+  });
+
+  it('requires a second click before clearing progress', async () => {
+    useProgressStore.getState().noteAttempt('l', 'cp', { solved: true, hintsUsed: 0 }, 'k1');
+    render(<AppControls />);
+
+    await userEvent.click(screen.getByRole('button', { name: /clear progress/i }));
+    expect(useProgressStore.getState().progress.lessons.l).toBeDefined();
+
+    await userEvent.click(screen.getByRole('button', { name: /really clear/i }));
+    expect(useProgressStore.getState().progress.lessons).toEqual({});
+  });
+
+  it('drops back to the unconfirmed label after clearing', async () => {
+    render(<AppControls />);
+    await userEvent.click(screen.getByRole('button', { name: /clear progress/i }));
+    await userEvent.click(screen.getByRole('button', { name: /really clear/i }));
+    expect(screen.getByRole('button', { name: /^clear progress$/i })).toBeInTheDocument();
   });
 });

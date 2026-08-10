@@ -1,12 +1,13 @@
 import { create } from 'zustand';
 import {
   addSavedLine,
+  emptyProgress,
   recordAttempt,
   recordLessonComplete,
   removeSavedLine,
 } from './progress';
 import type { Progress, SavedLine } from './schema';
-import { loadProgress, saveProgress } from './storage';
+import { clearProgress, loadProgress, saveProgress } from './storage';
 
 interface ProgressStore {
   progress: Progress;
@@ -25,6 +26,7 @@ interface ProgressStore {
   dropLine: (id: string) => void;
   dismissNotice: () => void;
   reset: () => void;
+  clearAll: () => void;
 }
 
 /**
@@ -70,6 +72,12 @@ export const useProgressStore = create<ProgressStore>((set, get) => {
       recorded.clear();
       const reloaded = loadProgress();
       set({ progress: reloaded.progress, recovered: reloaded.recovered, saveFailed: false });
+    },
+
+    clearAll: () => {
+      recorded.clear();
+      const ok = clearProgress();
+      set({ progress: emptyProgress(), recovered: false, saveFailed: !ok });
     },
   };
 });

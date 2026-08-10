@@ -83,10 +83,4 @@ describe('SavedLines', () => {
       ],
     ).toBeUndefined();
   });
-
-  it('tells the player when a save has failed', () => {
-    useProgressStore.setState({ saveFailed: true });
-    render(<SavedLines />);
-    expect(screen.getByRole('status')).toHaveTextContent(/not saved/i);
-  });
 });

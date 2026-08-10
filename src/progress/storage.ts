@@ -43,6 +43,20 @@ export function loadProgress(
   }
 }
 
+/**
+ * Removes stored progress entirely. Returns false when storage is
+ * unavailable — some privacy modes throw on the act of touching it.
+ */
+export function clearProgress(storage: Storage | null = defaultStorage()): boolean {
+  if (!storage) return false;
+  try {
+    storage.removeItem(STORAGE_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function saveProgress(
   progress: Progress,
   storage: Storage | null = defaultStorage(),

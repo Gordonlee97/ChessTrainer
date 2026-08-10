@@ -58,4 +58,19 @@ describe('progress store', () => {
     useProgressStore.getState().dismissNotice();
     expect(useProgressStore.getState().recovered).toBe(false);
   });
+
+  it('clears everything, in memory and in storage', () => {
+    useProgressStore.getState().noteAttempt('l', 'cp', { solved: true, hintsUsed: 0 }, 'k1');
+    expect(localStorage.getItem(STORAGE_KEY)).toContain('cp');
+
+    useProgressStore.getState().clearAll();
+
+    expect(useProgressStore.getState().progress).toEqual({ version: 1, lessons: {}, savedLines: [] });
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+
+    // The dedupe guard must clear too, or a checkpoint answered before
+    // clearing could never be recorded again after clearing.
+    useProgressStore.getState().noteAttempt('l', 'cp', { solved: true, hintsUsed: 0 }, 'k1');
+    expect(useProgressStore.getState().progress.lessons.l.checkpoints.cp.attempts).toBe(1);
+  });
 });
