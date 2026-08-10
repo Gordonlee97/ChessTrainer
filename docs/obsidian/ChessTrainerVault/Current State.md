@@ -1,29 +1,47 @@
 ---
-updated: 2026-08-06
+updated: 2026-08-10
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-08-06.** Plans 1 (foundation and line explorer), 2 (the explainer
-and compare), 3 (the teaching layer) and 4 (progress, saved lines, and
-controls) are all complete in code. Plans 1–3 are merged to `master` (PR #1,
-#2, #3). Plan 4 landed as six tasks on `feat/progress-and-controls`, followed
-by one whole-branch review fix wave; that branch is not yet merged.
+**As of 2026-08-10.** Plans 1 (foundation and line explorer), 2 (the explainer
+and compare), 3 (the teaching layer), 4 (progress, saved lines, and controls)
+and 5 (the app shell and keyboard navigation) are all complete in code. Plans
+1–4 are merged to `master`. Plan 5 sits on `feat/app-shell-and-keyboard`, eight
+implementation tasks plus a browser pass, **not yet merged and not yet given a
+whole-branch review**.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **410 passing, 1 skipped**, 42 test files, zero React `act()` warnings.
-`tsc --noEmit` clean, `npm run build` succeeds. The skip is
-`src/engine/engine.smoke.test.ts`, which needs a real `Worker`; jsdom has none,
-so the engine is verified in a browser.
+Suite: **434 passing, 1 skipped**, 46 test files, **zero warnings**.
+`tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
+needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 
-**Plan 4 has never been run in a browser.** Everything below about progress,
-saved lines, and controls is true of the test suite; none of it has been
-watched on a board. See [[Start Here]] for the manual checklist this needs
-before the branch is finished.
+## The board can finally be driven without a mouse
+
+This is the headline change. Until Plan 5, `react-chessboard` only handled
+drag-and-drop drops — synthetic drags never reached it and a pointer-event
+sequence once froze the renderer — so **nothing that required a piece to move
+could be verified without a human**. Three behaviours had never once been
+observed.
+
+Plan 5's keyboard layer is our own DOM, so it is drivable. On 2026-08-10 two of
+those three were watched for the first time:
+
+- **Answering a checkpoint** — Italian Game, `Enter ArrowUp ArrowUp Enter` from
+  the starting cursor plays `e4`; the tree advances and the lesson moves on.
+- **The wrong-answer path** — playing `d4` renders the authored near-miss reply,
+  **keeps the Hint control on screen**, keeps the checkpoint prompt, and leaves
+  zero candidate rows visible.
+
+The third — **segment-level board orientation after "Next part"** — is still
+unobserved. Lesson-level orientation was verified (`a8` first for White, `h1`
+first for Black), and both go through the same derivation, but the segment-level
+flip itself has not been watched. Full detail, including what could not be
+checked and why, is in `docs/superpowers/plans/spike-results-shell.md`.
 
 ## What works today
 
@@ -41,6 +59,12 @@ Run `npm run dev`, open the local URL, and you can:
 | Reach checkmate or stalemate | The rail says so rather than spinning |
 | Lose the engine | "Engine unavailable" card with a working Retry button |
 | Revisit a transposed position | Analysis is served from a FEN-keyed cache instead of re-searched — see `src/engine/evalCache.ts` |
+| Tab to the board and use the keyboard | Arrows move a cursor, Enter picks up and places, Escape puts down. Direction follows board orientation. A visually-hidden `aria-live` region announces each square with its occupant, and refuses illegal moves aloud without playing them. |
+| Look at the whole app | A one-screen shell: header, breadcrumb, then three columns — lesson region, board, candidates. The board never moves between modes; only the rails change contents. Below 1100x640 it flows as a single scrolling column, board first. |
+| Open a comparison | Opens as an overlay spanning the centre and right columns — real width for three mini-boards — closing on Escape and restoring focus. |
+| Reach a checkpoint | The candidate rail hands its column to a checkpoint panel: the prompt, the hint ladder, and the authored comparison. Hints live here, not in the lesson rail, and stay put while an answer is graded. |
+| Have unreadable stored progress | The notice appears in the **header**, survives starting a lesson, and can be dismissed. |
+| Want a clean slate | "Clear progress" in the header wipes durable storage behind a two-click "Really clear?" confirmation — no blocking modal. |
 
 The branching loop is the thing to exercise: play `e4 e5 Nf3`, click back to the
 position after `e4`, play `c5` instead — two lines now exist and the breadcrumb

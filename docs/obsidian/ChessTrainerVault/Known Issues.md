@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-06
+updated: 2026-08-10
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -35,7 +35,7 @@ trusting it.
 
 ### Compare at a checkpoint depends on the engine returning the authored moves
 
-**Where:** `src/ui/CandidateRail.tsx` — `checkpointComparison`
+**Where:** `src/ui/CheckpointPanel.tsx` — `checkpointComparison` (moved out of `CandidateRail.tsx` on 2026-08-09)
 **Severity:** low.
 
 The pair is picked from authored alternatives *found among the current lines*,
@@ -59,18 +59,6 @@ there is exactly one writer and it happens to be the same component that reads
 it — the local copy cannot go stale *yet*. A second mute control (a settings
 panel, a keyboard shortcut) would silently desync from this one the moment it
 existed, with no test able to catch it because there is only one today.
-
-### No production caller of `dismissNotice`, and no way to clear progress
-
-**Where:** `src/progress/store.ts`
-**Severity:** medium — a corrupted-storage notice, once shown, never goes away
-inside a session; there is also no player-facing way to reset lesson progress
-or saved lines short of clearing the browser's storage by hand.
-
-`dismissNotice()` exists and is tested, but nothing in `src/ui/` calls it —
-`LessonPicker`'s notice re-renders every time `recovered` or `saveFailed` is
-true, with no dismiss control on screen. Related but separate: there is no
-"reset my progress" affordance anywhere, authored or accidental.
 
 ### Multi-tab writes are last-writer-wins on the whole blob
 
@@ -187,15 +175,18 @@ not a patch, and it is **deliberately deferred to the next plan**. Do not bolt
 another ad-hoc feature onto `summarise` — the shape of the vocabulary is the
 decision to make first.
 
-### The compare drawer is a dialog in name only
+### The compare drawer still has no focus trap
 
 **Where:** `src/ui/CompareDrawer.tsx`
-**Severity:** medium for keyboard and screen-reader users; blocks nothing.
+**Severity:** low, reduced from medium on 2026-08-10.
 
-It carries `role="dialog"` and an accessible name, but it is an inline panel:
-no `aria-modal`, no focus trap, no Escape-to-close, and focus is not moved into
-it on open or restored on close. Either add those, or drop to a labelled
-`<section>` — the current state promises modal semantics it does not implement.
+Plan 5 gave it Escape-to-close, focus movement into the drawer on open, and
+focus restoration on unmount (guarded by `document.contains`), and it is now an
+overlay spanning the centre and right columns rather than an inline panel. It
+carries `role="region"` with an accessible name and **deliberately does not
+claim `aria-modal`**, because Tab containment was not implemented — a lying
+`aria-modal` is worse than none. Adding a real focus trap is what would let it
+claim modal semantics honestly.
 
 ### `MiniBoard` tells assistive technology nothing about the position
 
@@ -264,18 +255,55 @@ grows endgame content.
 - **`tsconfig.json` includes `types: ["node"]`**, which is unnecessary —
   `node:fs` resolves via `@types/node` regardless. Drop it next time that file is
   touched.
-- **`src/App.tsx` is an inline-styled placeholder**, not the designed layout —
-  now hosting the picker, lesson rail, saved lines, and controls on top of it.
-- **`tree.pinned` is never populated.** `src/tree/tree.ts` — it exists so a
-  node can keep its cached eval past the ~1000-node cap regardless of
-  recency, and the docstring on `evict()` still describes "pinned nodes" as
-  live machinery, but nothing in the app ever writes to it. Plan 4's saved
-  lines (2026-08-06) were the obvious candidate consumer and deliberately do
-  not use it — a saved line is PGN plus its starting FEN, replayed into
-  whatever tree exists when it is opened, never a set of node ids. Not a
-  correctness gap (eviction never removes a node, only its cached eval), just
-  unused machinery worth removing or wiring up next time the tree module is
-  touched.
+
+## Found in the 2026-08-10 browser pass — all minor
+
+### The keyboard cursor reads stale state within a single tick
+
+**Where:** `src/ui/Board.tsx` — the `onKeyDown` arrow branch
+**Severity:** low, latent.
+
+`setCursor(moveCursor(cursor, …))` reads `cursor` from the render closure
+rather than using a functional update. Sixteen arrow presses dispatched in one
+tick all computed from the same starting square and collapsed into a single
+move. A human's key repeats are spaced far enough apart that this will not
+surface, but `setCursor(c => moveCursor(c, …))` is the correct idiom and
+removes the class entirely.
+
+### Two `role="status"` regions live inside the board wrapper
+
+**Where:** `src/ui/Board.tsx` plus `react-chessboard`'s internals
+**Severity:** low.
+
+`react-chessboard` renders its own `aria-live="assertive"` region (via
+`@dnd-kit/accessibility`) inside the board, and ours (`aria-live="polite"`,
+`.visually-hidden`) sits alongside it. Ours is correctly `position: absolute`
+rather than `display: none`. Nothing is broken; a screen reader simply meets
+both, and a naive `querySelector('[role="status"]')` finds theirs first — which
+is exactly what made the keyboard announcements *look* empty during
+verification until the selector was corrected.
+
+### The keyboard cursor does not reset on "New game"
+
+**Where:** `src/ui/Board.tsx`
+**Severity:** low.
+
+Pressing "New game" resets the tree but leaves the cursor wherever it was.
+Defensible — it is a selection cursor, not board state — but it should be a
+deliberate decision rather than an accident.
+
+### The checkpoint prompt may be gated behind the engine search
+
+**Where:** `src/ui/CandidateRail.tsx` — the `status` early returns precede the
+checkpoint branch
+**Severity:** unknown; **pre-existing**, not introduced by Plan 5.
+
+While a search is in flight, the rail returns "Thinking…" before it reaches the
+branch that renders `CheckpointPanel` — so at a pending checkpoint the prompt
+and hints may not appear until analysis settles. In the 2026-08-10 pass the tab
+was backgrounded and the worker throttled, so the search never completed and
+severity could not be judged. In a foreground tab the window is around a
+second. Worth a look; not a blocker.
 
 ## Test coverage gaps
 

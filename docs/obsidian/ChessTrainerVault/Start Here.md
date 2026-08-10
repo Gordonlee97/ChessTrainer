@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-06
+updated: 2026-08-10
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,75 +10,82 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-06
+## Repo state as of 2026-08-10
 
 | | |
 |---|---|
-| Branch | `feat/progress-and-controls` |
-| Merged to `master` | PR #1 (Plan 1) 2026-08-04 · PR #2 (Plan 2) 2026-08-05 · PR #3 (Plan 3) 2026-08-06 |
+| Branch | `feat/app-shell-and-keyboard` |
+| Merged to `master` | PR #1 (Plan 1) · #2 (Plan 2) · #3 (Plan 3) · #4 (Plan 4) |
 | Working tree | Clean |
-| Suite | 410 passing, 1 skipped (expected — see below), zero `act()` warnings |
-| Last plan finished | Plan 4, progress/saved lines/controls, 2026-08-06 (six tasks + one whole-branch review fix wave) |
-| Last change | The Plan 4 fix wave, on `feat/progress-and-controls`, not yet merged |
+| Suite | 434 passing, 1 skipped (expected — see below), **zero warnings** |
+| Last plan finished | Plan 5, app shell and keyboard navigation — eight tasks, each individually reviewed, plus a browser pass |
+| Not yet done | **No whole-branch review.** The branch is not finished. |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
 second skip is a real failure.
 
-The fix wave that closed Plan 4's review is the reason to read [[Current State]]
-before trusting anything written about progress earlier in the branch: a saved
-line opened during a running lesson could record a checkpoint the player never
-answered, and a correct answer from a (currently hypothetical) multi-entry
-`accept` list was being written to durable storage as permanently unsolved.
+## Two of the three never-observed behaviours have now been observed
 
-## Plan 4's browser pass — mostly done, one gap
+Until this branch, `react-chessboard` handled only drag-and-drop drops, so
+**nothing requiring a piece to move could be verified without a human**. Plan 5's
+keyboard layer is our own DOM and *is* drivable. On 2026-08-10:
 
-**2026-08-06.** Driven by hand in Chrome. Confirmed working, console clean:
+- **Answering a checkpoint** — watched working.
+- **The wrong-answer path** — watched working, including the near-miss reply
+  with the Hint control still on screen beside it.
+- **Segment-level orientation after "Next part"** — **still unobserved.**
+  Lesson-level orientation was verified (`a8` first for White, `h1` first for
+  Black) and shares the same derivation, but the segment flip itself has not
+  been watched.
 
-- The controls row renders; "Sound on" toggles to "Sound off" with
-  `aria-pressed` following it, and **the mute survives a reload**.
-- Saving a line stores name, PGN and `startFen`; it **survives a reload**, and
-  "Open" rebuilds the position (breadcrumb back to `start › e4 › e5`).
-- The picker shows "1 of 3 checkpoints" for partial progress and "Done" for a
-  completed lesson.
-- Board orientation follows the lesson: the London renders from White's side,
-  "Answering 1.e4 as Black" from Black's.
-- **Spec §10 holds**: with `chesstrainer.progress.v1` deliberately corrupted,
-  the app comes up fully with "Your saved progress could not be read, so it is
-  starting fresh" — not a blank screen.
+Numbers, method, and an explicit list of what could *not* be checked are in
+`docs/superpowers/plans/spike-results-shell.md`.
 
-**The gap: nothing was verified that requires moving a piece on the board.**
-Neither a synthetic drag nor a click-to-move would drive `react-chessboard`
-through automation — the board only handles drops, and a synthetic pointer
-sequence froze the renderer. So these remain unobserved by hand:
-
-- answering a checkpoint and watching the record appear
-- the wrong-answer path showing its authored near-miss reply
-- "Next part" advancing to a segment, and with it the **segment-level board
-  orientation** that Plan 4's Task 1 added
-
-All three are covered by unit tests, and the segment-orientation test asserts
-the flipped value directly. A human with a mouse can close this in two minutes:
-start **Development and Tempo**, answer the `Nf3` checkpoint, take "Next part",
-and confirm the board flips to Black's side.
+**Known environment limit, confirmed by four separate agents:** the browser
+window cannot be resized here. `resize_window` reports success without moving
+the viewport; `window.resizeTo()`, an OS restore-down keystroke and CSS `zoom`
+all fail, and no CDP device-metrics tool is exposed. So the real
+`(min-width: 1100px) and (min-height: 640px)` breakpoint **trigger** has never
+been exercised — only the fallback's declarations, via an injected stylesheet.
+Do not burn time rediscovering this.
 
 ## Do this next
 
-**1. Spend two minutes on the gap above**, then finish the branch. It is
-otherwise ready to merge per [[Workflow]] — six tasks each reviewed
-individually, plus a whole-branch review and its fix wave, both clean, and
-zero `act()` warnings. See [[Current State]] for the before/after.
+**1. Run the whole-branch review, then finish the branch.** Point it at the
+seams. Every task passed its own review; what has not been asked is whether the
+tasks agree with each other. Feed it the deferred minors listed in the ledger at
+`.superpowers/sdd/2026-08-09-app-shell-and-keyboard/progress.md`.
 
-**2. Write Plan 5 — app shell and keyboard navigation.** [[Roadmap]] has what
-it covers: a properly designed `App.tsx` (currently an inline-styled shell
-stacking five components with no design pass) and the spec's outstanding
-keyboard board-navigation requirement. Do not start writing either directly;
-see [[Workflow]].
+**2. Merge PR #5 — and note that `Lessons.md` lives only on that branch.**
+`docs/learning-loop` has been open since 2026-08-07 and contains the whole
+learning-loop note. It is *not* on `master` and *not* on this branch, so the
+lessons below have nowhere to go until it lands. Merge it, then add them.
 
-Worth knowing for Plan 5: **keyboard board navigation would also make the
-board testable**. Every by-hand gap above exists because the only way to move
-a piece is a mouse drag. Building keyboard moves buys accessibility and an
-automatable input path in the same change.
+**3. Add these to `Lessons.md` once PR #5 is merged.** Both were paid for on
+this branch:
+
+- **A shared condition gets one definition, not two agreeing ones.** Plan 5's
+  Task 5 was written as a single task specifically to prevent a shared-surface
+  drift, and it drifted anyway: `CandidateRail` gated on `pendingCheckpoint`
+  while `CheckpointPanel` derived `pendingCheckpoint ?? attemptedCheckpoint`, so
+  the hint ladder vanished during grading. A third copy of the same rule was
+  later found in `checkpointComparison`. One owner is not enough when the rule
+  itself is duplicated. Corollary: **a test that renders a component directly
+  never exercises its mount gate** — every `CheckpointPanel` test rendered the
+  panel, so none could see that nothing mounted it.
+- **A task that writes grid or flex placement needs a browser check inside that
+  task.** jsdom performs no layout, so `npm test` structurally cannot catch a
+  CSS Grid bug. Plan 5 Task 6 shipped a green suite while the board and
+  candidate rail rendered *below* the left rail on every page load, because an
+  empty definitely-positioned portal target stole row 1 from auto-placement. A
+  reviewer found it only by starting the dev server and measuring. Deferring the
+  browser pass to the end of the plan is not sufficient.
+
+**4. Two smaller things.** `docs/superpowers/plans/spike-results-shell.md`
+records four new minors from the browser pass (a stale-closure cursor update, a
+duplicated `role="status"` region, the cursor not resetting on New game, and a
+possible engine-gating of the checkpoint prompt). None block merge.
 
 ## Where to look for what
 

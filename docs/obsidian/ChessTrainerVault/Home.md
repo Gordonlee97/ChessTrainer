@@ -41,6 +41,7 @@ makes harder later.
 - [[Decisions/Single-Threaded Stockfish Build]]
 - [[Decisions/Hybrid Explanations]]
 - [[Decisions/React 19 Upgrade]]
+- [[Decisions/Keyboard Board Navigation Model]]
 
 ## Where the authoritative documents live
 
@@ -57,5 +58,7 @@ The vault summarises and links; it does not duplicate.
 ## Repository
 
 <https://github.com/Gordonlee97/ChessTrainer> — public. Default branch `master`.
-As of 2026-08-04 the Plan 1 work sits in PR #1 on branch
-`feat/foundation-and-line-explorer`, not yet merged.
+As of 2026-08-10, Plans 1–4 are merged. Plan 5 sits on
+`feat/app-shell-and-keyboard`, awaiting a whole-branch review. **PR #5
+(`docs/learning-loop`) has been open since 2026-08-07 and carries `Lessons.md`,
+which exists on no other branch** — see [[Start Here]].
