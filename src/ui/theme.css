@@ -255,6 +255,18 @@ body {
   gap: 16px;
 }
 
+/* Every child of .app-main is explicitly placed — none of the four
+   (left rail, centre, right rail, .compare-portal below) is left to
+   auto-placement. CSS Grid places definitely-positioned items before
+   auto-placed ones regardless of source order: .compare-portal has an
+   explicit grid-column/grid-row (it must, to span centre + right and
+   overlay them), and if these three were auto-placed instead, the portal
+   would claim its cells first and bump all three into an implicit row 2 —
+   on every page load, not only while a comparison is open. Explicit
+   placement on all four sidesteps the ordering question entirely. */
+.app-rail-left { grid-column: 1; grid-row: 1; }
+.app-rail-right { grid-column: 3; grid-row: 1; }
+
 /* Sizing measured in Task 1 — do not substitute an aspect-ratio variant.
    The centre is a *size container*, and the board takes the smaller of its
    two dimensions in BOTH axes, so it is square by construction rather than
@@ -266,6 +278,8 @@ body {
   min-height: 0;
   min-width: 0;
   container-type: size;
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .board-wrap {
@@ -296,14 +310,19 @@ body {
     max-width: 560px;
     margin: 0 auto;
     width: 100%;
-    order: 1;
+    grid-column: 1;
+    grid-row: 1;
   }
   .board-wrap { width: 100%; height: auto; aspect-ratio: 1; }
 
   /* Board and candidates ahead of the picker and saved lines, so the two
-     things a player is looking at do not sit below a list. */
-  .app-rail-right { order: 2; }
-  .app-rail-left { order: 3; }
+     things a player is looking at do not sit below a list. Expressed as
+     explicit grid-row rather than `order`: every .app-main child is placed
+     explicitly (see the base rules above), and `order` has no effect once
+     placement is explicit — leaving it here would silently do nothing and
+     mislead the next reader. */
+  .app-rail-right { grid-column: 1; grid-row: 2; }
+  .app-rail-left { grid-column: 1; grid-row: 3; }
 }
 
 /* ---- Compare overlay --------------------------------------------------- */
@@ -316,6 +335,12 @@ body {
   z-index: 5;
 }
 
+/* Belt and braces on top of the explicit placement above: an empty portal
+   (the common case — no comparison open) is removed from grid layout
+   entirely rather than merely being zero-content, so it cannot contribute
+   so much as a gap in either mode. */
+.compare-portal:empty { display: none; }
+
 .compare-portal > * {
   pointer-events: auto;
   position: absolute;
@@ -324,7 +349,11 @@ body {
 }
 
 @media not all and (min-width: 1100px) and (min-height: 640px) {
-  /* Below the floor there are no columns to span, so it simply flows. */
-  .compare-portal { grid-column: 1; position: static; }
+  /* Below the floor there are no columns to span, so it simply flows — after
+     the three panels above (rows 1-3), in its own explicit row 4, rather
+     than overlapping .app-centre's row 1. Only the :empty rule keeps a
+     closed drawer from reserving that row's gap; while a comparison is open
+     this row is exactly what stops it from colliding with row 1. */
+  .compare-portal { grid-column: 1; grid-row: 4; position: static; }
   .compare-portal > * { position: static; }
 }
