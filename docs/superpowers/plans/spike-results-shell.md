@@ -101,14 +101,113 @@ fix. The documented fallback — a measured `ResizeObserver` sizing the board
 explicitly — is a different design and needs a human decision before Task 2
 proceeds.
 
-## Assumption flagged for whoever picks this up
+## Assumption flagged for whoever picks this up (superseded — see below)
 
 The diagnosis above (flex main-axis content-sizing collapsing an
 `aspect-ratio` + percentage-sized descendant) is offered as context, not as a
-verified fix. It was not tested as a replacement design — e.g., whether
-changing `.centre` to `display: grid` with `place-items: stretch`, or giving
-`.board-wrap` an explicit driving size (`width: 100%` plus the two `max-*-size`
-caps, or `flex: 1 1 0` with `min-width: 0`), would resolve it without a
-`ResizeObserver`. That is a real, cheap-to-test alternative worth trying before
-committing to `ResizeObserver`, but it is a different claim than the one this
-spike was scoped to measure, so it was not tried here.
+verified fix. It was not tested as a replacement design at first — see
+"Follow-up: two corrected-CSS candidates" below, where it was.
+
+## Follow-up: two corrected-CSS candidates (2026-08-09)
+
+The coordinator asked whether a *corrected* CSS — a small fix rather than a
+different design — works, before treating this as a `ResizeObserver` redesign
+decision. Two candidates were tested on the same spike page, using the
+forced-`#root` technique validated above (all three original measurements had
+agreed, so this substitute is trusted here too). Method: `.centre` and
+`.board-wrap`'s inline styles were reset and replaced with each candidate in
+turn, on the live page, then measured with `getBoundingClientRect()` and
+`getComputedStyle()` at two sizes:
+
+- **wide-and-short** (`1400 x 600`, forced on `#root`) — height must bind.
+- **narrow-and-tall** (`900 x 1000`, forced on `#root`) — width must bind.
+
+### Candidate A — container query units
+
+```css
+.centre { container-type: size; min-height: 0; display: block; }
+.board-wrap {
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  margin: auto;
+}
+```
+
+| Case | `main` | overflows root? | `.centre` | `.board-wrap` (rect = computed) | square? |
+|---|---|---|---|---|---|
+| wide-short `1400x600` | `1400 x 530` | no | `652 x 498` | `498 x 498` | **yes**, exact |
+| narrow-tall `900x1000` | `900 x 930` | no | `356 x 898` | `356 x 356` | **yes**, exact |
+
+`.board` (the grid inside the wrapper) measured 4px larger in each axis than
+`.board-wrap` in both cases (`502x502` and `360x360` respectively) — this is
+`.board`'s own 2px border (content-box sizing) poking past a wrapper that has
+no `overflow: hidden`, present identically in both candidates and in the
+original CSS; it is a pre-existing property of `.board`'s rule in the spike
+page, not something either candidate introduces or fixes.
+
+**Candidate A holds: pixel-exact square in both the height-bound and
+width-bound cases, main-column width unaffected, nothing overflows.**
+
+### Candidate B — definite block-size + aspect-ratio, in a grid
+
+```css
+.centre { display: grid; place-items: center; min-height: 0; }
+.board-wrap { block-size: 100%; aspect-ratio: 1; max-inline-size: 100%; }
+```
+
+| Case | `main` | overflows root? | `.centre` | `.board-wrap` (computed) | square? |
+|---|---|---|---|---|---|
+| wide-short `1400x600` | `1400 x 530` | no | `652 x 498` | `502px x 498px` | **no** (4px off) |
+| narrow-tall `900x1000` | `1446 x 930` | **yes — by 546px** | `902 x 898` | `902px x 898px` | **no** |
+
+This is worse than the coordinator's predicted failure mode. In the
+wide-and-short case (height correctly binding), the wrapper was still not
+exactly square — `502px` computed width against `498px` computed height, a
+reproducible 4px gap, not rounding noise (confirmed via `getComputedStyle`,
+not just the bounding rect).
+
+In the narrow-and-tall case it did not just produce a non-square wrapper as
+predicted — it broke the surrounding grid layout. With `#root` forced to
+`900px` wide, `main` rendered at `1446px` wide (546px over), and the whole
+page overflowed horizontally
+(`root.scrollWidth (1446ish) > root.clientWidth (900)`). Cause: `.board-wrap`
+has no explicit `width`/`inline-size`; its used width is derived from
+`aspect-ratio` against the definite `block-size: 100%` (which, per available
+height, computes to a large number — `898px` here). Because neither
+`.board-wrap` nor `.centre` nor `main` sets `min-width: 0`, that large
+aspect-ratio-derived size becomes (or is treated similarly to) an automatic
+minimum inline size that propagates upward through `.centre` and `main`,
+inflating `main`'s own grid track past `#root`'s actual width — the same class
+of "unconstrained intrinsic size leaking through an ancestor with no
+containment/`min-width:0`" problem diagnosed in the original REFUTED section
+above, just manifesting in the opposite direction (too big, not too small).
+Candidate A does not have this failure mode because `container-type: size` on
+`.centre` establishes size containment, which stops exactly this kind of
+upward leak — `.board-wrap`'s size in Candidate A can never affect `.centre`'s
+or `main`'s own sizing, by construction.
+
+**Candidate B fails in both directions: mildly (4px non-square) when height
+binds, and severely (546px page overflow, non-square) when width binds.**
+
+### Recommendation
+
+**A corrected CSS does work: Candidate A (container query units,
+`container-type: size` + `width/height: min(100cqw, 100cqh)`).** It was
+pixel-exact square in both the height-binding and width-binding cases, did not
+disturb the surrounding grid's column widths, and nothing overflowed. This is
+a small, targeted fix — swap `.centre`'s `display: flex` for
+`container-type: size; display: block`, and `.board-wrap`'s
+`aspect-ratio`/`max-*-size` recipe for the `min(100cqw, 100cqh)` recipe — not a
+different design, and it does not need a `ResizeObserver`.
+
+Candidate B (the `block-size: 100%` + `aspect-ratio` + `max-inline-size: 100%`
+recipe) is REFUTED on its own: it is non-square in the case it should have
+gotten right (wide-short) and actively overflows the page in the case it was
+expected to merely get wrong shape-wise (narrow-tall). It should not be used
+as specified.
+
+Caveat: `container-type: size` requires each queried container to have a
+definite size on both axes (true here, via the existing grid), and Baseline
+browser support for `container-type: size` and `cqw`/`cqh` units should be
+confirmed against this project's supported-browser list before Task 2 commits
+to it — that check was not done here, as it is outside this spike's scope.
