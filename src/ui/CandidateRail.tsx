@@ -10,6 +10,7 @@ import { useActiveLesson } from '../lesson/store';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 import { Button } from './Button';
+import { CheckpointPanel } from './CheckpointPanel';
 import { CompareDrawer } from './CompareDrawer';
 import { EvalBar } from './EvalBar';
 import { QualityBadge } from './QualityBadge';
@@ -107,33 +108,6 @@ export function CandidateRail() {
     return authoredContrastFor(alternatives, result.lines[0].san, result.lines[1].san);
   }, [alternatives, result]);
 
-  /**
-   * The comparison offered while a checkpoint is pending.
-   *
-   * Every move in the corpus that carries `alternatives` is also a
-   * checkpoint, so without this the authored contrast was unreachable: the
-   * rail hides itself at a checkpoint, and stepping off the line to un-hide
-   * it moves the position past the move the alternatives belong to.
-   *
-   * The constraint is that the engine must not leak the answer, not that
-   * comparison is forbidden — so the pair here is chosen from the authored
-   * alternatives found among the lines, never from the engine's ordering,
-   * and any line the checkpoint would accept is excluded. What the player
-   * sees is two moves the lesson itself wanted contrasted, neither of which
-   * is the answer.
-   */
-  const checkpointComparison = useMemo(() => {
-    const checkpoint = activeLesson?.state.pendingCheckpoint;
-    if (!checkpoint || !alternatives || !result) return null;
-    const eligible = result.lines.filter(
-      (line) =>
-        alternatives.some((entry) => entry.san === line.san) && !checkpoint.accept.includes(line.san),
-    );
-    if (eligible.length < 2) return null;
-    const [a, b] = eligible;
-    return { a, b, authored: authoredContrastFor(alternatives, a.san, b.san) };
-  }, [activeLesson, alternatives, result]);
-
   function playCandidate(san: string) {
     // Shares resolveDrop's classification (via resolveSan) so a candidate
     // click and the equivalent drag-and-drop move sound identical.
@@ -202,44 +176,7 @@ export function CandidateRail() {
   }
 
   if (activeLesson?.state.pendingCheckpoint) {
-    return (
-      <section aria-label="Candidate moves">
-        <p
-          role="status"
-          style={{
-            padding: 12,
-            margin: 0,
-            borderRadius: 'var(--radius)',
-            border: '2px solid var(--border)',
-            fontSize: 13,
-          }}
-        >
-          Engine suggestions are hidden while the lesson is asking you for a move.
-        </p>
-        {checkpointComparison && (
-          <>
-            <Button
-              variant="secondary"
-              style={{ width: '100%', marginTop: 8 }}
-              onClick={() => setComparing((open) => !open)}
-            >
-              {comparing
-                ? 'Hide comparison'
-                : `Compare ${checkpointComparison.a.san} and ${checkpointComparison.b.san}`}
-            </Button>
-            {comparing && (
-              <CompareDrawer
-                a={checkpointComparison.a}
-                b={checkpointComparison.b}
-                baseFen={node.fen}
-                onClose={() => setComparing(false)}
-                authored={checkpointComparison.authored}
-              />
-            )}
-          </>
-        )}
-      </section>
-    );
+    return <CheckpointPanel />;
   }
 
   return (
