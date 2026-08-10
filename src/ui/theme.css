@@ -196,3 +196,100 @@ body {
   font-size: 12px;
   flex: 1 1 auto;
 }
+
+/* ---- App shell -------------------------------------------------------- */
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.app-wordmark {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--primary);
+}
+
+.app-header-spacer { flex: 1; }
+
+.app-crumb { min-width: 0; overflow-x: auto; }
+
+.app-main {
+  display: grid;
+  grid-template-columns: minmax(220px, 22%) 1fr minmax(260px, 28%);
+  gap: 20px;
+}
+
+/* min-height: 0 is what makes the rails scroll instead of stretching the
+   grid. Without it a grid item refuses to shrink below its content and the
+   page grows instead — silently, and only at small window heights. */
+.app-rail {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Sizing measured in Task 1 — do not substitute an aspect-ratio variant.
+   The centre is a *size container*, and the board takes the smaller of its
+   two dimensions in BOTH axes, so it is square by construction rather than
+   by aspect-ratio inference. Task 1 tested the obvious alternative
+   (block-size: 100% + aspect-ratio: 1 + max-inline-size: 100%) and measured
+   it non-square even in the easy case (502x498), and in a narrow-tall column
+   it overflowed the page by 546px. See spike-results-shell.md. */
+.app-centre {
+  min-height: 0;
+  min-width: 0;
+  container-type: size;
+}
+
+.board-wrap {
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  margin: auto;
+}
+
+/* One screen only above the floor. Below either threshold the shell flows as
+   a single scrolling column — see the spec's §4. */
+@media (min-width: 1100px) and (min-height: 640px) {
+  html, body, #root { height: 100%; }
+  #root { overflow: hidden; }
+  .app-shell { height: 100dvh; overflow: hidden; }
+}
+
+@media not all and (min-width: 1100px) and (min-height: 640px) {
+  .app-main { grid-template-columns: 1fr; }
+  .app-rail { overflow-y: visible; }
+
+  /* container-type: size MUST be turned off here. It requires a definite
+     size on both axes, and in the flowing fallback the height is indefinite
+     — leaving it on makes 100cqh resolve to 0 and the board vanishes. In the
+     fallback the board goes back to being width-driven, which is correct for
+     a page that scrolls. */
+  .app-centre {
+    container-type: normal;
+    max-width: 560px;
+    margin: 0 auto;
+    width: 100%;
+    order: 1;
+  }
+  .board-wrap { width: 100%; height: auto; aspect-ratio: 1; }
+
+  /* Board and candidates ahead of the picker and saved lines, so the two
+     things a player is looking at do not sit below a list. */
+  .app-rail-right { order: 2; }
+  .app-rail-left { order: 3; }
+}
