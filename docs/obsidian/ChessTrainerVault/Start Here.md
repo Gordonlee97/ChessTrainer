@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-06
+updated: 2026-08-07
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,16 +10,16 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-06
+## Repo state as of 2026-08-07
 
 | | |
 |---|---|
-| Branch | `feat/progress-and-controls` |
-| Merged to `master` | PR #1 (Plan 1) 2026-08-04 · PR #2 (Plan 2) 2026-08-05 · PR #3 (Plan 3) 2026-08-06 |
+| Branch | `master` |
+| Merged | PR #1 (Plan 1) · #2 (Plan 2) · #3 (Plan 3) · #4 (Plan 4), all by 2026-08-07 |
 | Working tree | Clean |
 | Suite | 410 passing, 1 skipped (expected — see below), zero `act()` warnings |
 | Last plan finished | Plan 4, progress/saved lines/controls, 2026-08-06 (six tasks + one whole-branch review fix wave) |
-| Last change | The Plan 4 fix wave, on `feat/progress-and-controls`, not yet merged |
+| Last change | The vault became a learning loop — see [[Lessons]] |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
@@ -64,10 +64,8 @@ and confirm the board flips to Black's side.
 
 ## Do this next
 
-**1. Spend two minutes on the gap above**, then finish the branch. It is
-otherwise ready to merge per [[Workflow]] — six tasks each reviewed
-individually, plus a whole-branch review and its fix wave, both clean, and
-zero `act()` warnings. See [[Current State]] for the before/after.
+**1. Spend two minutes on the gap above.** Plan 4 is merged, so this is now a
+confirmation rather than a gate — but it is still unobserved.
 
 **2. Write Plan 5 — app shell and keyboard navigation.** [[Roadmap]] has what
 it covers: a properly designed `App.tsx` (currently an inline-styled shell
@@ -87,6 +85,7 @@ automatable input path in the same change.
 - **What's next and why** → [[Roadmap]]
 - **How the code fits together** → [[Architecture]]
 - **How work gets done here** → [[Workflow]]
+- **Mistakes not to make again** → [[Lessons]] — read this before writing a plan
 - **What's broken** → [[Known Issues]]
 - **Why something is the way it is** → `Decisions/`, indexed from [[Home]]
 

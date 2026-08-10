@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-04
+updated: 2026-08-06
 status: current
 tags: [chesstrainer, index]
 ---
@@ -26,6 +26,7 @@ to update before you finish.
 | [[Roadmap]] | What's next, in priority order, and why |
 | [[Architecture]] | How the pieces fit and which invariants must not break |
 | [[Workflow]] | How work gets done here: the cycle, the review bar, the conventions |
+| [[Lessons]] | Mistakes made more than once, and the countermeasures now in force — read before writing a plan |
 | [[Known Issues]] | Bugs, leaks, dead code, drift between spec and reality |
 | [[Glossary]] | What "PV", "MultiPV", "centipawn", "node", and "line" mean here |
 

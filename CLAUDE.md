@@ -18,6 +18,11 @@ From there, `Workflow.md` covers how work gets done here — the process, the
 review bar, and the branch and commit conventions. Follow it rather than
 improvising a process.
 
+**Before writing a plan, read `Lessons.md`.** It is the ledger of mistakes this
+project has already made more than once, and the countermeasures now in force.
+Most of them were introduced *by a plan*, not by an implementer — so reading it
+at planning time is where it pays.
+
 Then update the vault as you go, per the rules below.
 
 ## What this project is
@@ -63,6 +68,7 @@ worse than no vault because it is believed.
 | `Roadmap.md` | What's next and why, in priority order. Plans that are done, in flight, and not yet written. | Whenever priorities move |
 | `Architecture.md` | The layers, how data flows, and the invariants that must not break. | When structure changes |
 | `Known Issues.md` | Bugs, leaks, dead code, and deferred cleanup. Each with severity and whether it blocks anything. | When found or fixed |
+| `Lessons.md` | **The learning loop.** Mistakes made more than once, with counts and the countermeasure now in force. Read before writing a plan. | When something recurs |
 | `Glossary.md` | Chess and project vocabulary — PV, MultiPV, UCI, centipawn, node, line, candidate. | Rare |
 | `Decisions/` | One note per architectural decision: context, the choice, alternatives rejected, what it makes harder. | One per decision |
 
@@ -105,6 +111,10 @@ Triggers:
 - **An issue was fixed** → remove it from `Known Issues.md`; don't leave a
   tombstone.
 - **Priorities moved, or a plan was finished or written** → `Roadmap.md`.
+- **The same kind of mistake happened twice** → `Lessons.md`, with the count and
+  a countermeasure written somewhere binding. Once is bad luck; twice is a
+  process gap, and a lesson recorded only in prose gets re-learned. If you find
+  yourself writing "as happened before" anywhere, that is the trigger.
 - **A session ended having changed nothing** → change nothing. An empty update
   is noise.
 
@@ -172,7 +182,38 @@ which jsdom lacks.
 ## Testing expectations
 
 - TDD where the plan calls for it; tests verify behaviour, not mocks.
-- Test output must be pristine. Warnings are findings.
+- **Mutation-check any test written to guard a named defect.** Break the
+  implementation deliberately, confirm the test fails *for the right reason*,
+  restore, confirm it passes, and report what you saw. Six tests here have
+  passed against a broken implementation — including one that locked the defect
+  in. A test whose failure you have not witnessed is a guess.
+- **Test output must be pristine, and the warning count is a number you report.**
+  Ten `act()` warnings survived six tasks because each one only checked that the
+  count had not *grown*. Zero is the target; a non-zero count is a finding with
+  an owner.
 - The engine and the tree are the two places where a missing test has
   historically cost the most. Anything touching search lifecycle, stale-result
   guarding, or node identity needs a test that fails without the fix.
+
+## Rules paid for in blood
+
+Each of these exists because it went wrong more than once. `Lessons.md` has the
+evidence and the counts.
+
+- **Never hand-write a FEN.** Derive it by replaying moves through chess.js in a
+  scratch script and paste the result.
+- **Legality is not correctness.** `validateLessonChess` proves a move is legal,
+  never that it is good. For any position where a move is taught as *the answer*,
+  run the vendored engine at `public/engine/` and confirm it. A lesson once
+  shipped teaching the losing side of a known trap, and it passed both the
+  validator and a task review.
+- **Grep, don't recall.** Before writing prose or a plan step that depends on how
+  a library or a repo mechanism behaves, read it or run it. Assumed shapes have
+  produced an inert function parameter and a purity guard that would have
+  rejected the next store.
+- **Plans describe changes to existing files; they paste full code only for new
+  ones.** Five snippets have been written against file shapes that had moved,
+  one of which would have broken the rules of hooks if followed literally.
+- **Anything requiring a piece to move on the board cannot be automated today.**
+  `react-chessboard` only handles drops; synthetic drags and clicks do not reach
+  it. Verify those paths by hand, or say plainly that you could not.
