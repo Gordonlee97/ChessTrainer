@@ -84,7 +84,7 @@ The board and its column are fixed. Only the rails change.
 |---|---|---|
 | Idle | `LessonPicker`, then `SavedLines` | `CandidateRail` |
 | Lesson, ordinary move | `LessonRail` — title, note, "Play the next move", "Leave lesson" | `CandidateRail` |
-| Lesson, checkpoint pending | `LessonRail` **without** its hint block | **Checkpoint panel**: prompt, revealed hints, "Show another hint" |
+| Lesson, checkpoint pending | `LessonRail` **without** its hint block | **Checkpoint panel**: prompt, revealed hints, "Show another hint", and the existing authored comparison |
 | Lesson, answer graded | `LessonRail` with the reply and "Return to the lesson" | Checkpoint panel remains |
 
 ### Why the hint block moves
@@ -102,6 +102,20 @@ stated first goal. It requires no new authored content: `asking.hints` and
 The graded state keeps the checkpoint panel on screen deliberately. A wrong
 answer's reply text tells the player to take a hint, so the hints must be
 visible beside it.
+
+### What the checkpoint panel must not lose
+
+The checkpoint branch of `CandidateRail` (lines 204–243) renders more than the
+grey notice. It also renders `checkpointComparison` — a "Compare X and Y"
+button and drawer whose pair is drawn from the lesson's authored
+`alternatives` and **excludes any move the checkpoint would accept**, so it
+contrasts two moves without leaking the answer.
+
+That affordance exists because Plan 3's review found the authored contrast was
+otherwise unreachable: every move in the corpus carrying `alternatives` is also
+a checkpoint, and the rail hid itself at checkpoints. The new checkpoint panel
+**absorbs it unchanged**, along with the `useMemo` that builds it. Losing it
+would silently re-introduce a bug this project has already paid to fix.
 
 ### Shared surface — name this in both task briefs
 
