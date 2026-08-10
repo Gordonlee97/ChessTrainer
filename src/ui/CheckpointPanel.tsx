@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Alternative } from '../content/schema';
 import type { AuthoredContrastPair } from '../explain/compare';
-import { useActiveLesson, useLessonStore } from '../lesson/store';
+import { askingCheckpoint, useActiveLesson, useLessonStore } from '../lesson/store';
 import { useSelectedNode } from '../tree/store';
 import { Button } from './Button';
 import { CompareDrawer } from './CompareDrawer';
@@ -30,10 +30,12 @@ function authoredContrastFor(
 
 /**
  * What the candidate rail shows in its place while a lesson checkpoint is
- * pending: the notice that engine suggestions are hidden, the hint ladder for
- * the question being asked, and — when the lesson's alternatives make one
- * available — a comparison drawn from authored content rather than the
- * engine's own ordering.
+ * being asked — pending, or under grading after an off-book answer (see
+ * `askingCheckpoint`): the notice that engine suggestions are hidden, the
+ * hint ladder for the question being asked, and — when the lesson's
+ * alternatives make one available — a comparison drawn from authored content
+ * rather than the engine's own ordering. Renders nothing when no checkpoint
+ * is being asked.
  */
 export function CheckpointPanel() {
   const activeLesson = useActiveLesson();
@@ -54,7 +56,18 @@ export function CheckpointPanel() {
   const alternatives = activeLesson?.state.nextMove?.alternatives;
 
   /**
-   * The comparison offered while a checkpoint is pending.
+   * The question currently in front of the player — see `askingCheckpoint`
+   * for why this isn't just `state.pendingCheckpoint`. `CandidateRail` calls
+   * the same function to decide whether to mount this component at all; if
+   * the two ever used different derivations again, one of them would gate on
+   * a checkpoint the other didn't think existed.
+   */
+  const asking = askingCheckpoint(activeLesson);
+  const revealed = asking ? (hintsShown[asking.id] ?? 0) : 0;
+
+  /**
+   * The comparison offered while a checkpoint is being asked (pending or
+   * under grading — see `asking` above).
    *
    * Every move in the corpus that carries `alternatives` is also a
    * checkpoint, so without this the authored contrast was unreachable: the
@@ -64,31 +77,23 @@ export function CheckpointPanel() {
    * The constraint is that the engine must not leak the answer, not that
    * comparison is forbidden — so the pair here is chosen from the authored
    * alternatives found among the lines, never from the engine's ordering,
-   * and any line the checkpoint would accept is excluded. What the player
-   * sees is two moves the lesson itself wanted contrasted, neither of which
-   * is the answer.
+   * and any line the checkpoint would accept is excluded (`checkpoint.accept`
+   * — regression-tested in CheckpointPanel.test.tsx: an alternative whose SAN
+   * is also an accepted answer must never appear in the pair). What the
+   * player sees is two moves the lesson itself wanted contrasted, neither of
+   * which is the answer.
    */
   const checkpointComparison = useMemo(() => {
-    const checkpoint = activeLesson?.state.pendingCheckpoint;
-    if (!checkpoint || !alternatives || !result) return null;
+    if (!asking || !alternatives || !result) return null;
     const eligible = result.lines.filter(
-      (line) =>
-        alternatives.some((entry) => entry.san === line.san) && !checkpoint.accept.includes(line.san),
+      (line) => alternatives.some((entry) => entry.san === line.san) && !asking.accept.includes(line.san),
     );
     if (eligible.length < 2) return null;
     const [a, b] = eligible;
     return { a, b, authored: authoredContrastFor(alternatives, a.san, b.san) };
-  }, [activeLesson, alternatives, result]);
+  }, [asking, alternatives, result]);
 
-  /**
-   * The question currently in front of the player. Normally the pending
-   * checkpoint; while an answer is being graded `pendingCheckpoint` is null
-   * (the path has left the line), but the question — and the hints for it —
-   * must stay on screen, because the reply beside them talks about taking a
-   * hint.
-   */
-  const asking = activeLesson?.state.pendingCheckpoint ?? activeLesson?.attemptedCheckpoint;
-  const revealed = asking ? (hintsShown[asking.id] ?? 0) : 0;
+  if (!asking) return null;
 
   return (
     <section aria-label="Candidate moves">
@@ -104,23 +109,21 @@ export function CheckpointPanel() {
       >
         Engine suggestions are hidden while the lesson is asking you for a move.
       </p>
-      {asking && (
-        <div>
-          <p style={{ fontSize: 14, fontWeight: 700 }}>{asking.prompt}</p>
+      <div>
+        <p style={{ fontSize: 14, fontWeight: 700 }}>{asking.prompt}</p>
 
-          <ol style={{ fontSize: 13, paddingLeft: 18 }}>
-            {asking.hints.slice(0, revealed).map((hint) => (
-              <li key={hint}>{hint}</li>
-            ))}
-          </ol>
+        <ol style={{ fontSize: 13, paddingLeft: 18 }}>
+          {asking.hints.slice(0, revealed).map((hint) => (
+            <li key={hint}>{hint}</li>
+          ))}
+        </ol>
 
-          {revealed < asking.hints.length && (
-            <Button variant="ghost" onClick={() => revealHint(asking.id)}>
-              Hint
-            </Button>
-          )}
-        </div>
-      )}
+        {revealed < asking.hints.length && (
+          <Button variant="ghost" onClick={() => revealHint(asking.id)}>
+            Hint
+          </Button>
+        )}
+      </div>
       {checkpointComparison && (
         <>
           <Button

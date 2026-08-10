@@ -18,6 +18,49 @@ vi.mock('./useAnalysis', async (importOriginal) => ({
   useAnalysis: () => analysis.value,
 }));
 
+// A synthetic lesson whose checkpoint accepts one of its own authored
+// alternatives — no lesson in the real corpus does this (an alternative is,
+// by definition, a move the lesson didn't want), so it's the only way to
+// exercise the exclusion directly rather than relying on it being vacuously
+// true because the accepted answer was never an alternative to begin with.
+const overlappingAcceptLesson = vi.hoisted(() => ({
+  id: 'overlapping-accept-test',
+  title: 'Overlapping Accept Test',
+  kind: 'opening' as const,
+  side: 'white' as const,
+  summary: 'A synthetic lesson for testing the accept/alternatives overlap.',
+  tags: [],
+  segments: [
+    {
+      startFen: null,
+      moves: [
+        {
+          san: 'e4',
+          checkpoint: {
+            id: 'overlap-cp',
+            prompt: 'Play the best central pawn move.',
+            accept: ['e4', 'd4'],
+            hints: ['Central pawn moves open lines.'],
+          },
+          alternatives: [
+            { san: 'd4', name: "Queen's Pawn", note: 'A real alternative first move.', pros: ['Solid'], cons: ['Different game'] },
+            { san: 'c4', name: 'English', note: 'A flank opening.', pros: ['Flexible'], cons: ['Slower'] },
+          ],
+        },
+      ],
+    },
+  ],
+}));
+vi.mock('../content/lessons/index', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../content/lessons/index')>();
+  return {
+    ...actual,
+    ALL_LESSONS: [...actual.ALL_LESSONS, overlappingAcceptLesson],
+    lessonById: (id: string) =>
+      id === overlappingAcceptLesson.id ? overlappingAcceptLesson : actual.lessonById(id),
+  };
+});
+
 describe('CandidateRail', () => {
   beforeEach(() => {
     useLessonStore.getState().stopLesson();
@@ -366,6 +409,28 @@ describe('CandidateRail', () => {
       expect(screen.queryByRole('button', { name: /compare/i })).not.toBeInTheDocument();
     });
 
+    it('excludes an alternative whose SAN the checkpoint also accepts from the comparison pair', () => {
+      // d4 is both an accepted answer and an authored alternative — the only
+      // way to exercise the `!checkpoint.accept.includes(...)` clause, since
+      // no lesson in the real corpus has that overlap. Without the clause,
+      // eligible would be [d4, c4] and the button would read "Compare d4 and
+      // c4", offering the accepted answer as one half of the comparison.
+      useLessonStore.getState().startLesson('overlapping-accept-test');
+      analysis.value = {
+        status: 'idle',
+        result: {
+          depth: 18,
+          lines: [
+            { san: 'd4', cp: 40, mate: null, pv: ['d4'] },
+            { san: 'c4', cp: 35, mate: null, pv: ['c4'] },
+          ],
+        },
+      } as never;
+
+      render(<CandidateRail />);
+      expect(screen.queryByRole('button', { name: /compare/i })).not.toBeInTheDocument();
+    });
+
     it('offers no comparison at a checkpoint whose move authored no alternatives', () => {
       // The Italian's opening checkpoint (e4) carries none.
       useLessonStore.getState().startLesson('italian-game');
@@ -395,5 +460,26 @@ describe('CandidateRail', () => {
     render(<CandidateRail />);
     expect(screen.queryByRole('button', { name: /^e4/ })).not.toBeInTheDocument();
     expect(screen.getByRole('status')).toHaveTextContent(/hidden while the lesson/i);
+  });
+
+  it('keeps the hint control mounted, through CandidateRail itself, while a checkpoint answer is being graded', async () => {
+    // Regression: CandidateRail used to gate CheckpointPanel on
+    // state.pendingCheckpoint alone. pendingCheckpoint and attemptedCheckpoint
+    // are mutually exclusive by construction, so the moment a wrong move goes
+    // off-script, pendingCheckpoint goes null and this fell through to the
+    // ordinary candidate list — CheckpointPanel, built to handle grading via
+    // attemptedCheckpoint, never got mounted at all. Rendering through
+    // CandidateRail's real mount gate (not CheckpointPanel directly) is the
+    // point: CheckpointPanel.test.tsx alone could not have caught this.
+    useLessonStore.getState().startLesson('italian-game');
+    useTreeStore.getState().playMove('a3'); // wrong move at the e4 checkpoint
+    analysis.value = {
+      status: 'idle',
+      result: { depth: 20, lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4'] }] },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.getByRole('button', { name: /^hint$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^e4/ })).not.toBeInTheDocument();
   });
 });

@@ -6,7 +6,7 @@ import type { Alternative } from '../content/schema';
 import type { AuthoredContrastPair } from '../explain/compare';
 import { buildContext, describeMove } from '../explain/explain';
 import { classifyMove } from '../explain/quality';
-import { useActiveLesson } from '../lesson/store';
+import { askingCheckpoint, useActiveLesson } from '../lesson/store';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 import { Button } from './Button';
@@ -175,7 +175,13 @@ export function CandidateRail() {
     );
   }
 
-  if (activeLesson?.state.pendingCheckpoint) {
+  // The same question `CheckpointPanel` asks itself before rendering its
+  // prompt — gating on `state.pendingCheckpoint` alone previously let the
+  // two disagree: pending and attempted are mutually exclusive, so during
+  // grading (a wrong or off-book answer) this fell through to the ordinary
+  // candidate list while CheckpointPanel, never mounted, sat unreachable
+  // with a hint ladder no one could see.
+  if (askingCheckpoint(activeLesson)) {
     return <CheckpointPanel />;
   }
 

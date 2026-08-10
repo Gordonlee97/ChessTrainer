@@ -131,3 +131,22 @@ export function useActiveLesson(): ActiveLesson | null {
     attemptedGrade,
   };
 }
+
+/**
+ * The checkpoint currently being asked — normally the pending one, but while
+ * an answer is being graded `pendingCheckpoint` is null (the path has left
+ * the line) and this falls back to `attemptedCheckpoint`, because the reply
+ * to a graded attempt talks about taking a hint, so the question and the
+ * hint control must stay on screen through grading, not just before it.
+ *
+ * `CandidateRail` (deciding whether to mount `CheckpointPanel` at all) and
+ * `CheckpointPanel` (deciding whether to render its own prompt) both need
+ * this exact answer. It is defined once, here, and both call it — two
+ * independent copies of this rule drifted apart once already: `CandidateRail`
+ * gated on `pendingCheckpoint` alone, so during grading it fell through to
+ * the ordinary candidate list while `CheckpointPanel` (never mounted) sat
+ * unreachable with a hint ladder no one could see.
+ */
+export function askingCheckpoint(active: ActiveLesson | null): Checkpoint | null {
+  return active ? (active.state.pendingCheckpoint ?? active.attemptedCheckpoint) : null;
+}
