@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Alternative } from '../content/schema';
+import type { EvalResult } from '../engine/types';
 import type { AuthoredContrastPair } from '../explain/compare';
 import { askingCheckpoint, useActiveLesson, useLessonStore } from '../lesson/store';
 import { useSelectedNode } from '../tree/store';
 import { Button } from './Button';
 import { CompareDrawer } from './CompareDrawer';
-import { useAnalysis } from './useAnalysis';
+import { EngineUnavailableNotice } from './EngineUnavailableNotice';
+import type { AnalysisStatus } from './useAnalysis';
 
 /**
  * The authored pros and cons for a pair of moves, or undefined when the
@@ -28,20 +30,40 @@ function authoredContrastFor(
   };
 }
 
+interface CheckpointPanelProps {
+  /**
+   * The analysis `CandidateRail` already has. Passed down rather than fetched
+   * with a second `useAnalysis()`: two hooks on the same FEN meant two
+   * `go depth 20` searches per checkpoint, the second aborting the first —
+   * against this project's "one search, three lines" rule, and straight
+   * through the engine's abort/drain path for nothing.
+   *
+   * Null whenever the engine has nothing to offer (unavailable, or a search
+   * that has not produced a line yet). That must cost the player the
+   * comparison and nothing else.
+   */
+  result: EvalResult | null;
+  status: AnalysisStatus;
+  onRetry: () => void;
+}
+
 /**
  * What the candidate rail shows in its place while a lesson checkpoint is
  * being asked — pending, or under grading after an off-book answer (see
- * `askingCheckpoint`): the notice that engine suggestions are hidden, the
- * hint ladder for the question being asked, and — when the lesson's
- * alternatives make one available — a comparison drawn from authored content
- * rather than the engine's own ordering. Renders nothing when no checkpoint
- * is being asked.
+ * `askingCheckpoint`): why the engine lines are not there, the hint ladder
+ * for the question being asked, and — when the lesson's alternatives and the
+ * analysis together make one available — a comparison drawn from authored
+ * content rather than the engine's own ordering. Renders nothing when no
+ * checkpoint is being asked.
+ *
+ * The prompt and the hint ladder never depend on the engine. This panel is
+ * mounted above `CandidateRail`'s engine-status returns precisely so that a
+ * dead or still-thinking engine cannot make a lesson unanswerable.
  */
-export function CheckpointPanel() {
+export function CheckpointPanel({ result, status, onRetry }: CheckpointPanelProps) {
   const activeLesson = useActiveLesson();
   const hintsShown = useLessonStore((store) => store.hintsShown);
   const revealHint = useLessonStore((store) => store.revealHint);
-  const { result } = useAnalysis();
   const node = useSelectedNode();
   const [comparing, setComparing] = useState(false);
 
@@ -97,18 +119,27 @@ export function CheckpointPanel() {
 
   return (
     <section aria-label="Candidate moves">
-      <p
-        role="status"
-        style={{
-          padding: 12,
-          margin: 0,
-          borderRadius: 'var(--radius)',
-          border: '2px solid var(--border)',
-          fontSize: 13,
-        }}
-      >
-        Engine suggestions are hidden while the lesson is asking you for a move.
-      </p>
+      {/*
+        With the engine down there are no suggestions to hide, and the rail's
+        own notice is unreachable while this panel stands in its place — so
+        the retry comes along rather than being stranded behind the question.
+      */}
+      {status === 'unavailable' ? (
+        <EngineUnavailableNotice onRetry={onRetry} />
+      ) : (
+        <p
+          role="status"
+          style={{
+            padding: 12,
+            margin: 0,
+            borderRadius: 'var(--radius)',
+            border: '2px solid var(--border)',
+            fontSize: 13,
+          }}
+        >
+          Engine suggestions are hidden while the lesson is asking you for a move.
+        </p>
+      )}
       <div>
         <p style={{ fontSize: 14, fontWeight: 700 }}>{asking.prompt}</p>
 

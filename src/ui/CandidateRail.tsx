@@ -12,6 +12,7 @@ import { useSelectedNode, useTreeStore } from '../tree/store';
 import { Button } from './Button';
 import { CheckpointPanel } from './CheckpointPanel';
 import { CompareDrawer } from './CompareDrawer';
+import { EngineUnavailableNotice } from './EngineUnavailableNotice';
 import { EvalBar } from './EvalBar';
 import { QualityBadge } from './QualityBadge';
 import { formatScore, useAnalysis } from './useAnalysis';
@@ -118,40 +119,20 @@ export function CandidateRail() {
     }
   }
 
+  // The single gate for "a checkpoint is being asked", and it sits *above*
+  // the engine-status returns on purpose. The prompt and the hint ladder are
+  // lesson content: they were an unconditional sibling of this rail before
+  // the panel absorbed them, and with the gate below the unavailable/thinking
+  // returns a dead engine made the lesson unanswerable while LessonRail's
+  // reply went on naming a Hint control that was not on screen. What the
+  // panel can say about the *engine* — the authored comparison — degrades to
+  // absent from a null `result`; the question never does.
+  if (askingCheckpoint(activeLesson)) {
+    return <CheckpointPanel result={result} status={status} onRetry={retry} />;
+  }
+
   if (status === 'unavailable') {
-    return (
-      <div
-        role="status"
-        style={{
-          padding: 12,
-          borderRadius: 'var(--radius)',
-          border: '2px solid var(--border)',
-          fontSize: 13,
-        }}
-      >
-        <p style={{ margin: '0 0 8px' }}>
-          Engine unavailable — lesson content still works, but live evaluation is off.
-        </p>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={retry}
-          style={
-            {
-              fontWeight: 700,
-              fontSize: 13,
-              padding: '6px 12px',
-              background: 'var(--surface)',
-              color: 'var(--ink)',
-              border: '2px solid var(--border)',
-              '--btn-shadow': 'var(--border)',
-            } as CSSProperties
-          }
-        >
-          Retry
-        </Button>
-      </div>
-    );
+    return <EngineUnavailableNotice onRetry={retry} />;
   }
 
   if (!result || result.lines.length === 0) {
@@ -173,16 +154,6 @@ export function CandidateRail() {
         Thinking…
       </div>
     );
-  }
-
-  // The same question `CheckpointPanel` asks itself before rendering its
-  // prompt — gating on `state.pendingCheckpoint` alone previously let the
-  // two disagree: pending and attempted are mutually exclusive, so during
-  // grading (a wrong or off-book answer) this fell through to the ordinary
-  // candidate list while CheckpointPanel, never mounted, sat unreachable
-  // with a hint ladder no one could see.
-  if (askingCheckpoint(activeLesson)) {
-    return <CheckpointPanel />;
   }
 
   return (

@@ -2,20 +2,30 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLessonStore } from '../lesson/store';
+import { useProgressStore } from '../progress/store';
 import { useTreeStore } from '../tree/store';
 import { createTree } from '../tree/tree';
 import { sounds } from '../sound';
 import { CandidateRail } from './CandidateRail';
+import { LessonRail } from './LessonRail';
 
 const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
 vi.mock('howler', () => ({
   Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
 }));
 
-const analysis = vi.hoisted(() => ({ value: { result: null, status: 'idle', retry: () => {} } as never }));
+// `calls` counts subscriptions to the analysis, which is the only way to see
+// a duplicate search from jsdom — see the "one search" test below.
+const analysis = vi.hoisted(() => ({
+  value: { result: null, status: 'idle', retry: () => {} } as never,
+  calls: 0,
+}));
 vi.mock('./useAnalysis', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./useAnalysis')>()),
-  useAnalysis: () => analysis.value,
+  useAnalysis: () => {
+    analysis.calls += 1;
+    return analysis.value;
+  },
 }));
 
 // A synthetic lesson whose checkpoint accepts one of its own authored
@@ -66,8 +76,14 @@ describe('CandidateRail', () => {
     useLessonStore.getState().stopLesson();
     useTreeStore.getState().reset();
     analysis.value = { result: null, status: 'idle', retry: () => {} } as never;
+    analysis.calls = 0;
     mocks.play.mockClear();
     sounds.setMuted(false);
+    // The composed tests below mount LessonRail, whose recording effect
+    // writes real localStorage; node ids are deterministic, so an attempt
+    // written by one test would otherwise leak into the next.
+    localStorage.clear();
+    useProgressStore.getState().reset();
   });
 
   it('lists candidate moves with their scores', () => {
@@ -481,5 +497,96 @@ describe('CandidateRail', () => {
     render(<CandidateRail />);
     expect(screen.getByRole('button', { name: /^hint$/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^e4/ })).not.toBeInTheDocument();
+  });
+
+  describe('a checkpoint does not depend on the engine', () => {
+    // Regression (whole-branch review C1): CheckpointPanel is mounted only by
+    // this component, and the mount gate used to sit *below* the unavailable
+    // and thinking early returns. With no engine the lesson was unanswerable —
+    // no prompt, no hints — while LessonRail's wrong-answer reply went on
+    // naming a Hint control that was not on screen. The prompt and the hint
+    // ladder are lesson content; they must not be gated on a search.
+    it('asks the question and offers a hint while the engine is unavailable', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      analysis.value = { result: null, status: 'unavailable', retry: () => {} } as never;
+
+      render(<CandidateRail />);
+      expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^hint$/i })).toBeInTheDocument();
+    });
+
+    it('asks the question and offers a hint while the first search is still running', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      analysis.value = { result: null, status: 'analyzing', retry: () => {} } as never;
+
+      render(<CandidateRail />);
+      expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /^hint$/i })).toBeInTheDocument();
+      expect(screen.queryByText(/thinking/i)).not.toBeInTheDocument();
+    });
+
+    it('keeps the retry affordance at a checkpoint when the engine is unavailable', async () => {
+      const retry = vi.fn();
+      useLessonStore.getState().startLesson('italian-game');
+      analysis.value = { result: null, status: 'unavailable', retry } as never;
+
+      render(<CandidateRail />);
+      await userEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(retry).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops the authored comparison, not the question, when there is no analysis to draw one from', () => {
+      // The Bc4 checkpoint is the one that carries authored alternatives, so
+      // it is the case where the comparison has something to lose.
+      useLessonStore.getState().startLesson('italian-game');
+      for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
+      analysis.value = { result: null, status: 'unavailable', retry: () => {} } as never;
+
+      render(<CandidateRail />);
+      expect(screen.getByText(/most aggressive square/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /compare/i })).not.toBeInTheDocument();
+    });
+
+    it('subscribes to the analysis once at a checkpoint, not twice', () => {
+      // "One search, three lines." CheckpointPanel used to call useAnalysis()
+      // itself, so reaching a checkpoint put two `go depth 20` searches on the
+      // same FEN — the second aborting the first, straight through the
+      // engine's abort/drain path — for one set of lines. The panel takes the
+      // rail's `result` as a prop instead. The hook is mocked in every suite
+      // that renders these components, so counting subscriptions is the only
+      // place this is visible without a real worker.
+      useLessonStore.getState().startLesson('italian-game');
+      analysis.value = {
+        status: 'idle',
+        result: { depth: 20, lines: [{ san: 'e4', cp: 31, mate: null, pv: ['e4'] }] },
+        retry: () => {},
+      } as never;
+      analysis.calls = 0;
+
+      render(<CandidateRail />);
+      expect(analysis.calls).toBe(1);
+    });
+
+    // The invariant this branch already broke once (Task 5) and broke again
+    // through a different gate: the reply must not name a control the player
+    // cannot see. It spans two components, so it is asserted across both —
+    // rendering CheckpointPanel directly would never exercise the mount gate,
+    // which is exactly how C1 got through.
+    it('never names a hint the player cannot take, even with the engine unavailable', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('a3'); // wrong answer at the e4 checkpoint
+      analysis.value = { result: null, status: 'unavailable', retry: () => {} } as never;
+
+      render(
+        <>
+          <LessonRail />
+          <CandidateRail />
+        </>,
+      );
+
+      const reply = screen.getByText(/not this time/i);
+      expect(reply).toHaveTextContent(/hint/i);
+      expect(screen.getByRole('button', { name: /^hint$/i })).toBeInTheDocument();
+    });
   });
 });

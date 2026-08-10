@@ -221,12 +221,15 @@ describe('LessonRail', () => {
       expect(screen.queryByText(/not this time/i)).not.toBeInTheDocument();
     });
 
-    // The reply itself still names "hint" and "Return to the lesson" — both
-    // are copy this component owns — but the Hint button and the question it
-    // answers now live in CheckpointPanel (see
-    // "keeps the question and the hint control on screen while an attempt is
-    // being graded" there), so only the control LessonRail still renders is
-    // asserted here.
+    // The reply names "hint" and "Return to the lesson", but only the latter
+    // is a control this component renders — the Hint button and the question
+    // it answers now live in CheckpointPanel, which CandidateRail mounts. So
+    // the half of the invariant that spans both components ("the reply must
+    // not name a control the player cannot see") is asserted where both are
+    // on screen and the real mount gate runs: see "never names a hint the
+    // player cannot take, even with the engine unavailable" in
+    // CandidateRail.test.tsx. Deleting it from here without putting it there
+    // is what let the whole-branch review's C1 through.
     it('names the return-to-lesson control in the not-this-time copy', () => {
       useLessonStore.getState().startLesson('italian-game');
       useTreeStore.getState().playMove('a3');

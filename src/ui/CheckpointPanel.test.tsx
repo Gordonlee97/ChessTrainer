@@ -32,20 +32,29 @@ function startAtCheckpoint() {
   });
 }
 
+/**
+ * The panel takes the rail's analysis as props rather than running a second
+ * search of its own, so these tests hand it the state every assertion below
+ * is indifferent to: no lines, engine idle. The question and the hint ladder
+ * must read the same whatever the engine is doing — `CandidateRail.test.tsx`
+ * covers the unavailable and analyzing cases through the real mount gate.
+ */
+const noAnalysis = { result: null, status: 'idle' as const, onRetry: () => {} };
+
 describe('checkpoint panel', () => {
   // Guards the whole file: if content changes so that e4 no longer carries a
   // checkpoint, every test below would pass vacuously against an empty
   // render. That is the exact failure mode Lessons.md §2 records six times.
   it('is genuinely at a pending checkpoint', () => {
     startAtCheckpoint();
-    render(<CheckpointPanel />);
+    render(<CheckpointPanel {...noAnalysis} />);
     expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
   });
 
   it('reveals hints one at a time', async () => {
     const user = userEvent.setup();
     startAtCheckpoint();
-    render(<CheckpointPanel />);
+    render(<CheckpointPanel {...noAnalysis} />);
     expect(screen.queryByText(/central pawn moves are the ones/i)).toBeNull();
     await user.click(screen.getByRole('button', { name: /hint/i }));
     expect(screen.getByText(/central pawn moves are the ones/i)).toBeInTheDocument();
@@ -55,7 +64,7 @@ describe('checkpoint panel', () => {
 
   it('still tells the player why the engine lines are hidden', () => {
     startAtCheckpoint();
-    render(<CheckpointPanel />);
+    render(<CheckpointPanel {...noAnalysis} />);
     expect(screen.getByRole('status')).toHaveTextContent(
       /hidden while the lesson is asking/i,
     );
@@ -76,7 +85,7 @@ describe('checkpoint panel', () => {
   describe('the hint ladder (moved from LessonRail)', () => {
     it('asks for the move at a checkpoint instead of naming it', () => {
       startAtCheckpoint();
-      render(<CheckpointPanel />);
+      render(<CheckpointPanel {...noAnalysis} />);
       // The Italian's first move is itself a checkpoint.
       expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
       expect(screen.queryByText(/play e4\./i)).not.toBeInTheDocument();
@@ -84,7 +93,7 @@ describe('checkpoint panel', () => {
 
     it('reveals hints one at a time, in order', async () => {
       startAtCheckpoint();
-      render(<CheckpointPanel />);
+      render(<CheckpointPanel {...noAnalysis} />);
 
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
       expect(screen.getByText(/central pawn moves/i)).toBeInTheDocument();
@@ -97,7 +106,7 @@ describe('checkpoint panel', () => {
 
     it('stops offering hints once they are exhausted', async () => {
       startAtCheckpoint();
-      render(<CheckpointPanel />);
+      render(<CheckpointPanel {...noAnalysis} />);
       for (let i = 0; i < 3; i += 1) {
         await userEvent.click(screen.getByRole('button', { name: /hint/i }));
       }
@@ -106,7 +115,7 @@ describe('checkpoint panel', () => {
 
     it('starts the next checkpoint with no hints showing and the Hint button back', async () => {
       startAtCheckpoint();
-      const { rerender } = render(<CheckpointPanel />);
+      const { rerender } = render(<CheckpointPanel {...noAnalysis} />);
 
       // Spend every hint at the first checkpoint (e4)...
       for (let i = 0; i < 3; i += 1) {
@@ -118,7 +127,7 @@ describe('checkpoint panel', () => {
       act(() => {
         for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
       });
-      rerender(<CheckpointPanel />);
+      rerender(<CheckpointPanel {...noAnalysis} />);
 
       expect(screen.getByText(/most aggressive square/i)).toBeInTheDocument();
       expect(screen.queryByText(/the bishop belongs on c4\./i)).not.toBeInTheDocument();
@@ -129,7 +138,7 @@ describe('checkpoint panel', () => {
     it('keeps the question and the hint control on screen while an attempt is being graded', async () => {
       startAtCheckpoint();
       useTreeStore.getState().playMove('a3');
-      render(<CheckpointPanel />);
+      render(<CheckpointPanel {...noAnalysis} />);
 
       // The reply (rendered by LessonRail) talks about taking a hint, so the
       // question it answers and the Hint button both have to still be here.
@@ -141,7 +150,7 @@ describe('checkpoint panel', () => {
     it('keeps the question up after a near miss too', () => {
       startAtCheckpoint();
       useTreeStore.getState().playMove('d4');
-      render(<CheckpointPanel />);
+      render(<CheckpointPanel {...noAnalysis} />);
       expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /^hint$/i })).toBeInTheDocument();
     });
