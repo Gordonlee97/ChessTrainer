@@ -211,3 +211,89 @@ definite size on both axes (true here, via the existing grid), and Baseline
 browser support for `container-type: size` and `cqw`/`cqh` units should be
 confirmed against this project's supported-browser list before Task 2 commits
 to it — that check was not done here, as it is outside this spike's scope.
+
+---
+
+# Browser verification pass — 2026-08-10
+
+Run by the controller after the Task 9 subagent was cut off mid-run by a spend
+limit. Driven against `npm run dev` in real Chrome via CDP.
+
+**Read the environment caveat first.** The tab was **backgrounded**
+(`document.visibilityState === "hidden"`), which has two consequences that
+shape everything below:
+
+- `innerWidth`/`innerHeight` report **0**, so the app rendered in its
+  *fallback* layout, not the one-screen layout.
+- Timers and the engine's Web Worker are throttled — `setTimeout` clamps to
+  ~1s, which repeatedly blew the 45s CDP evaluation budget and made precise
+  multi-step keyboard sequences unreliable.
+
+Neither is an application defect. The one-screen geometry was measured
+independently by two agents earlier in this branch (all three regions
+`top: 127`, board 740.02 x 740.02 square) and is recorded above; it was **not**
+re-measured here.
+
+## What was verified
+
+| # | Item | Result |
+|---|---|---|
+| 1 | Fallback stacking order | **PASS** — measured live at zero viewport: `.app-centre` top 279, `.app-rail-right` top 475, `.app-rail-left` top 1095. Board → candidates → picker, as specified. Rails `overflow-y: visible`, page scrolls. |
+| 2 | `.compare-portal` when empty | **PASS** — 0 children, `display: none`. The `:empty` guard works. |
+| 3 | **Checkpoint answered by keyboard** | **PASS — first time ever observed.** Italian Game, cursor e2, `Enter ArrowUp ArrowUp Enter`. Breadcrumb `start` → `start › e4`; lesson advanced to the e4 note and offered "Play the next move". |
+| 4 | Keyboard announcements | **PASS** — `d2, white pawn` → `picked up d2, white pawn` → `d4, empty` → `d4` (SAN on placement). Empty square gives `d6, empty — nothing to pick up`. |
+| 5 | **Wrong-answer path** | **PASS — first time ever observed.** Played `d4` (authored near-miss). Near-miss reply rendered ("the Queen's Gambit family"), **the Hint control stayed on screen**, the checkpoint prompt stayed, "Return to the lesson" appeared, and **0 candidate rows** were visible — engine suggestions stayed hidden through grading. This is Task 5's Critical fix confirmed in a browser. |
+| 6 | Illegal-move guard | **PASS** — `g1 to g1 is not a legal move`, and the piece stayed held afterwards, as designed. |
+| 7 | Board orientation | **PARTIAL** — with no lesson the board renders `a8` first / `h1` last (White's view); starting `Answering 1.e4 as Black` (`side: 'black'`) flips it to `h1` first / `a8` last. The derivation works. **Segment-level mid-lesson flip was NOT verified** — see below. |
+| 8 | Compare overlay | **PASS** — portal receives the drawer (1 child, `display: block`), `role="region"` and `aria-label="Compare e4 and d4"` preserved, focus moves into the drawer, Escape closes it, portal returns to 0 children / `display: none`. |
+| 9 | Progress notice in the header | **PASS** — with `chesstrainer.progress.v1` set to `not json`, the header reads "Your saved progress could not be read, so it is starting fresh." with a Dismiss button. **It is still there after starting a lesson**, while `[aria-label="My lines"]` is gone — which is precisely the bug the move fixes. Dismiss clears it. |
+| 10 | Clear progress | **PASS** — first click relabels to "Really clear?", second click leaves `localStorage.getItem('chesstrainer.progress.v1') === null` and resets the label to "Clear progress". |
+| 11 | Checkpoint panel contents | **PASS** — notice and prompt render together in the right rail. |
+
+## What could NOT be verified, and why
+
+- **Segment-level board orientation after "Next part".** This is the one
+  behaviour `Start Here.md` has listed as never observed. Reaching it requires
+  answering the `Nf3` checkpoint and playing out five more moves; under ~1s
+  timer clamping the arrow-key sequences were repeatedly lost mid-call. The
+  *lesson-level* flip was verified (row 7) and shares the same derivation
+  (`activeLesson?.segment.side ?? activeLesson?.lesson.side ?? 'white'`), but
+  the segment-level path itself remains unobserved. **Still open.**
+- **The real `(min-width: 1100px) and (min-height: 640px)` breakpoint trigger.**
+  Unreachable in this environment — confirmed now by four separate agents.
+  `resize_window` reports success without moving the viewport;
+  `window.resizeTo()`, an OS restore-down keystroke, and CSS `zoom` all fail;
+  and no CDP device-metrics tool is exposed. Only the fallback *declarations*
+  have been exercised.
+- **Focus return when the compare drawer closes.** A programmatic `.click()`
+  does not move focus, so nothing meaningful was focused when the drawer
+  mounted and nothing meaningful could be restored. Not a defect signal either
+  way. The unit test for this exists and was mutation-checked twice.
+- **The `.progress-notice` inline-Dismiss styling.** Screenshot capture errored
+  at this viewport, so its appearance is unassessed. Still a Minor to look at.
+
+## Findings
+
+**Minor (new, latent).** `Board.tsx`'s key handler does
+`setCursor(moveCursor(cursor, …))`, reading `cursor` from the render closure
+rather than using a functional update. Sixteen arrow presses dispatched in one
+tick all computed from the same starting square and collapsed to a single move.
+Real key repeats are spaced far enough apart that a user will not hit this, but
+`setCursor(c => moveCursor(c, …))` is the correct idiom and removes the class.
+
+**Minor (observation).** There are **two** `role="status"` regions inside the
+board wrapper: `react-chessboard`'s own `aria-live="assertive"` region (from
+`@dnd-kit/accessibility`) and ours (`aria-live="polite"`, `.visually-hidden`).
+Ours is correctly `position: absolute` rather than `display: none`. Worth
+knowing that a screen reader meets both.
+
+**Minor (observation).** The keyboard cursor does not reset when "New game" is
+pressed — it stays wherever it was. Defensible (it is a selection cursor, not
+board state), but worth a deliberate decision rather than an accident.
+
+**Observation, pre-existing and unconfirmed.** `CandidateRail`'s "Thinking…"
+early return precedes its checkpoint branch, so while a search is in flight at
+a pending checkpoint the prompt and hints do not render. In this throttled tab
+the search never completed, so severity could not be judged; in a foreground
+tab the window is ~1s. The ordering predates this branch. Worth a look, not a
+blocker.
