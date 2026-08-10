@@ -20,7 +20,8 @@ can be reconstructed from the code, and this cannot.
 | Suite | 443 passing, 1 skipped (expected — see below), **zero warnings** |
 | Last plan finished | Plan 5, app shell and keyboard navigation — eight tasks, each individually reviewed, plus a browser pass |
 | Whole-branch review | Run 2026-08-10. One Critical and three Importants; **all four fixed** in one wave — see `.superpowers/sdd/2026-08-09-app-shell-and-keyboard/fix-wave-report.md` |
-| Not yet done | The fix wave has not been re-reviewed, and its engine claim (one search per checkpoint) is proven by test, not on the wire |
+| Fix-wave re-review | Run 2026-08-10. **All four ADDRESSED, merge recommended.** Mutations reproduced independently. |
+| Verification debt | No browser pass since the fix wave; "one search per checkpoint" is proven structurally and by test, never watched on the wire |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
@@ -53,24 +54,18 @@ Do not burn time rediscovering this.
 
 ## Do this next
 
-**1. Re-review the fix wave, then finish the branch.** The whole-branch review
-ran on 2026-08-10 and found one Critical (the checkpoint prompt and hints were
-gated behind engine status, making a lesson unanswerable with no engine) and
-three Importants (two engine searches per checkpoint, "Clear progress" undoing
-itself mid-lesson, and a deleted invariant assertion). All four are fixed; the
-findings and their mutation checks are in
-`.superpowers/sdd/2026-08-09-app-shell-and-keyboard/fix-wave-report.md`. What is
-*not* re-verified: the "one search per checkpoint" claim is proven by counting
-`useAnalysis` subscriptions in jsdom, not by watching UCI traffic, and no
-browser pass has run since the fix.
+**1. Finish the branch.** The whole-branch review and its fix-wave re-review are
+both done and clean. Before merging, note that this branch was cut from `master`
+*before* PR #5 landed, so **`Start Here.md` conflicts** — take both sides: the
+learning-loop framing from `master` and the Plan 5 state from here.
 
-**2. Merge PR #5 — and note that `Lessons.md` lives only on that branch.**
-`docs/learning-loop` has been open since 2026-08-07 and contains the whole
-learning-loop note. It is *not* on `master` and *not* on this branch, so the
-lessons below have nowhere to go until it lands. Merge it, then add them.
+Then spend the verification debt: a browser pass has not run since the fix wave,
+and the C1 fix (the checkpoint question surviving an unavailable engine) is
+exactly the kind of thing this project has repeatedly shipped broken past a
+green suite.
 
-**3. Add these to `Lessons.md` once PR #5 is merged.** All three were paid for
-on this branch:
+**2. Add these to `Lessons.md`.** PR #5 merged on 2026-08-10, so the note now
+exists on `master`. All three were paid for on this branch:
 
 - **A shared condition gets one definition, not two agreeing ones.** Plan 5's
   Task 5 was written as a single task specifically to prevent a shared-surface
@@ -99,7 +94,7 @@ on this branch:
   now with three sightings: **a test that renders a component directly never
   exercises its mount gate.**
 
-**4. Two smaller things.** `docs/superpowers/plans/spike-results-shell.md`
+**3. Two smaller things.** `docs/superpowers/plans/spike-results-shell.md`
 records four minors from the browser pass. The fourth — "a possible engine
 gating of the checkpoint prompt" — turned out to be the review's Critical and is
 now fixed; the note there still calls it pre-existing and transient, which it
