@@ -399,8 +399,9 @@ export function ProgressNotice() {
 
 `EvalBar` is rendered inside `CandidateRail`, not beside the board — read
 `src/ui/CandidateRail.tsx` and confirm before assuming otherwise. If it is
-where this plan says, `.app-centre` holds only the board wrapper and the
-`gap: 10px` is harmless. **Report what you find.**
+where this plan says, `.app-centre` holds only the board wrapper, which is
+what lets it be a bare size container with no flex layout of its own.
+**Report what you find.**
 
 - [ ] **Step 4: Write the mode-behaviour tests**
 
