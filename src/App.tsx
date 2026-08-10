@@ -46,6 +46,8 @@ export function App() {
         <div className="app-rail app-rail-right">
           <CandidateRail />
         </div>
+
+        <div className="compare-portal" id="compare-portal" />
       </div>
     </main>
   );

@@ -139,7 +139,7 @@ body {
 }
 
 .compare-drawer {
-  margin-top: 18px;
+  margin-top: 0;
   padding: 16px;
   border: 2px solid var(--border);
   border-radius: var(--radius);
@@ -304,4 +304,27 @@ body {
      things a player is looking at do not sit below a list. */
   .app-rail-right { order: 2; }
   .app-rail-left { order: 3; }
+}
+
+/* ---- Compare overlay --------------------------------------------------- */
+
+.compare-portal {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  position: relative;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.compare-portal > * {
+  pointer-events: auto;
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+}
+
+@media not all and (min-width: 1100px) and (min-height: 640px) {
+  /* Below the floor there are no columns to span, so it simply flows. */
+  .compare-portal { grid-column: 1; position: static; }
+  .compare-portal > * { position: static; }
 }
