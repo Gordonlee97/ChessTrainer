@@ -60,11 +60,31 @@ determines its height, so total board height follows from its width, and
 `height: 100%` on the container does **not** shrink it. Only constraining the
 wrapper's *width* by the available height will cap the board.
 
-**This was read, not run.** The `aspect-ratio` + `max-block-size` pattern is
-well established and depends on the grid row giving the wrapper a definite
-height, which `1fr` does — but the claim is unverified in a browser. The
-implementation plan must open with a spike step that proves it before any
-other layout work is built on top of it.
+**Measured 2026-08-09, and the `aspect-ratio` approach above was refuted.**
+The spike (`docs/superpowers/plans/spike-results-shell.md`) found that
+`aspect-ratio: 1` with `max-block-size`/`max-inline-size` collapses the board
+to 8×8px: those properties are *caps*, not definite sizes, so inside a
+shrink-to-fit parent the board's own `width: 100%` is circular. The obvious
+correction — `block-size: 100%` plus `aspect-ratio: 1` — measured non-square
+even in the easy case and overflowed the page by 546px in a narrow-tall
+column.
+
+**What actually works** is making the centre column a size container and
+sizing the board from it in both axes, so it is square by construction:
+
+```css
+.app-centre { container-type: size; min-width: 0; min-height: 0; }
+.board-wrap { width: min(100cqw, 100cqh); height: min(100cqw, 100cqh); }
+```
+
+Measured pixel-exact square in both the height-bound and width-bound cases.
+This does not raise the project's browser floor: container query units are
+Chrome 105+ / Safari 16+ / Firefox 110+, while `color-mix()`, already shipped
+in `Board.tsx`, needs Chrome 111+ / Safari 16.2+ / Firefox 113+.
+
+**One trap this creates:** `container-type: size` needs a definite size on
+both axes. In the §4 fallback the height is indefinite, so it must be reset to
+`normal` there or `100cqh` resolves to zero and the board disappears.
 
 ### Compare
 
@@ -286,9 +306,14 @@ currently zero and any non-zero count is a finding with an owner.
 - Any change to `src/engine/` or to `src/tree/` beyond deleting `pinned`
 - Wiring `pinned` to protect saved-line evals
 
-## 9. Open risk
+## 9. Open risk — closed 2026-08-09
 
-The board sizing described in §2 is read from the library's source, not
-observed in a browser. It is the one claim the rest of the layout depends on.
-The plan opens with a spike that proves or disproves it, and records the
-result, before any layout task runs.
+The board sizing in §2 was the one claim everything else rested on, and it was
+read from the library's source rather than observed. The spike ran first and
+**refuted it**, along with the obvious correction. §2 now carries the measured
+CSS that works, and `docs/superpowers/plans/spike-results-shell.md` carries the
+numbers.
+
+This is what the spike was for. Had the plan simply asserted the CSS, the
+failure would have surfaced as an 8×8px board somewhere in Task 2, after the
+shell had been built around it.

@@ -217,6 +217,11 @@ git commit -m "test: measure whether the board can be capped by available height
 - Produces: CSS class names `app-shell`, `app-header`, `app-crumb`, `app-main`,
   `app-rail`, `app-centre`, `board-wrap`. Later tasks attach to these.
 
+**Task 1 refuted this task's original CSS and the corrected version below is
+the measured one.** Use it as written. If you find yourself reaching for
+`aspect-ratio` on `.board-wrap`, stop — that is the variant that was measured
+failing, in both directions.
+
 - [ ] **Step 1: Append the shell CSS to `src/ui/theme.css`**
 
 ```css
@@ -266,19 +271,23 @@ git commit -m "test: measure whether the board can be capped by available height
   gap: 16px;
 }
 
+/* Sizing measured in Task 1 — do not substitute an aspect-ratio variant.
+   The centre is a *size container*, and the board takes the smaller of its
+   two dimensions in BOTH axes, so it is square by construction rather than
+   by aspect-ratio inference. Task 1 tested the obvious alternative
+   (block-size: 100% + aspect-ratio: 1 + max-inline-size: 100%) and measured
+   it non-square even in the easy case (502x498), and in a narrow-tall column
+   it overflowed the page by 546px. See spike-results-shell.md. */
 .app-centre {
   min-height: 0;
-  display: flex;
-  gap: 10px;
-  justify-content: center;
+  min-width: 0;
+  container-type: size;
 }
 
 .board-wrap {
-  aspect-ratio: 1;
-  max-block-size: 100%;
-  max-inline-size: 100%;
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
   margin: auto;
-  min-width: 0;
 }
 
 /* One screen only above the floor. Below either threshold the shell flows as
@@ -292,10 +301,23 @@ git commit -m "test: measure whether the board can be capped by available height
 @media not all and (min-width: 1100px) and (min-height: 640px) {
   .app-main { grid-template-columns: 1fr; }
   .app-rail { overflow-y: visible; }
-  .app-centre { max-width: 560px; margin: 0 auto; width: 100%; }
+
+  /* container-type: size MUST be turned off here. It requires a definite
+     size on both axes, and in the flowing fallback the height is indefinite
+     — leaving it on makes 100cqh resolve to 0 and the board vanishes. In the
+     fallback the board goes back to being width-driven, which is correct for
+     a page that scrolls. */
+  .app-centre {
+    container-type: normal;
+    max-width: 560px;
+    margin: 0 auto;
+    width: 100%;
+    order: 1;
+  }
+  .board-wrap { width: 100%; height: auto; aspect-ratio: 1; }
+
   /* Board and candidates ahead of the picker and saved lines, so the two
      things a player is looking at do not sit below a list. */
-  .app-centre { order: 1; }
   .app-rail-right { order: 2; }
   .app-rail-left { order: 3; }
 }
