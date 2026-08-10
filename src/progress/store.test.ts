@@ -67,10 +67,31 @@ describe('progress store', () => {
 
     expect(useProgressStore.getState().progress).toEqual({ version: 1, lessons: {}, savedLines: [] });
     expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
 
-    // The dedupe guard must clear too, or a checkpoint answered before
-    // clearing could never be recorded again after clearing.
+  it('does not let an already-recorded attempt come back after clearing', () => {
+    // `clearAll` used to empty the dedupe set. LessonRail's recording effect
+    // re-derives the in-flight attempt from the tree on every render, so the
+    // very next render re-recorded it and a twice-confirmed destructive
+    // action silently undid itself. The dedupe key is what stands between
+    // "the player answered this" and "React rendered again".
     useProgressStore.getState().noteAttempt('l', 'cp', { solved: true, hintsUsed: 0 }, 'k1');
+    useProgressStore.getState().clearAll();
+
+    useProgressStore.getState().noteAttempt('l', 'cp', { solved: true, hintsUsed: 0 }, 'k1');
+
+    expect(useProgressStore.getState().progress.lessons).toEqual({});
+    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('still records a genuinely new attempt after clearing', () => {
+    // Suppressing the re-derivation must not freeze recording altogether: a
+    // different move is a different tree node, hence a different key.
+    useProgressStore.getState().noteAttempt('l', 'cp', { solved: false, hintsUsed: 0 }, 'k1');
+    useProgressStore.getState().clearAll();
+    useProgressStore.getState().noteAttempt('l', 'cp', { solved: true, hintsUsed: 0 }, 'k2');
+
     expect(useProgressStore.getState().progress.lessons.l.checkpoints.cp.attempts).toBe(1);
+    expect(useProgressStore.getState().progress.lessons.l.checkpoints.cp.solved).toBe(true);
   });
 });

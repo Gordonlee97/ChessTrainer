@@ -75,7 +75,14 @@ export const useProgressStore = create<ProgressStore>((set, get) => {
     },
 
     clearAll: () => {
-      recorded.clear();
+      // `recorded` is deliberately *not* cleared here. Recording is driven by
+      // an effect that re-derives the in-flight attempt from the tree on every
+      // render (see the comment in `LessonRail`), so emptying the guard let the
+      // very next render write the current attempt straight back: a
+      // twice-confirmed destructive action silently undid itself mid-lesson.
+      // Keeping the keys costs nothing the player can see — a genuinely new
+      // attempt is a different tree node and so a different key — and it is
+      // what makes "clear" mean cleared.
       const ok = clearProgress();
       set({ progress: emptyProgress(), recovered: false, saveFailed: !ok });
     },
