@@ -6,11 +6,13 @@ import type { Alternative } from '../content/schema';
 import type { AuthoredContrastPair } from '../explain/compare';
 import { buildContext, describeMove } from '../explain/explain';
 import { classifyMove } from '../explain/quality';
-import { useActiveLesson } from '../lesson/store';
+import { askingCheckpoint, useActiveLesson } from '../lesson/store';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 import { Button } from './Button';
+import { CheckpointPanel } from './CheckpointPanel';
 import { CompareDrawer } from './CompareDrawer';
+import { EngineUnavailableNotice } from './EngineUnavailableNotice';
 import { EvalBar } from './EvalBar';
 import { QualityBadge } from './QualityBadge';
 import { formatScore, useAnalysis } from './useAnalysis';
@@ -107,33 +109,6 @@ export function CandidateRail() {
     return authoredContrastFor(alternatives, result.lines[0].san, result.lines[1].san);
   }, [alternatives, result]);
 
-  /**
-   * The comparison offered while a checkpoint is pending.
-   *
-   * Every move in the corpus that carries `alternatives` is also a
-   * checkpoint, so without this the authored contrast was unreachable: the
-   * rail hides itself at a checkpoint, and stepping off the line to un-hide
-   * it moves the position past the move the alternatives belong to.
-   *
-   * The constraint is that the engine must not leak the answer, not that
-   * comparison is forbidden — so the pair here is chosen from the authored
-   * alternatives found among the lines, never from the engine's ordering,
-   * and any line the checkpoint would accept is excluded. What the player
-   * sees is two moves the lesson itself wanted contrasted, neither of which
-   * is the answer.
-   */
-  const checkpointComparison = useMemo(() => {
-    const checkpoint = activeLesson?.state.pendingCheckpoint;
-    if (!checkpoint || !alternatives || !result) return null;
-    const eligible = result.lines.filter(
-      (line) =>
-        alternatives.some((entry) => entry.san === line.san) && !checkpoint.accept.includes(line.san),
-    );
-    if (eligible.length < 2) return null;
-    const [a, b] = eligible;
-    return { a, b, authored: authoredContrastFor(alternatives, a.san, b.san) };
-  }, [activeLesson, alternatives, result]);
-
   function playCandidate(san: string) {
     // Shares resolveDrop's classification (via resolveSan) so a candidate
     // click and the equivalent drag-and-drop move sound identical.
@@ -144,40 +119,20 @@ export function CandidateRail() {
     }
   }
 
+  // The single gate for "a checkpoint is being asked", and it sits *above*
+  // the engine-status returns on purpose. The prompt and the hint ladder are
+  // lesson content: they were an unconditional sibling of this rail before
+  // the panel absorbed them, and with the gate below the unavailable/thinking
+  // returns a dead engine made the lesson unanswerable while LessonRail's
+  // reply went on naming a Hint control that was not on screen. What the
+  // panel can say about the *engine* — the authored comparison — degrades to
+  // absent from a null `result`; the question never does.
+  if (askingCheckpoint(activeLesson)) {
+    return <CheckpointPanel result={result} status={status} onRetry={retry} />;
+  }
+
   if (status === 'unavailable') {
-    return (
-      <div
-        role="status"
-        style={{
-          padding: 12,
-          borderRadius: 'var(--radius)',
-          border: '2px solid var(--border)',
-          fontSize: 13,
-        }}
-      >
-        <p style={{ margin: '0 0 8px' }}>
-          Engine unavailable — lesson content still works, but live evaluation is off.
-        </p>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={retry}
-          style={
-            {
-              fontWeight: 700,
-              fontSize: 13,
-              padding: '6px 12px',
-              background: 'var(--surface)',
-              color: 'var(--ink)',
-              border: '2px solid var(--border)',
-              '--btn-shadow': 'var(--border)',
-            } as CSSProperties
-          }
-        >
-          Retry
-        </Button>
-      </div>
-    );
+    return <EngineUnavailableNotice onRetry={retry} />;
   }
 
   if (!result || result.lines.length === 0) {
@@ -198,47 +153,6 @@ export function CandidateRail() {
       <div role="status" style={{ padding: 12, color: 'var(--ink-soft)', fontSize: 13 }}>
         Thinking…
       </div>
-    );
-  }
-
-  if (activeLesson?.state.pendingCheckpoint) {
-    return (
-      <section aria-label="Candidate moves">
-        <p
-          role="status"
-          style={{
-            padding: 12,
-            margin: 0,
-            borderRadius: 'var(--radius)',
-            border: '2px solid var(--border)',
-            fontSize: 13,
-          }}
-        >
-          Engine suggestions are hidden while the lesson is asking you for a move.
-        </p>
-        {checkpointComparison && (
-          <>
-            <Button
-              variant="secondary"
-              style={{ width: '100%', marginTop: 8 }}
-              onClick={() => setComparing((open) => !open)}
-            >
-              {comparing
-                ? 'Hide comparison'
-                : `Compare ${checkpointComparison.a.san} and ${checkpointComparison.b.san}`}
-            </Button>
-            {comparing && (
-              <CompareDrawer
-                a={checkpointComparison.a}
-                b={checkpointComparison.b}
-                baseFen={node.fen}
-                onClose={() => setComparing(false)}
-                authored={checkpointComparison.authored}
-              />
-            )}
-          </>
-        )}
-      </section>
     );
   }
 

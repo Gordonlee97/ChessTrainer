@@ -100,4 +100,24 @@ describe('CompareDrawer', () => {
     );
     expect(screen.getByText('Authored pro')).toBeInTheDocument();
   });
+
+  it('closes on Escape', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<CompareDrawer a={a} b={b} baseFen={START} onClose={onClose} />);
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it('returns focus to whatever was focused when it opened', async () => {
+    render(<button type="button">opener</button>);
+    const opener = screen.getByRole('button', { name: 'opener' });
+    opener.focus();
+    const view = render(
+      <CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />,
+    );
+    expect(opener).not.toHaveFocus();
+    view.unmount();
+    expect(opener).toHaveFocus();
+  });
 });

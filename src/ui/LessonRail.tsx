@@ -10,7 +10,6 @@ import { Button } from './Button';
 export function LessonRail() {
   const active = useActiveLesson();
   const hintsShown = useLessonStore((store) => store.hintsShown);
-  const revealHint = useLessonStore((store) => store.revealHint);
   const stopLesson = useLessonStore((store) => store.stopLesson);
   const nextSegment = useLessonStore((store) => store.nextSegment);
   const playMove = useTreeStore((store) => store.playMove);
@@ -74,17 +73,7 @@ export function LessonRail() {
   }, [active, hintsShown, selectedId, noteAttempt, noteLessonComplete]);
 
   if (!active) return null;
-  const { lesson, segment, state, attemptedCheckpoint, attemptedGrade, hasNextSegment } = active;
-
-  /**
-   * The question currently in front of the player. Normally the pending
-   * checkpoint; while an answer is being graded `pendingCheckpoint` is null
-   * (the path has left the line), but the question — and the hints for it —
-   * must stay on screen, because the reply beside them talks about taking a
-   * hint.
-   */
-  const asking = state.pendingCheckpoint ?? attemptedCheckpoint;
-  const revealed = asking ? (hintsShown[asking.id] ?? 0) : 0;
+  const { lesson, segment, state, attemptedGrade, hasNextSegment } = active;
 
   /** The note attached to the move the lesson has just walked past. */
   const lastNote = !state.offScript && state.ply > 0 ? segment.moves[state.ply - 1]?.note : undefined;
@@ -160,24 +149,6 @@ export function LessonRail() {
             Return to the lesson
           </Button>
         </>
-      )}
-
-      {asking && (
-        <div>
-          <p style={{ fontSize: 14, fontWeight: 700 }}>{asking.prompt}</p>
-
-          <ol style={{ fontSize: 13, paddingLeft: 18 }}>
-            {asking.hints.slice(0, revealed).map((hint) => (
-              <li key={hint}>{hint}</li>
-            ))}
-          </ol>
-
-          {revealed < asking.hints.length && (
-            <Button variant="ghost" onClick={() => revealHint(asking.id)}>
-              Hint
-            </Button>
-          )}
-        </div>
       )}
 
       {!state.offScript && !state.complete && !state.pendingCheckpoint && state.nextMove && (

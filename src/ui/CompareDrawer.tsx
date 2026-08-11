@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { PvLine } from '../engine/types';
 import { compareLines, type AuthoredContrastPair, type LineSummary } from '../explain/compare';
 import { formatScore } from './useAnalysis';
@@ -78,8 +79,42 @@ export function CompareDrawer({
     [baseFen, a, b, authored],
   );
 
-  return (
-    <div role="region" aria-label={`Compare ${a.san} and ${b.san}`} className="compare-drawer">
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Focus capture/restore lives here, not at the call sites, so both
+  // CandidateRail's and CheckpointPanel's drawers get it for free. Captured
+  // on mount (before focus moves into the drawer below) and restored on
+  // unmount only if the previously-focused element is still attached — it
+  // can legitimately be gone, e.g. the position changed underneath and the
+  // rail that held it re-rendered.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    rootRef.current?.focus();
+    return () => {
+      if (previouslyFocused && document.contains(previouslyFocused)) {
+        previouslyFocused.focus();
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  const portalTarget = document.getElementById('compare-portal') ?? document.body;
+
+  return createPortal(
+    <div
+      ref={rootRef}
+      role="region"
+      aria-label={`Compare ${a.san} and ${b.san}`}
+      tabIndex={-1}
+      className="compare-drawer"
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: 16, margin: 0 }}>
           Compare {a.san} and {b.san}
@@ -107,6 +142,7 @@ export function CompareDrawer({
       >
         <strong>Verdict:</strong> {comparison.verdict}
       </p>
-    </div>
+    </div>,
+    portalTarget,
   );
 }

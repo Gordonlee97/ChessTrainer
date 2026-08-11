@@ -43,6 +43,18 @@ body {
   font-family: var(--font);
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .btn {
   font-family: inherit;
   font-weight: 800;
@@ -127,7 +139,7 @@ body {
 }
 
 .compare-drawer {
-  margin-top: 18px;
+  margin-top: 0;
   padding: 16px;
   border: 2px solid var(--border);
   border-radius: var(--radius);
@@ -195,4 +207,153 @@ body {
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
   flex: 1 1 auto;
+}
+
+/* ---- App shell -------------------------------------------------------- */
+
+.app-shell {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.app-wordmark {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  color: var(--primary);
+}
+
+.app-header-spacer { flex: 1; }
+
+.app-crumb { min-width: 0; overflow-x: auto; }
+
+.app-main {
+  display: grid;
+  grid-template-columns: minmax(220px, 22%) 1fr minmax(260px, 28%);
+  gap: 20px;
+}
+
+/* min-height: 0 is what makes the rails scroll instead of stretching the
+   grid. Without it a grid item refuses to shrink below its content and the
+   page grows instead — silently, and only at small window heights. */
+.app-rail {
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Every child of .app-main is explicitly placed — none of the four
+   (left rail, centre, right rail, .compare-portal below) is left to
+   auto-placement. CSS Grid places definitely-positioned items before
+   auto-placed ones regardless of source order: .compare-portal has an
+   explicit grid-column/grid-row (it must, to span centre + right and
+   overlay them), and if these three were auto-placed instead, the portal
+   would claim its cells first and bump all three into an implicit row 2 —
+   on every page load, not only while a comparison is open. Explicit
+   placement on all four sidesteps the ordering question entirely. */
+.app-rail-left { grid-column: 1; grid-row: 1; }
+.app-rail-right { grid-column: 3; grid-row: 1; }
+
+/* Sizing measured in Task 1 — do not substitute an aspect-ratio variant.
+   The centre is a *size container*, and the board takes the smaller of its
+   two dimensions in BOTH axes, so it is square by construction rather than
+   by aspect-ratio inference. Task 1 tested the obvious alternative
+   (block-size: 100% + aspect-ratio: 1 + max-inline-size: 100%) and measured
+   it non-square even in the easy case (502x498), and in a narrow-tall column
+   it overflowed the page by 546px. See spike-results-shell.md. */
+.app-centre {
+  min-height: 0;
+  min-width: 0;
+  container-type: size;
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.board-wrap {
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  margin: auto;
+}
+
+/* One screen only above the floor. Below either threshold the shell flows as
+   a single scrolling column — see the spec's §4. */
+@media (min-width: 1100px) and (min-height: 640px) {
+  html, body, #root { height: 100%; }
+  #root { overflow: hidden; }
+  .app-shell { height: 100dvh; overflow: hidden; }
+}
+
+@media not all and (min-width: 1100px) and (min-height: 640px) {
+  .app-main { grid-template-columns: 1fr; }
+  .app-rail { overflow-y: visible; }
+
+  /* container-type: size MUST be turned off here. It requires a definite
+     size on both axes, and in the flowing fallback the height is indefinite
+     — leaving it on makes 100cqh resolve to 0 and the board vanishes. In the
+     fallback the board goes back to being width-driven, which is correct for
+     a page that scrolls. */
+  .app-centre {
+    container-type: normal;
+    max-width: 560px;
+    margin: 0 auto;
+    width: 100%;
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .board-wrap { width: 100%; height: auto; aspect-ratio: 1; }
+
+  /* Board and candidates ahead of the picker and saved lines, so the two
+     things a player is looking at do not sit below a list. Expressed as
+     explicit grid-row rather than `order`: every .app-main child is placed
+     explicitly (see the base rules above), and `order` has no effect once
+     placement is explicit — leaving it here would silently do nothing and
+     mislead the next reader. */
+  .app-rail-right { grid-column: 1; grid-row: 2; }
+  .app-rail-left { grid-column: 1; grid-row: 3; }
+}
+
+/* ---- Compare overlay --------------------------------------------------- */
+
+.compare-portal {
+  grid-column: 2 / -1;
+  grid-row: 1;
+  position: relative;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Belt and braces on top of the explicit placement above: an empty portal
+   (the common case — no comparison open) is removed from grid layout
+   entirely rather than merely being zero-content, so it cannot contribute
+   so much as a gap in either mode. */
+.compare-portal:empty { display: none; }
+
+.compare-portal > * {
+  pointer-events: auto;
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+}
+
+@media not all and (min-width: 1100px) and (min-height: 640px) {
+  /* Below the floor there are no columns to span, so it simply flows — after
+     the three panels above (rows 1-3), in its own explicit row 4, rather
+     than overlapping .app-centre's row 1. Only the :empty rule keeps a
+     closed drawer from reserving that row's gap; while a comparison is open
+     this row is exactly what stops it from colliding with row 1. */
+  .compare-portal { grid-column: 1; grid-row: 4; position: static; }
+  .compare-portal > * { position: static; }
 }

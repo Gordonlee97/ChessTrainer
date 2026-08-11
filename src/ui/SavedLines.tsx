@@ -13,7 +13,6 @@ export function SavedLines() {
   const savedLines = useProgressStore((store) => store.progress.savedLines);
   const keepLine = useProgressStore((store) => store.keepLine);
   const dropLine = useProgressStore((store) => store.dropLine);
-  const saveFailed = useProgressStore((store) => store.saveFailed);
 
   const path = pathTo(tree, tree.selectedId);
   const sans = path.slice(1).map((node) => node.move!.san);
@@ -43,12 +42,6 @@ export function SavedLines() {
   return (
     <section aria-label="My lines" className="saved-lines">
       <h3 className="saved-lines-heading">MY LINES</h3>
-
-      {saveFailed && (
-        <p role="status" className="progress-notice">
-          This line was not saved — your browser storage is full or unavailable.
-        </p>
-      )}
 
       {sans.length > 0 && (
         <Button variant="ghost" onClick={save}>

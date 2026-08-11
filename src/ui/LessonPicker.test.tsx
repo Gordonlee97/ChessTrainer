@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -83,19 +83,5 @@ describe('LessonPicker', () => {
     useProgressStore.getState().noteLessonComplete('london-system');
     render(<LessonPicker />);
     expect(screen.getByText(/done/i)).toBeInTheDocument();
-  });
-
-  it('tells the player when stored progress could not be read', () => {
-    useProgressStore.setState({ recovered: true });
-    render(<LessonPicker />);
-    expect(screen.getByRole('status')).toHaveTextContent(/could not be read|starting fresh/i);
-    act(() => useProgressStore.getState().dismissNotice());
-  });
-
-  it('tells the player when progress cannot be saved', () => {
-    useProgressStore.setState({ saveFailed: true });
-    render(<LessonPicker />);
-    expect(screen.getByRole('status')).toHaveTextContent(/not being saved/i);
-    act(() => useProgressStore.getState().dismissNotice());
   });
 });

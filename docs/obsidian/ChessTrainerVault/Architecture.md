@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-06
+updated: 2026-08-10
 status: current
 tags: [chesstrainer, architecture]
 ---
@@ -49,7 +49,11 @@ watches the *derived* grade in an effect that deliberately re-runs on every
 render (`useActiveLesson()` returns a fresh object each time, so no dependency
 array can prevent that) and dedupes by
 `${lessonId}:${checkpointId}:${nodeId}` — a session-only `Set`, never
-persisted, because it is about render behaviour, not the player's history. Any
+persisted, because it is about render behaviour, not the player's history.
+**`clearAll` does not empty that `Set`** (2026-08-10): it used to, and the next
+render re-derived the in-flight attempt from the tree and wrote it straight
+back, so a twice-confirmed "Clear progress" silently undid itself mid-lesson.
+Any
 component that can change the tree while a lesson is running must stop the
 lesson first, or this effect will grade moves the player never chose to
 answer — `SavedLines.open()` and `AppControls.newGame()` both do.
@@ -158,3 +162,51 @@ in this app is CSS.
 React 19 rather than the spec's React 18 — see
 [[Decisions/React 19 Upgrade]]. Engine build choice in
 [[Decisions/Single-Threaded Stockfish Build]].
+
+## The app shell (Plan 5, 2026-08-09)
+
+`src/App.tsx` is a CSS grid exactly one viewport tall: header, breadcrumb, then
+a three-column main region. **The board column never moves.** Only the two side
+rails change contents by mode — picker plus saved lines when idle, the lesson
+rail during a lesson, and the candidate rail handing its whole column to
+`CheckpointPanel` while a checkpoint is being asked.
+
+Three invariants hold this together:
+
+- **`min-height: 0` on the rails** is what makes them scroll rather than grow
+  the page. Without it a grid item refuses to shrink below its content, and it
+  fails silently, only at small window heights.
+- **Every child of `.app-main` is explicitly placed.** An empty, definitely
+  positioned `.compare-portal` once stole row 1 from auto-placement and pushed
+  the board and candidate rail into an implicit row 2 on every page load. Leave
+  no child auto-placed.
+- **The board is sized by container-query units** — `min(100cqw, 100cqh)` — so
+  it is square by construction. Both `aspect-ratio` variants were measured
+  failing, in both directions; see
+  `docs/superpowers/plans/spike-results-shell.md`. `container-type: size` needs
+  a definite size on both axes, so the flowing fallback below 1100x640 must
+  reset it to `normal` or the board vanishes.
+
+`CompareDrawer` renders through a React portal into `.compare-portal`, letting
+it span the centre and right columns while still being owned by the rail that
+opened it.
+
+**One shared condition, one definition.** `askingCheckpoint(active)` in
+`src/lesson/store.ts` is the single source of truth for "a checkpoint is being
+asked". Both `CandidateRail`, which decides whether to mount the panel, and
+`CheckpointPanel`, which renders it, call it. They previously each held their
+own copy of the rule and drifted — see [[Known Issues]] and [[Start Here]].
+
+**A checkpoint outranks engine status, and there is only one search.**
+`CandidateRail`'s checkpoint gate sits *above* its `unavailable` and thinking
+returns (2026-08-10): the prompt and the hint ladder are lesson content and
+must reach the player whether or not a search ever returns. Only the authored
+comparison is engine-derived, and it degrades to absent. The panel takes
+`result`, `status` and `onRetry` as props rather than calling `useAnalysis()`
+itself — a second call meant two `go depth 20` searches on the same FEN, the
+second aborting the first, against **one search, three lines**. The
+engine-unavailable notice and its retry live in
+`src/ui/EngineUnavailableNotice.tsx` so both renderers share one copy.
+
+Keyboard board navigation is documented in
+[[Decisions/Keyboard Board Navigation Model]].

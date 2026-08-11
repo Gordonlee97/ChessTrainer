@@ -8,7 +8,7 @@ export function Breadcrumb() {
   return (
     <nav
       aria-label="Move history"
-      style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 12 }}
+      style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}
     >
       {path.map((node, index) => (
         <span key={node.id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

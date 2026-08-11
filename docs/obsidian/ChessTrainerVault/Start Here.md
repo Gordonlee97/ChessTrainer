@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-07
+updated: 2026-08-10
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,73 +10,97 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-07
+## Repo state as of 2026-08-10
 
 | | |
 |---|---|
-| Branch | `master` |
-| Merged | PR #1 (Plan 1) · #2 (Plan 2) · #3 (Plan 3) · #4 (Plan 4), all by 2026-08-07 |
+| Branch | `feat/app-shell-and-keyboard` |
+| Merged to `master` | PR #1 (Plan 1) · #2 (Plan 2) · #3 (Plan 3) · #4 (Plan 4) |
 | Working tree | Clean |
-| Suite | 410 passing, 1 skipped (expected — see below), zero `act()` warnings |
-| Last plan finished | Plan 4, progress/saved lines/controls, 2026-08-06 (six tasks + one whole-branch review fix wave) |
-| Last change | The vault became a learning loop — see [[Lessons]] |
+| Suite | 443 passing, 1 skipped (expected — see below), **zero warnings** |
+| Last plan finished | Plan 5, app shell and keyboard navigation — eight tasks, each individually reviewed, plus a browser pass |
+| Whole-branch review | Run 2026-08-10. One Critical and three Importants; **all four fixed** in one wave — see `.superpowers/sdd/2026-08-09-app-shell-and-keyboard/fix-wave-report.md` |
+| Fix-wave re-review | Run 2026-08-10. **All four ADDRESSED, merge recommended.** Mutations reproduced independently. |
+| Verification debt | No browser pass since the fix wave; "one search per checkpoint" is proven structurally and by test, never watched on the wire |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
 second skip is a real failure.
 
-The fix wave that closed Plan 4's review is the reason to read [[Current State]]
-before trusting anything written about progress earlier in the branch: a saved
-line opened during a running lesson could record a checkpoint the player never
-answered, and a correct answer from a (currently hypothetical) multi-entry
-`accept` list was being written to durable storage as permanently unsolved.
+## Two of the three never-observed behaviours have now been observed
 
-## Plan 4's browser pass — mostly done, one gap
+Until this branch, `react-chessboard` handled only drag-and-drop drops, so
+**nothing requiring a piece to move could be verified without a human**. Plan 5's
+keyboard layer is our own DOM and *is* drivable. On 2026-08-10:
 
-**2026-08-06.** Driven by hand in Chrome. Confirmed working, console clean:
+- **Answering a checkpoint** — watched working.
+- **The wrong-answer path** — watched working, including the near-miss reply
+  with the Hint control still on screen beside it.
+- **Segment-level orientation after "Next part"** — **still unobserved.**
+  Lesson-level orientation was verified (`a8` first for White, `h1` first for
+  Black) and shares the same derivation, but the segment flip itself has not
+  been watched.
 
-- The controls row renders; "Sound on" toggles to "Sound off" with
-  `aria-pressed` following it, and **the mute survives a reload**.
-- Saving a line stores name, PGN and `startFen`; it **survives a reload**, and
-  "Open" rebuilds the position (breadcrumb back to `start › e4 › e5`).
-- The picker shows "1 of 3 checkpoints" for partial progress and "Done" for a
-  completed lesson.
-- Board orientation follows the lesson: the London renders from White's side,
-  "Answering 1.e4 as Black" from Black's.
-- **Spec §10 holds**: with `chesstrainer.progress.v1` deliberately corrupted,
-  the app comes up fully with "Your saved progress could not be read, so it is
-  starting fresh" — not a blank screen.
+Numbers, method, and an explicit list of what could *not* be checked are in
+`docs/superpowers/plans/spike-results-shell.md`.
 
-**The gap: nothing was verified that requires moving a piece on the board.**
-Neither a synthetic drag nor a click-to-move would drive `react-chessboard`
-through automation — the board only handles drops, and a synthetic pointer
-sequence froze the renderer. So these remain unobserved by hand:
-
-- answering a checkpoint and watching the record appear
-- the wrong-answer path showing its authored near-miss reply
-- "Next part" advancing to a segment, and with it the **segment-level board
-  orientation** that Plan 4's Task 1 added
-
-All three are covered by unit tests, and the segment-orientation test asserts
-the flipped value directly. A human with a mouse can close this in two minutes:
-start **Development and Tempo**, answer the `Nf3` checkpoint, take "Next part",
-and confirm the board flips to Black's side.
+**Known environment limit, confirmed by four separate agents:** the browser
+window cannot be resized here. `resize_window` reports success without moving
+the viewport; `window.resizeTo()`, an OS restore-down keystroke and CSS `zoom`
+all fail, and no CDP device-metrics tool is exposed. So the real
+`(min-width: 1100px) and (min-height: 640px)` breakpoint **trigger** has never
+been exercised — only the fallback's declarations, via an injected stylesheet.
+Do not burn time rediscovering this.
 
 ## Do this next
 
-**1. Spend two minutes on the gap above.** Plan 4 is merged, so this is now a
-confirmation rather than a gate — but it is still unobserved.
+**1. Finish the branch.** The whole-branch review and its fix-wave re-review are
+both done and clean, and `master` has already been merged in — this note's
+conflict with the learning-loop rewrite was resolved in favour of the Plan 5
+state.
 
-**2. Write Plan 5 — app shell and keyboard navigation.** [[Roadmap]] has what
-it covers: a properly designed `App.tsx` (currently an inline-styled shell
-stacking five components with no design pass) and the spec's outstanding
-keyboard board-navigation requirement. Do not start writing either directly;
-see [[Workflow]].
+Then spend the verification debt: a browser pass has not run since the fix wave,
+and the C1 fix (the checkpoint question surviving an unavailable engine) is
+exactly the kind of thing this project has repeatedly shipped broken past a
+green suite.
 
-Worth knowing for Plan 5: **keyboard board navigation would also make the
-board testable**. Every by-hand gap above exists because the only way to move
-a piece is a mouse drag. Building keyboard moves buys accessibility and an
-automatable input path in the same change.
+**2. Add these to `Lessons.md`.** PR #5 merged on 2026-08-10, so the note now
+exists on `master`. All three were paid for on this branch:
+
+- **A shared condition gets one definition, not two agreeing ones.** Plan 5's
+  Task 5 was written as a single task specifically to prevent a shared-surface
+  drift, and it drifted anyway: `CandidateRail` gated on `pendingCheckpoint`
+  while `CheckpointPanel` derived `pendingCheckpoint ?? attemptedCheckpoint`, so
+  the hint ladder vanished during grading. A third copy of the same rule was
+  later found in `checkpointComparison`. One owner is not enough when the rule
+  itself is duplicated. Corollary: **a test that renders a component directly
+  never exercises its mount gate** — every `CheckpointPanel` test rendered the
+  panel, so none could see that nothing mounted it.
+- **A task that writes grid or flex placement needs a browser check inside that
+  task.** jsdom performs no layout, so `npm test` structurally cannot catch a
+  CSS Grid bug. Plan 5 Task 6 shipped a green suite while the board and
+  candidate rail rendered *below* the left rail on every page load, because an
+  empty definitely-positioned portal target stole row 1 from auto-placement. A
+  reviewer found it only by starting the dev server and measuring. Deferring the
+  browser pass to the end of the plan is not sufficient.
+- **Deleting an assertion deletes an invariant — count it as a code change.**
+  Moving the hint ladder out of `LessonRail` dropped
+  `getByRole('button', {name: /^hint$/i})` from the not-this-time test as
+  "no longer this component's control". It was the only encoding of *the reply
+  must not name a control the player cannot see*, and within the same branch
+  that invariant broke again through a different gate (the engine-status early
+  returns) with a green suite. When a moved feature makes an assertion homeless,
+  it moves to wherever both halves are on screen — not into the bin. Related, and
+  now with three sightings: **a test that renders a component directly never
+  exercises its mount gate.**
+
+**3. Two smaller things.** `docs/superpowers/plans/spike-results-shell.md`
+records four minors from the browser pass. The fourth — "a possible engine
+gating of the checkpoint prompt" — turned out to be the review's Critical and is
+now fixed; the note there still calls it pre-existing and transient, which it
+was not. The other three (a stale-closure cursor update, a duplicated
+`role="status"` region, the cursor not resetting on New game) stand and none
+block merge.
 
 ## Where to look for what
 

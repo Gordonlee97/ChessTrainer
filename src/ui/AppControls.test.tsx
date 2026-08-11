@@ -13,15 +13,18 @@ vi.mock('howler', () => ({
 }));
 
 import { useLessonStore } from '../lesson/store';
+import { useProgressStore } from '../progress/store';
 import { sounds } from '../sound';
 import { useTreeStore } from '../tree/store';
 import { AppControls } from './AppControls';
+import { LessonRail } from './LessonRail';
 
 describe('AppControls', () => {
   beforeEach(() => {
     localStorage.clear();
     useTreeStore.getState().reset();
     useLessonStore.getState().stopLesson();
+    useProgressStore.getState().reset();
     sounds.setMuted(false);
   });
 
@@ -58,5 +61,50 @@ describe('AppControls', () => {
     render(<AppControls />);
     await userEvent.click(screen.getByRole('button', { name: /sound/i }));
     expect(screen.getByRole('button', { name: /sound off/i })).toBeInTheDocument();
+  });
+
+  it('requires a second click before clearing progress', async () => {
+    useProgressStore.getState().noteAttempt('l', 'cp', { solved: true, hintsUsed: 0 }, 'k1');
+    render(<AppControls />);
+
+    await userEvent.click(screen.getByRole('button', { name: /clear progress/i }));
+    expect(useProgressStore.getState().progress.lessons.l).toBeDefined();
+
+    await userEvent.click(screen.getByRole('button', { name: /really clear/i }));
+    expect(useProgressStore.getState().progress.lessons).toEqual({});
+  });
+
+  it('keeps progress cleared mid-lesson, when the lesson rail re-derives the attempt', async () => {
+    // Regression: clearing emptied the recording dedupe set, and LessonRail's
+    // deliberately-every-render effect re-derived the in-flight attempt from
+    // the tree and wrote it straight back. A twice-confirmed destructive
+    // action has to survive the next render.
+    useLessonStore.getState().startLesson('italian-game');
+    useTreeStore.getState().playMove('d4'); // a wrong answer at the e4 checkpoint
+
+    // A fresh element every time: re-passing the *same* element object makes
+    // React bail out of re-rendering the subtree, so the effect under test
+    // would never re-run and this would pass against a broken store.
+    const composed = () => (
+      <>
+        <LessonRail />
+        <AppControls />
+      </>
+    );
+    const { rerender } = render(composed());
+    expect(useProgressStore.getState().progress.lessons['italian-game']).toBeDefined();
+
+    await userEvent.click(screen.getByRole('button', { name: /clear progress/i }));
+    await userEvent.click(screen.getByRole('button', { name: /really clear/i }));
+    rerender(composed());
+
+    expect(useProgressStore.getState().progress.lessons).toEqual({});
+  });
+
+  it('drops back to the unconfirmed label after clearing', async () => {
+    render(<AppControls />);
+    await userEvent.click(screen.getByRole('button', { name: /clear progress/i }));
+    await userEvent.click(screen.getByRole('button', { name: /really clear/i }));
+    expect(screen.getByRole('button', { name: /^clear progress$/i })).toBeInTheDocument();
   });
 });

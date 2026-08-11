@@ -1,29 +1,53 @@
+import { useLessonStore } from './lesson/store';
 import { AppControls } from './ui/AppControls';
 import { Board } from './ui/Board';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { CandidateRail } from './ui/CandidateRail';
 import { LessonPicker } from './ui/LessonPicker';
 import { LessonRail } from './ui/LessonRail';
+import { ProgressNotice } from './ui/ProgressNotice';
 import { SavedLines } from './ui/SavedLines';
 
 export function App() {
+  const lessonId = useLessonStore((store) => store.lessonId);
+  const inLesson = lessonId !== null;
+
   return (
-    <main style={{ maxWidth: 1400, margin: '0 auto', padding: 24 }}>
-      <h1 style={{ fontSize: 26, fontWeight: 800, margin: '0 0 18px' }}>ChessTrainer</h1>
-      <AppControls />
-      <Breadcrumb />
-      <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div style={{ flex: '0 1 260px', minWidth: 220 }}>
-          <LessonPicker />
-          <LessonRail />
-          <SavedLines />
+    <main className="app-shell">
+      <header className="app-header">
+        <h1 className="app-wordmark">ChessTrainer</h1>
+        <ProgressNotice />
+        <span className="app-header-spacer" />
+        <AppControls />
+      </header>
+
+      <div className="app-crumb">
+        <Breadcrumb />
+      </div>
+
+      <div className="app-main">
+        <div className="app-rail app-rail-left">
+          {inLesson ? (
+            <LessonRail />
+          ) : (
+            <>
+              <LessonPicker />
+              <SavedLines />
+            </>
+          )}
         </div>
-        <div style={{ flex: '1 1 420px', maxWidth: 520 }}>
-          <Board />
+
+        <div className="app-centre">
+          <div className="board-wrap">
+            <Board />
+          </div>
         </div>
-        <div style={{ flex: '1 1 260px', minWidth: 240 }}>
+
+        <div className="app-rail app-rail-right">
           <CandidateRail />
         </div>
+
+        <div className="compare-portal" id="compare-portal" />
       </div>
     </main>
   );

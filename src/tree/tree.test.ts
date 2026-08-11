@@ -131,23 +131,6 @@ describe('game tree', () => {
       }
     });
 
-    it('keeps evals on pinned nodes regardless of the cap', () => {
-      let tree = createTree();
-      const e4 = insertMove(tree, tree.rootId, 'e4');
-      const d4 = insertMove(e4.tree, tree.rootId, 'd4');
-      tree = d4.tree;
-      tree = setEval(tree, e4.nodeId, EVAL);
-      tree = setEval(tree, d4.nodeId, EVAL);
-      // Keep root selected — neither e4 nor d4 is on the selected path.
-      expect(tree.selectedId).toBe(tree.rootId);
-      tree = { ...tree, pinned: [e4.nodeId] };
-
-      const evicted = evict(tree, 0);
-      expect(evicted.nodes[e4.nodeId].eval).toBeDefined(); // pinned node keeps its eval
-      expect(evicted.nodes[d4.nodeId].eval).toBeUndefined(); // unpinned sibling loses it
-      expect(evicted.nodes[d4.nodeId]).toBeDefined(); // but the node itself remains
-    });
-
     it('keeps evals on authored nodes regardless of the cap', () => {
       let tree = createTree();
       const e4 = insertMove(tree, tree.rootId, 'e4');

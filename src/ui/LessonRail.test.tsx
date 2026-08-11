@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLessonStore } from '../lesson/store';
@@ -83,36 +83,6 @@ describe('LessonRail', () => {
     expect(screen.getByRole('heading', { name: /italian game/i })).toBeInTheDocument();
   });
 
-  it('asks for the move at a checkpoint instead of naming it', () => {
-    useLessonStore.getState().startLesson('italian-game');
-    render(<LessonRail />);
-    // The Italian's first move is itself a checkpoint.
-    expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
-    expect(screen.queryByText(/play e4\./i)).not.toBeInTheDocument();
-  });
-
-  it('reveals hints one at a time, in order', async () => {
-    useLessonStore.getState().startLesson('italian-game');
-    render(<LessonRail />);
-
-    await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-    expect(screen.getByText(/central pawn moves/i)).toBeInTheDocument();
-    expect(screen.queryByText(/play e4\./i)).not.toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-    await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-    expect(screen.getByText(/play e4\./i)).toBeInTheDocument();
-  });
-
-  it('stops offering hints once they are exhausted', async () => {
-    useLessonStore.getState().startLesson('italian-game');
-    render(<LessonRail />);
-    for (let i = 0; i < 3; i += 1) {
-      await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-    }
-    expect(screen.queryByRole('button', { name: /hint/i })).not.toBeInTheDocument();
-  });
-
   it('advances the line when the player asks for the next move', async () => {
     useLessonStore.getState().startLesson('london-system');
     render(<LessonRail />);
@@ -154,30 +124,6 @@ describe('LessonRail', () => {
     }
     render(<LessonRail />);
     expect(screen.getByText(/finished|complete/i)).toBeInTheDocument();
-  });
-
-  describe('hints are counted per checkpoint', () => {
-    it('starts the next checkpoint with no hints showing and the Hint button back', async () => {
-      useLessonStore.getState().startLesson('italian-game');
-      const { rerender } = render(<LessonRail />);
-
-      // Spend every hint at the first checkpoint (e4)...
-      for (let i = 0; i < 3; i += 1) {
-        await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-      }
-      expect(screen.getByText(/play e4\./i)).toBeInTheDocument();
-
-      // ...then walk to the second one (Bc4).
-      act(() => {
-        for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
-      });
-      rerender(<LessonRail />);
-
-      expect(screen.getByText(/most aggressive square/i)).toBeInTheDocument();
-      expect(screen.queryByText(/the bishop belongs on c4\./i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/aim at the weakest point/i)).not.toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /hint/i })).toBeInTheDocument();
-    });
   });
 
   describe('notes', () => {
@@ -275,19 +221,16 @@ describe('LessonRail', () => {
       expect(screen.queryByText(/not this time/i)).not.toBeInTheDocument();
     });
 
-    it('keeps the question and the hint control on screen while an attempt is being graded', async () => {
-      useLessonStore.getState().startLesson('italian-game');
-      useTreeStore.getState().playMove('a3');
-      render(<LessonRail />);
-
-      // The reply talks about taking a hint, so the question it answers and
-      // the Hint button both have to still be there.
-      expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
-      await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-      expect(screen.getByText(/central pawn moves/i)).toBeInTheDocument();
-    });
-
-    it('names only controls that are on screen in the not-this-time copy', () => {
+    // The reply names "hint" and "Return to the lesson", but only the latter
+    // is a control this component renders — the Hint button and the question
+    // it answers now live in CheckpointPanel, which CandidateRail mounts. So
+    // the half of the invariant that spans both components ("the reply must
+    // not name a control the player cannot see") is asserted where both are
+    // on screen and the real mount gate runs: see "never names a hint the
+    // player cannot take, even with the engine unavailable" in
+    // CandidateRail.test.tsx. Deleting it from here without putting it there
+    // is what let the whole-branch review's C1 through.
+    it('names the return-to-lesson control in the not-this-time copy', () => {
       useLessonStore.getState().startLesson('italian-game');
       useTreeStore.getState().playMove('a3');
       render(<LessonRail />);
@@ -295,16 +238,7 @@ describe('LessonRail', () => {
       const reply = screen.getByText(/not this time/i);
       expect(reply).toHaveTextContent(/hint/i);
       expect(reply).toHaveTextContent(/return to the lesson/i);
-      expect(screen.getByRole('button', { name: /^hint$/i })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /return to the lesson/i })).toBeInTheDocument();
-    });
-
-    it('keeps the question up after a near miss too', () => {
-      useLessonStore.getState().startLesson('italian-game');
-      useTreeStore.getState().playMove('d4');
-      render(<LessonRail />);
-      expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /^hint$/i })).toBeInTheDocument();
     });
 
     it('does not treat a wrong checkpoint answer as an error', () => {
