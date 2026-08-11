@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import { sideToMove } from '../chess/side';
 import { lessonSchema, type Lesson, type Segment } from './schema';
 
 const START_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -95,6 +96,56 @@ export function validateLessonChess(lesson: Lesson): string[] {
     }
   });
   return problems;
+}
+
+function validateSegmentOpeningCoverage(
+  lesson: Lesson,
+  segment: Segment,
+  segmentIndex: number,
+): string[] {
+  const problems: string[] = [];
+  let chess: Chess;
+  try {
+    chess = new Chess(segment.startFen ?? START_FEN);
+  } catch {
+    // validateLessonChess already reports a malformed startFen.
+    return problems;
+  }
+
+  const side = segment.side ?? lesson.side;
+
+  for (const [moveIndex, move] of segment.moves.entries()) {
+    const fenBefore = chess.fen();
+    if (sideToMove(fenBefore) === side && !move.checkpoint) {
+      problems.push(
+        `segment ${segmentIndex}, move ${moveIndex}: "${move.san}" is played by the player (${side}) but has no checkpoint`,
+      );
+    }
+
+    try {
+      chess.move(move.san);
+    } catch {
+      // validateLessonChess already reports an illegal authored move; the
+      // rest of the segment is unreachable once the line breaks.
+      return problems;
+    }
+  }
+
+  return problems;
+}
+
+/**
+ * For an opening lesson, every move on the player's side must carry a
+ * checkpoint — otherwise a later auto-play of the opponent's replies would
+ * silently play the player's own move for them, and the lesson would advance
+ * without ever asking. Non-opening lessons are exempt: a theme lesson draws
+ * positions from different games, and coverage there isn't a coherent idea.
+ */
+export function validateOpeningCoverage(lesson: Lesson): string[] {
+  if (lesson.kind !== 'opening') return [];
+  return lesson.segments.flatMap((segment, index) =>
+    validateSegmentOpeningCoverage(lesson, segment, index),
+  );
 }
 
 export function checkpointIds(lesson: Lesson): string[] {
