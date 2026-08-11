@@ -55,9 +55,9 @@ Do not burn time rediscovering this.
 ## Do this next
 
 **1. Finish the branch.** The whole-branch review and its fix-wave re-review are
-both done and clean. Before merging, note that this branch was cut from `master`
-*before* PR #5 landed, so **`Start Here.md` conflicts** — take both sides: the
-learning-loop framing from `master` and the Plan 5 state from here.
+both done and clean, and `master` has already been merged in — this note's
+conflict with the learning-loop rewrite was resolved in favour of the Plan 5
+state.
 
 Then spend the verification debt: a browser pass has not run since the fix wave,
 and the C1 fix (the checkpoint question surviving an unavailable engine) is
@@ -109,6 +109,7 @@ block merge.
 - **What's next and why** → [[Roadmap]]
 - **How the code fits together** → [[Architecture]]
 - **How work gets done here** → [[Workflow]]
+- **Mistakes not to make again** → [[Lessons]] — read this before writing a plan
 - **What's broken** → [[Known Issues]]
 - **Why something is the way it is** → `Decisions/`, indexed from [[Home]]
 
