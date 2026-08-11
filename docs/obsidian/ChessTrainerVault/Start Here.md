@@ -63,37 +63,7 @@ banner's "lesson content still works" is finally true.
 
 Pick the next plan from [[Roadmap]].
 
-**2. Add these to `Lessons.md`.** Still outstanding — all three were paid for
-on Plan 5 and none is recorded in the note yet:
-
-- **A shared condition gets one definition, not two agreeing ones.** Plan 5's
-  Task 5 was written as a single task specifically to prevent a shared-surface
-  drift, and it drifted anyway: `CandidateRail` gated on `pendingCheckpoint`
-  while `CheckpointPanel` derived `pendingCheckpoint ?? attemptedCheckpoint`, so
-  the hint ladder vanished during grading. A third copy of the same rule was
-  later found in `checkpointComparison`. One owner is not enough when the rule
-  itself is duplicated. Corollary: **a test that renders a component directly
-  never exercises its mount gate** — every `CheckpointPanel` test rendered the
-  panel, so none could see that nothing mounted it.
-- **A task that writes grid or flex placement needs a browser check inside that
-  task.** jsdom performs no layout, so `npm test` structurally cannot catch a
-  CSS Grid bug. Plan 5 Task 6 shipped a green suite while the board and
-  candidate rail rendered *below* the left rail on every page load, because an
-  empty definitely-positioned portal target stole row 1 from auto-placement. A
-  reviewer found it only by starting the dev server and measuring. Deferring the
-  browser pass to the end of the plan is not sufficient.
-- **Deleting an assertion deletes an invariant — count it as a code change.**
-  Moving the hint ladder out of `LessonRail` dropped
-  `getByRole('button', {name: /^hint$/i})` from the not-this-time test as
-  "no longer this component's control". It was the only encoding of *the reply
-  must not name a control the player cannot see*, and within the same branch
-  that invariant broke again through a different gate (the engine-status early
-  returns) with a green suite. When a moved feature makes an assertion homeless,
-  it moves to wherever both halves are on screen — not into the bin. Related, and
-  now with three sightings: **a test that renders a component directly never
-  exercises its mount gate.**
-
-**3. Two smaller things.** `docs/superpowers/plans/spike-results-shell.md`
+**2. Two smaller things.** `docs/superpowers/plans/spike-results-shell.md`
 records four minors from the browser pass. The fourth — "a possible engine
 gating of the checkpoint prompt" — turned out to be the review's Critical and is
 now fixed; the note there still calls it pre-existing and transient, which it

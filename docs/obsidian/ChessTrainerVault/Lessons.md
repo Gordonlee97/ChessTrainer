@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-06
+updated: 2026-08-11
 status: current
 tags: [chesstrainer, process, lessons]
 ---
@@ -60,7 +60,7 @@ and irrelevant, because it is a double attack that loses on the spot.
 
 ### 2. Tests that pass against a broken implementation
 
-**Six occurrences.** Each one is a test that looked like coverage and was not.
+**Seven occurrences.** Each one is a test that looked like coverage and was not.
 
 - A rail test asserting `/centre|center/i` — which *locked in* the defect where
   every opening move produced the same sentence.
@@ -73,6 +73,13 @@ and irrelevant, because it is a double attack that loses on the spot.
 - An abort test asserting `stop` was sent — but `analyze()` sends `stop` on
   entry, so it passed with abort completely broken.
 - A "shows nothing" test whose regex would have matched "0 of 3 checkpoints".
+- **Plan 5, seventh:** a keyboard illegal-move test whose two assertions were
+  both non-discriminating. `playMove` try/catches internally, so the tree is
+  never touched by a bad call; and the stale announcement from the previous
+  keystroke was never compared against. It "failed" its mutation check only
+  because the implementer's chosen mutation happened to throw — a reviewer then
+  wrote a non-crashing expression of the *same* defect and got four passing
+  tests and exit code 0.
 
 **Countermeasure — in [[Workflow]] §4, and `CLAUDE.md`:**
 
@@ -84,6 +91,23 @@ This is cheap and it has never once failed to settle the question. It is how
 the `startFen` fix was proven, how the segment-orientation test was proven, and
 how the `act()` fix was proven. A test whose failure you have not seen is a
 test you are guessing about.
+
+**Plan 5 added two refinements, both paid for:**
+
+- **A failure caused by an exception is not evidence.** *How* it fails is the
+  evidence, not *that* it fails. Require a clean assertion mismatch; if the
+  mutation throws, pick a different mutation — a `try/catch` added later would
+  silence the crash and leave the defect uncovered. One implementer also caught
+  itself here honestly: its own new test passed against a broken store because
+  it re-passed the same JSX element and React bailed out of re-rendering.
+- **Deleting an assertion deletes an invariant — count it as a code change.**
+  Moving the hint ladder out of `LessonRail` dropped
+  `getByRole('button', { name: /^hint$/i })` from the "not this time" test as
+  "no longer this component's control". It was the only encoding of *the reply
+  must not name a control the player cannot see* — and within the same branch
+  that invariant broke again, through a different gate, with a green suite. When
+  a moved feature makes an assertion homeless, it moves to wherever both halves
+  are on screen. Not into the bin.
 
 ### 3. Plan code written against a file shape that has moved
 
@@ -106,6 +130,27 @@ files and a trap for existing ones.
   and report any divergence rather than forcing the edit.** This works — every
   one of the five was caught and reported by the implementer.
 
+**Plan 5 exposed a second variant with the same shape and a different cause:
+plan code that was never stale, just wrong.** Both of Plan 5's Criticals came
+from the brief, not the implementer — the CSS Grid placement that pushed the
+board below the left rail, and the board-sizing CSS the opening spike measured
+at 8×8px. Implementers transcribed both faithfully, exactly as instructed. The
+existing countermeasure cannot catch this: "read the file and report divergence"
+finds a plan that disagrees with the code, not a plan that is internally
+coherent and incorrect.
+
+**What does catch it:**
+
+- **A spike, for any load-bearing claim the plan asserts rather than measures.**
+  Plan 5 opened with one because the whole layout rested on how
+  `react-chessboard` sizes itself. It came back REFUTED and cost one task
+  instead of a rebuild. **This is the single highest-return thing in this
+  document.**
+- **Naming, in the brief, which parts are measured and which are assumed**, so
+  an implementer knows where to push back rather than transcribing uniformly.
+  Plan 5's later briefs said "the CSS below is measured, use it exactly — if you
+  reach for `aspect-ratio`, stop", and no implementer re-broke it.
+
 ### 4. Assuming a mechanism's shape instead of reading it
 
 - The purity guard's exemption was assumed to be a filename check. It was a
@@ -122,7 +167,7 @@ on it; verify a repo mechanism by reading it before writing a plan step around i
 
 ### 5. Cross-task drift
 
-**Four occurrences, every one invisible to task-scoped review and caught only by
+**Six occurrences, every one invisible to task-scoped review and caught only by
 the whole-branch review.**
 
 - Quality badges computed across mixed search depths, so candidates flickered
@@ -145,6 +190,41 @@ agree. A task reviewer cannot see this; it only has one diff.
 - **The final review is pointed at the seams explicitly**: "do tasks N and M
   agree about X?" is a better prompt than "look for problems."
 
+**Fifth and sixth occurrences, Plan 5 (2026-08-09/10) — and they show the
+countermeasure above is necessary but not sufficient.**
+
+Plan 5's Task 5 was deliberately written as *one* task so a single implementer
+would own both halves of the `pendingCheckpoint` surface, and the brief named
+the hazard outright. It drifted anyway: `CandidateRail` gated the checkpoint
+panel on `pendingCheckpoint` while `CheckpointPanel` derived
+`pendingCheckpoint ?? attemptedCheckpoint`. Those are mutually exclusive, so
+during answer-grading the panel never mounted and the hint ladder vanished at
+exactly the moment the wrong-answer copy says "take a hint." A **third** copy of
+the same rule was then found inside `checkpointComparison`.
+
+Then it happened again, in the same branch, through a different mechanism: the
+whole-branch review found the prompt and hints sitting *below* `CandidateRail`'s
+engine-status early returns, so with the engine unavailable a lesson was
+permanently unanswerable while the banner read "lesson content still works."
+
+Neither was carelessness. The first was **the condition existing in two places
+at all** — each copy individually correct, drifting the moment one had to handle
+an extra state. The second was a correct condition evaluated **downstream of a
+gate nobody re-examined**.
+
+**Stronger rules, now in force:**
+
+- **A shared condition gets one definition, not two agreeing ones.** The fix
+  added `askingCheckpoint(active)` to `src/lesson/store.ts`; every consumer
+  calls it. Widening the second copy would have fixed the symptom and left the
+  mechanism intact.
+- **When you move a feature, check what now gates it.** Moving the hint ladder
+  from an unconditional sibling into a component mounted behind two engine-status
+  returns changed its preconditions without changing a line of its own logic.
+- **A test that renders a component directly never exercises its mount gate.**
+  Every `CheckpointPanel` test rendered the panel, so none could notice that
+  nothing mounted it. The test that catches this renders *through* the parent.
+
 ### 6. Green tests, broken app
 
 **Every plan that had a UI. Every single time.**
@@ -154,21 +234,44 @@ agree. A task reviewer cannot see this; it only has one diff.
 | 2 | 223 | Four user-visible defects, including a caption that contradicted the board beside it and a verdict that asserted a difference then stated none |
 | 3 | 318 | Three lessons shipping half their content unreachable |
 | 4 | 407 | Nothing new — the first clean pass |
+| 5 | 430 | The board and candidate rail rendering *below* the left rail on every page load — a CSS Grid placement bug |
 
 **Countermeasure — in [[Workflow]] §5 and §6: run the browser check *before* the
 final whole-branch review, not after.** In Plans 2 and 3 it ran afterwards,
 which meant the final reviewer triaged a list it could not see the evidence for.
 Running it first gives the reviewer real findings to weigh.
 
-**Known blocker:** the board cannot be driven by automation. Neither a synthetic
-drag nor a click reaches `react-chessboard` — it only handles drops, and a
-pointer-event sequence froze the renderer. Anything requiring a piece to move is
-currently hand-only. **Keyboard board navigation (Plan 5) fixes this and the
-accessibility requirement in one change** — that is the strongest argument for
-doing it next.
+**Plan 5 sharpened this: end-of-plan is still too late for layout.** Task 6
+shipped with a fully green suite while an empty, definitely-positioned
+`.compare-portal` stole grid row 1 from auto-placement and pushed the centre and
+right columns into an implicit row 2. jsdom performs no layout, so `npm test`
+**structurally cannot** catch this class of bug; a reviewer found it only by
+starting the dev server and reading `getBoundingClientRect()`. Had the plan's
+browser pass stayed at the end, it would have sat undetected through two more
+tasks.
+
+**So: a task that writes grid or flex placement gets a browser check inside that
+task**, not deferred to the plan's browser pass. The same applies to anything
+whose correctness is a rendered geometry rather than a value.
+
+**Blocker resolved (Plan 5).** The board *can* now be driven by automation.
+`react-chessboard` still only handles drops, but the keyboard layer added in
+Plan 5 is our own DOM: dispatching `keydown` on the `role="application"` wrapper
+plays real moves. Two behaviours this project had never once observed were
+watched working on 2026-08-10 — answering a checkpoint, and the wrong-answer
+path. The third, **segment-level board orientation after "Next part"**, is still
+unobserved.
 
 Everything else is reachable: candidate-rail rows are real buttons that play
 moves, and `localStorage` can be seeded and corrupted from the console.
+
+**Environment limit worth knowing before you plan a browser check:** the browser
+window cannot be resized here — confirmed independently by four agents.
+`resize_window` reports success without moving the viewport; `window.resizeTo()`,
+an OS restore-down keystroke and CSS `zoom` all fail, and no CDP device-metrics
+tool is exposed. Media-query *declarations* can be exercised by injecting a
+stylesheet under `@media all`; the *trigger* cannot. Do not spend a session
+rediscovering this.
 
 ### 7. Warnings treated as background noise
 
@@ -204,8 +307,11 @@ baseline to preserve.
 
 ## What to try next
 
-- **Run the browser check before the final review** (see §6). Untested as an
-  ordering; the reasoning is above.
+- ~~Run the browser check before the final review~~ — **tried in Plan 5, and it
+  half-worked.** It caught real defects the final reviewer could then weigh, but
+  a layout bug still reached the end of the plan because end-of-plan is too late
+  for geometry. The refinement is in §6: layout gets checked inside the task
+  that writes it.
 - **A content spike task for any plan that authors chess**, mirroring Plan 1's
   engine-depth spike: derive every FEN and engine-check every taught move up
   front, in one task, before any prose is written. Six of the seven §1 errors
