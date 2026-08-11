@@ -63,13 +63,19 @@ banner's "lesson content still works" is finally true.
 
 Pick the next plan from [[Roadmap]].
 
-**2. Two smaller things.** `docs/superpowers/plans/spike-results-shell.md`
-records four minors from the browser pass. The fourth — "a possible engine
-gating of the checkpoint prompt" — turned out to be the review's Critical and is
-now fixed; the note there still calls it pre-existing and transient, which it
-was not. The other three (a stale-closure cursor update, a duplicated
-`role="status"` region, the cursor not resetting on New game) stand and none
-block merge.
+**2. Three open minors**, all in [[Known Issues]] and none blocking: a
+stale-closure cursor update in `Board.tsx` (rapid same-tick arrow presses
+collapse — the functional-update form fixes it), two `role="status"` regions
+inside the board wrapper (ours plus `react-chessboard`'s), and the keyboard
+cursor not resetting on "New game".
+
+A fourth was filed during the browser pass as "a possible engine gating of the
+checkpoint prompt, pre-existing and transient". It was neither — it was the
+whole-branch review's Critical, introduced by Plan 5 and permanent when the
+engine is unavailable. Fixed, and the record corrected in
+`docs/superpowers/plans/spike-results-shell.md`. Worth remembering as a case
+where an explanation for an observation was wrong in a way that nearly buried
+it.
 
 ## Where to look for what
 
