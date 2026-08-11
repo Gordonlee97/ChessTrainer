@@ -538,11 +538,14 @@ describe('Board during a lesson', () => {
     const board = screen.getByRole('application', { name: /chess board/i });
     board.focus();
     // Cursor starts on e2. Pick up, go up one, place: e3 — legal, but not the answer.
-    await act(async () => {
-      for (const key of ['Enter', 'ArrowUp', 'Enter']) {
+    // One act() per key. Dispatching several inside a single act() does not
+    // re-render between them, so every handler after the first reads a stale
+    // `cursor`/`picked` from its render closure and only the first key lands.
+    for (const key of ['Enter', 'ArrowUp', 'Enter']) {
+      await act(async () => {
         board.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
-      }
-    });
+      });
+    }
     expect(nodeCount()).toBe(before);
     expect(useLessonStore.getState().lastRejection?.san).toBe('e3');
   });
@@ -551,11 +554,11 @@ describe('Board during a lesson', () => {
     render(<Board />);
     const board = screen.getByRole('application', { name: /chess board/i });
     board.focus();
-    await act(async () => {
-      for (const key of ['Enter', 'ArrowUp', 'ArrowUp', 'Enter']) {
+    for (const key of ['Enter', 'ArrowUp', 'ArrowUp', 'Enter']) {
+      await act(async () => {
         board.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
-      }
-    });
+      });
+    }
     const tree = useTreeStore.getState().tree;
     expect(tree.nodes[tree.selectedId].move?.san).toBe('e4');
     expect(useLessonStore.getState().lastRejection).toBeNull();
