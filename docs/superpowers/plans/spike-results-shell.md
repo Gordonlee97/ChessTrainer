@@ -291,12 +291,16 @@ knowing that a screen reader meets both.
 pressed — it stays wherever it was. Defensible (it is a selection cursor, not
 board state), but worth a deliberate decision rather than an accident.
 
-**Observation, pre-existing and unconfirmed.** `CandidateRail`'s "Thinking…"
-early return precedes its checkpoint branch, so while a search is in flight at
-a pending checkpoint the prompt and hints do not render. In this throttled tab
-the search never completed, so severity could not be judged; in a foreground
-tab the window is ~1s. The ordering predates this branch. Worth a look, not a
-blocker.
+**~~Observation, pre-existing and unconfirmed.~~ CORRECTED 2026-08-10 — this
+was the whole-branch review's Critical, and both labels were wrong.**
+`CandidateRail`'s status early returns preceded its checkpoint branch, so the
+prompt and hints did not render while a search was in flight *or when the
+engine was unavailable*. It was **not** pre-existing — before this branch those
+controls lived in `LessonRail`, an unconditional sibling — and the `unavailable`
+case was **permanent**, not a one-second window, which made a lesson
+unanswerable while the banner claimed "lesson content still works". Fixed by
+hoisting the `askingCheckpoint` gate above the status returns. Verified in a
+browser on 2026-08-10; see the fix-wave pass below.
 
 > **Corrected 2026-08-10.** Both halves of that call were wrong, and the
 > whole-branch review raised it as a Critical. It does **not** predate this
@@ -308,3 +312,71 @@ blocker.
 > went on naming a Hint control that was not on screen. Fixed by moving the
 > checkpoint gate above both status returns; see the fix-wave report in
 > `.superpowers/sdd/2026-08-09-app-shell-and-keyboard/`.
+
+---
+
+# Fix-wave browser pass — 2026-08-10
+
+Run on merged `master` (`fde4d87`) after PR #6, against `npm run dev` in real
+Chrome. Same environment caveat as the pass above: the tab is backgrounded, so
+the viewport is zero and timers/worker are throttled. That makes long keyboard
+sequences unreliable but does not affect any result below.
+
+## C1 — the checkpoint question must survive the engine being gone
+
+**PASS, both halves.**
+
+*Search in flight.* Reaching the Italian's opening checkpoint now renders the
+notice, the question and the Hint button together:
+
+> "Engine suggestions are hidden while the lesson is asking you for a move.
+> Open the game. Which pawn move claims the centre and frees two pieces? Hint"
+
+This is a genuine before/after in the **same** throttled tab: the earlier pass
+recorded "Thinking…" alone at this exact point.
+
+*Engine unavailable.* `public/engine/stockfish.js` was temporarily moved aside
+so the worker genuinely failed to load (restored immediately afterwards and
+confirmed byte-identical against a backup; working tree clean). With the engine
+truly gone:
+
+> "Engine unavailable — lesson content still works, but live evaluation is off.
+> Retry — Open the game. Which pawn move claims the centre and frees two
+> pieces? Hint"
+
+The question, the hints and Retry all coexist, so the banner's claim is now
+true. Before the fix this state had neither question nor hints.
+
+**And the lesson is genuinely answerable with no engine** — not merely
+readable. Driven by keyboard with the engine still removed: `Enter ArrowUp
+ArrowUp Enter` announced `e4` and the breadcrumb advanced to `start › e4`.
+
+## I3 — "Clear progress" must stick mid-lesson
+
+**PASS.** With a lesson running and an attempt recorded
+(`attempts: 2, solved: true`), the two-click confirm relabelled to
+"Really clear?" and then left `localStorage.getItem('chesstrainer.progress.v1')`
+`null`. Forcing further renders (keyboard events, lesson still running) left it
+`null` — the every-render recording effect no longer resurrects it. The button
+label reset to "Clear progress".
+
+## Regression check after the I2 refactor
+
+**PASS.** The wrong-answer path still behaves: playing `d4` renders the authored
+near-miss reply ("the Queen's Gambit family"), the Hint control stays on screen,
+the checkpoint prompt stays, and zero candidate rows are visible.
+
+## Still not verified
+
+- **"One search per checkpoint" on the wire.** Patching
+  `Worker.prototype.postMessage` captured nothing, because the taps needed to
+  reach an uncached position were lost to throttling — the instrumentation was
+  never exercised rather than failing. The claim rests on the re-review's
+  structural proof: exactly one runtime `useAnalysis()` call site
+  (`CandidateRail.tsx:56`), with `CheckpointPanel` importing only
+  `type AnalysisStatus`, which is erased at compile time. That is a stronger
+  guarantee than a wire count, but the wire has still never been watched.
+- **Segment-level board orientation after "Next part."** Unchanged; still the
+  one never-observed behaviour.
+- **The real 1100x640 breakpoint trigger.** Unchanged; the environment cannot
+  resize the browser window.
