@@ -391,15 +391,22 @@ describe('useLessonAutoplay', () => {
   });
 
   // The rule that stops the lesson fighting a player who looks back.
+  //
+  // The node matters. Stepping back to the *root* proves nothing here: the
+  // player is White, so the root is the player's own turn and guard 3 blocks
+  // it whether or not the tip-of-line guard exists. The only position in this
+  // line where guard 4 is load-bearing is the node after `e4` — Black to move,
+  // so the opponent's, and it already has a child.
   it('does not move when the selection is not the tip of the line', () => {
     render(<Harness />);
     act(() => useLessonStore.getState().startLesson('italian-game'));
     act(() => { useTreeStore.getState().playMove('e4'); });
     act(() => { vi.advanceTimersByTime(700); });                  // now at e4 e5
-    const root = useTreeStore.getState().tree.rootId;
-    act(() => { useTreeStore.getState().selectNode(root); });     // step back to the start
+    const tree = useTreeStore.getState().tree;
+    const afterE4 = pathTo(tree, tree.selectedId)[1].id;          // Black to move here
+    act(() => { useTreeStore.getState().selectNode(afterE4); });
     act(() => { vi.advanceTimersByTime(5000); });
-    expect(useTreeStore.getState().tree.selectedId).toBe(root);   // still there
+    expect(useTreeStore.getState().tree.selectedId).toBe(afterE4);
   });
 
   it('does nothing when no lesson is running', () => {
