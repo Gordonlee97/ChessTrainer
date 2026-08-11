@@ -21,7 +21,8 @@ can be reconstructed from the code, and this cannot.
 | Last plan finished | Plan 5, app shell and keyboard navigation — eight tasks, each individually reviewed, plus a browser pass |
 | Whole-branch review | Run 2026-08-10. One Critical and three Importants; **all four fixed** in one wave — see `.superpowers/sdd/2026-08-09-app-shell-and-keyboard/fix-wave-report.md` |
 | Fix-wave re-review | Run 2026-08-10. **All four ADDRESSED, merge recommended.** Mutations reproduced independently. |
-| Verification debt | No browser pass since the fix wave; "one search per checkpoint" is proven structurally and by test, never watched on the wire |
+| Fix-wave browser pass | Run 2026-08-10 on merged `master`. C1 verified **both** halves — including with the engine physically removed — and I3 verified. See `docs/superpowers/plans/spike-results-shell.md` |
+| Verification debt | "One search per checkpoint" is proven structurally and by test, never watched on the wire |
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser instead. A
@@ -54,18 +55,16 @@ Do not burn time rediscovering this.
 
 ## Do this next
 
-**1. Finish the branch.** The whole-branch review and its fix-wave re-review are
-both done and clean, and `master` has already been merged in — this note's
-conflict with the learning-loop rewrite was resolved in favour of the Plan 5
-state.
+**1. Plan 5 is done and merged (PR #6, 2026-08-10).** The whole-branch review,
+its fix wave, the scoped re-review, and a fix-wave browser pass are all
+complete. The C1 fix was verified with the engine *physically removed* from
+`public/engine/`, so a lesson is now answerable with no engine at all — the
+banner's "lesson content still works" is finally true.
 
-Then spend the verification debt: a browser pass has not run since the fix wave,
-and the C1 fix (the checkpoint question surviving an unavailable engine) is
-exactly the kind of thing this project has repeatedly shipped broken past a
-green suite.
+Pick the next plan from [[Roadmap]].
 
-**2. Add these to `Lessons.md`.** PR #5 merged on 2026-08-10, so the note now
-exists on `master`. All three were paid for on this branch:
+**2. Add these to `Lessons.md`.** Still outstanding — all three were paid for
+on Plan 5 and none is recorded in the note yet:
 
 - **A shared condition gets one definition, not two agreeing ones.** Plan 5's
   Task 5 was written as a single task specifically to prevent a shared-surface
