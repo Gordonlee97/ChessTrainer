@@ -7,8 +7,10 @@ import { LessonPicker } from './ui/LessonPicker';
 import { LessonRail } from './ui/LessonRail';
 import { ProgressNotice } from './ui/ProgressNotice';
 import { SavedLines } from './ui/SavedLines';
+import { useLessonAutoplay } from './ui/useLessonAutoplay';
 
 export function App() {
+  useLessonAutoplay();
   const lessonId = useLessonStore((store) => store.lessonId);
   const inLesson = lessonId !== null;
 
