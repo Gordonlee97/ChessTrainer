@@ -18,10 +18,22 @@ interface LessonStore {
    * solved-cold from solved-after-three-hints.
    */
   hintsShown: Record<string, number>;
+  /**
+   * The most recent wrong or near-miss answer, deliberately kept out of the
+   * game tree — a rejected guess must never become part of the source of
+   * truth. Everything else in the lesson runner re-derives from the tree;
+   * this is the one thing that can't, because it is defined by its absence
+   * from it. `atNodeId` stops a stale attempt from rendering at a position
+   * the player has since left, the same way the progress store's dedupe key
+   * scopes an attempt to where it happened.
+   */
+  lastRejection: { san: string; grade: Grade; atNodeId: string } | null;
   startLesson: (id: string) => void;
   stopLesson: () => void;
   nextSegment: () => void;
   revealHint: (checkpointId: string) => void;
+  noteRejection: (san: string, grade: Grade, atNodeId: string) => void;
+  clearRejection: () => void;
 }
 
 /**
@@ -38,15 +50,16 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
   lessonId: null,
   segmentIndex: 0,
   hintsShown: {},
+  lastRejection: null,
 
   startLesson: (id) => {
     const lesson = lessonById(id);
     if (!lesson) return;
     seedTree(lesson.segments[0]);
-    set({ lessonId: id, segmentIndex: 0, hintsShown: {} });
+    set({ lessonId: id, segmentIndex: 0, hintsShown: {}, lastRejection: null });
   },
 
-  stopLesson: () => set({ lessonId: null, segmentIndex: 0, hintsShown: {} }),
+  stopLesson: () => set({ lessonId: null, segmentIndex: 0, hintsShown: {}, lastRejection: null }),
 
   nextSegment: () => {
     const { lessonId, segmentIndex } = get();
@@ -57,13 +70,17 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
     seedTree(next);
     // Hint counts are keyed by checkpoint id, which is unique across every
     // lesson, so they survive the move without leaking into the next segment.
-    set({ segmentIndex: segmentIndex + 1 });
+    set({ segmentIndex: segmentIndex + 1, lastRejection: null });
   },
 
   revealHint: (checkpointId) =>
     set((prior) => ({
       hintsShown: { ...prior.hintsShown, [checkpointId]: (prior.hintsShown[checkpointId] ?? 0) + 1 },
     })),
+
+  noteRejection: (san, grade, atNodeId) => set({ lastRejection: { san, grade, atNodeId } }),
+
+  clearRejection: () => set({ lastRejection: null }),
 }));
 
 export interface ActiveLesson {
