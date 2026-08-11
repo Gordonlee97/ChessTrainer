@@ -32,6 +32,12 @@ export function MiniBoard({ fen, label }: { fen: string; label: string }) {
       style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(8, 1fr)',
+        // Rows must be declared too. Without this they are auto-sized by
+        // content, and since each square holds an SVG rather than a line of
+        // text, the intrinsic heights differ from row to row and the board
+        // renders visibly warped. The glyph version got away with it because
+        // every row was the same line of text.
+        gridTemplateRows: 'repeat(8, 1fr)',
         aspectRatio: '1',
         borderRadius: 10,
         overflow: 'hidden',
