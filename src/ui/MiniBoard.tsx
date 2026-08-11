@@ -1,17 +1,27 @@
-import { Chess, type Color, type PieceSymbol } from 'chess.js';
+import { Chess } from 'chess.js';
+import { defaultPieces } from 'react-chessboard';
 
 /**
- * Colour-keyed glyphs. Drawing both armies from the black set and separating
- * them with CSS `color` would signal side by colour alone — and under Windows
- * High Contrast (`forced-colors`) the OS overrides both `color` and
- * `textShadow`, leaving thirty-two identical pieces. The fill and the shadow
- * below stay as legibility aids on top of the glyph, not as the distinction.
+ * Draws the same piece artwork the main board does.
+ *
+ * This used to render Unicode glyphs, which had one real advantage — the white
+ * and black sets are different characters, so the two armies stayed
+ * distinguishable under `forced-colors`, where the OS overrides `color` and
+ * `textShadow`. It also looked wrong: the glyphs sat small inside their squares
+ * and White's outline characters (♙♘♗) read as unfinished next to Black's
+ * filled ones.
+ *
+ * `defaultPieces` is exactly what `Board.tsx` renders, so the drawer now
+ * matches the board it is describing. The trade is that react-chessboard's
+ * white and black pieces share a path and differ by `fill`, so under
+ * `forced-colors` they can flatten together. That is **already true of the
+ * main board** — this makes the mini-boards no worse than the primary surface
+ * rather than better than it, which is the right place for a secondary view to
+ * sit. Recorded in `Known Issues.md`.
+ *
+ * `data-piece` carries the piece code (`wP`, `bN`) so the two armies stay
+ * assertable in tests now that there is no text content to match on.
  */
-const GLYPHS: Record<Color, Record<PieceSymbol, string>> = {
-  w: { p: '♙', n: '♘', b: '♗', r: '♖', q: '♕', k: '♔' },
-  b: { p: '♟', n: '♞', b: '♝', r: '♜', q: '♛', k: '♚' },
-};
-
 export function MiniBoard({ fen, label }: { fen: string; label: string }) {
   const board = new Chess(fen).board();
 
@@ -29,25 +39,26 @@ export function MiniBoard({ fen, label }: { fen: string; label: string }) {
       }}
     >
       {board.flatMap((row, rankIndex) =>
-        row.map((cell, fileIndex) => (
-          <div
-            key={`${rankIndex}-${fileIndex}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 'min(3vw, 18px)',
-              lineHeight: 1,
-              background:
-                (rankIndex + fileIndex) % 2 === 0 ? 'var(--board-light)' : 'var(--board-dark)',
-              color: cell?.color === 'w' ? '#fff' : '#111',
-              textShadow:
-                cell?.color === 'w' ? '0 0 2px rgba(0,0,0,.8)' : '0 0 2px rgba(255,255,255,.8)',
-            }}
-          >
-            {cell ? GLYPHS[cell.color][cell.type] : ''}
-          </div>
-        )),
+        row.map((cell, fileIndex) => {
+          const code = cell ? `${cell.color}${cell.type.toUpperCase()}` : null;
+          const Piece = code ? defaultPieces[code] : undefined;
+
+          return (
+            <div
+              key={`${rankIndex}-${fileIndex}`}
+              data-piece={code ?? undefined}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background:
+                  (rankIndex + fileIndex) % 2 === 0 ? 'var(--board-light)' : 'var(--board-dark)',
+              }}
+            >
+              {Piece ? <Piece /> : null}
+            </div>
+          );
+        }),
       )}
     </div>
   );

@@ -5,29 +5,38 @@ import { MiniBoard } from './MiniBoard';
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 describe('MiniBoard', () => {
-  it('distinguishes the two armies by glyph, not by colour alone', () => {
-    // The branch's own rule: success/failure — and here, side — is never
-    // signalled by colour alone. Under Windows High Contrast (forced-colors)
-    // both `color` and `textShadow` are overridden by the OS, so a board
-    // that draws both armies with the black glyph set renders as thirty-two
-    // identical pieces.
+  it('draws every piece on the board', () => {
     render(<MiniBoard fen={START} label="Start position" />);
     const board = screen.getByRole('img', { name: 'Start position' });
 
-    expect(board).toHaveTextContent('♙'); // white pawn
-    expect(board).toHaveTextContent('♔'); // white king
-    expect(board).toHaveTextContent('♟'); // black pawn
-    expect(board).toHaveTextContent('♚'); // black king
+    expect(board.querySelectorAll('[data-piece]')).toHaveLength(32);
+    expect(board.querySelectorAll('[data-piece="wP"]')).toHaveLength(8);
+    expect(board.querySelectorAll('[data-piece="bP"]')).toHaveLength(8);
+    // Every occupied square renders artwork, not an empty box.
+    expect(board.querySelectorAll('[data-piece] svg')).toHaveLength(32);
   });
 
-  it('draws a white piece with the white glyph even where the black one differs only in fill', () => {
-    // The only knight on the board is White's, so the black knight glyph
-    // must not appear anywhere.
+  /**
+   * The armies are distinguished by piece code, which is what a test can see.
+   * Visually they are separated by `fill` — a real limitation the component's
+   * own comment records, shared with the main board.
+   */
+  it('marks a white piece as White even where the black one shares its shape', () => {
     render(<MiniBoard fen="7k/8/8/8/8/8/4K3/6N1 w - - 0 1" label="White knight" />);
     const board = screen.getByRole('img', { name: 'White knight' });
 
-    expect(board).toHaveTextContent('♘');
-    expect(board).not.toHaveTextContent('♞');
+    expect(board.querySelectorAll('[data-piece="wN"]')).toHaveLength(1);
+    expect(board.querySelectorAll('[data-piece="bN"]')).toHaveLength(0);
+    expect(board.querySelectorAll('[data-piece="wK"]')).toHaveLength(1);
+    expect(board.querySelectorAll('[data-piece="bK"]')).toHaveLength(1);
+  });
+
+  it('leaves empty squares empty', () => {
+    render(<MiniBoard fen="7k/8/8/8/8/8/4K3/6N1 w - - 0 1" label="Sparse position" />);
+    const board = screen.getByRole('img', { name: 'Sparse position' });
+
+    expect(board.children).toHaveLength(64);
+    expect(board.querySelectorAll('[data-piece]')).toHaveLength(3);
   });
 
   it('labels itself for assistive technology', () => {

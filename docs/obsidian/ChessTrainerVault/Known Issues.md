@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-10
+updated: 2026-08-11
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -187,6 +187,29 @@ carries `role="region"` with an accessible name and **deliberately does not
 claim `aria-modal`**, because Tab containment was not implemented — a lying
 `aria-modal` is worse than none. Adding a real focus trap is what would let it
 claim modal semantics honestly.
+
+### The mini-boards separate the armies by fill, like the main board
+
+**Where:** `src/ui/MiniBoard.tsx`
+**Severity:** low. Changed deliberately on 2026-08-11.
+
+The mini-boards used to draw Unicode glyphs, whose white and black sets are
+*different characters* — so the two armies stayed distinguishable under
+`forced-colors`, where the OS overrides `color` and `textShadow`. That was
+genuinely better than the main board on that one axis, and it looked wrong:
+the glyphs sat small inside their squares and White's outline characters
+(♙♘♗) read as unfinished beside Black's filled ones.
+
+They now render `defaultPieces` from `react-chessboard` — the same artwork
+`Board.tsx` draws. react-chessboard's white and black pieces share a path and
+differ only by `fill` (`#ffffff` vs `#000000`), so under `forced-colors` they
+can flatten together.
+
+**This is already true of the main board**, so the change makes the
+mini-boards no worse than the primary surface rather than better than it. If
+`forced-colors` support is ever taken up properly it should be fixed in one
+place, for both. Tests assert on a `data-piece` attribute (`wP`, `bN`) rather
+than text, since there is no longer any text content to match.
 
 ### `MiniBoard` tells assistive technology nothing about the position
 
