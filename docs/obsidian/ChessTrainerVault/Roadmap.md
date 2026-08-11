@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-06
+updated: 2026-08-11
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -67,37 +67,56 @@ nowhere to surface it once a lesson stopped running, and a dead re-export. One
 fix wave of five items closed it. [[Current State]] has the before/after
 table; what was found and deliberately left is in [[Known Issues]].
 
-## Next: browser verification, then Plan 5
+**Plan 5 — App shell and keyboard navigation.** Eight tasks plus a browser
+pass, complete 2026-08-10, **merged to `master` as PR #6**. A one-screen CSS
+grid shell whose board column never moves; keyboard board navigation
+(`src/chess/boardCursor.ts`, the layer in `src/ui/Board.tsx`); the checkpoint
+panel that takes the candidate rail's column and holds the hint ladder;
+compare as a portalled overlay; the progress notice moved to the header with a
+dismiss control and a two-click "Clear progress"; and the dead `tree.pinned`
+field removed. Plan:
+`docs/superpowers/plans/2026-08-09-app-shell-and-keyboard.md`.
 
-**Nothing in Plan 4 has been watched in a browser.** That is the next action —
-see [[Start Here]] for the manual checklist.
+**Reviewed and fixed 2026-08-10.** The opening spike refuted the plan's own
+board-sizing CSS before anything was built on it (measured at 8x8px; container
+query units replaced it). The whole-branch review then found the checkpoint
+prompt and hints sitting behind the engine-status early returns — with the
+engine unavailable a lesson was **unanswerable** while the banner claimed
+otherwise — plus two engine searches per checkpoint, "Clear progress" undoing
+itself mid-lesson, and a deleted assertion. One fix wave and a scoped
+re-review closed all four (suite 410 → 443).
 
-### Plan 5 — App shell and keyboard navigation
+**This plan resolved the automation blocker.** The board can now be driven by
+keyboard, so two behaviours never once observed in this project were watched
+working. See [[Lessons]] §6.
 
-Not yet written. Two things Plan 4 explicitly deferred because both are shell
-work and belong together:
+## Next
 
-- **A properly designed `App.tsx` layout.** Currently an inline-styled flex
-  shell now hosting the picker, lesson rail, saved lines, and app controls
-  stacked with no design pass.
-- **Keyboard board navigation.** The spec's outstanding accessibility
-  requirement.
+**Nothing is planned.** Plan 5 closed the queued items (clear progress, the
+`dismissNotice` caller, `tree.pinned`), so the roadmap's "Also queued" section
+below is now empty of work.
 
-Also on the table for Plan 5 or whichever plan revisits the compare drawer:
+The strongest candidate for Plan 6 is **the compare drawer's contrast
+vocabulary** — see "Still undecided" below. It is the one item on this roadmap
+that changes whether the app *teaches* rather than *describes*, and it is a
+design decision before it is code.
 
-- **The compare drawer's contrast vocabulary**, which [[Known Issues]] records
-  as needing a design decision rather than a patch.
-- **More authored `alternatives`.** One move in the whole corpus carries them.
+Before planning it, two things want a human at the keyboard:
+
+- **A design pass by eye.** Plan 5's layout has been *measured* — regions
+  aligned, board square, no overflow — but never *judged*. Nobody has looked at
+  it and said whether it feels right.
+- **Segment-level board orientation after "Next part"**, still the one
+  behaviour never observed. `Development and Tempo` flips to Black for its
+  second segment.
 
 ## Also queued
 
 Small, and each has a stated reason for existing:
 
-- **A way for a player to clear their own progress**, and a dismiss control
-  for the recovered/save-failed notices — `dismissNotice()` exists and is
-  tested but has no caller. See [[Known Issues]].
-- **Wire `tree.pinned` to saved lines, or remove it.** Currently dead — saved
-  lines are PGN, not node ids, so nothing populates it. See [[Known Issues]].
+Both former entries here — a player-facing way to clear progress with a
+dismiss control for the notices, and the dead `tree.pinned` field — were done
+in Plan 5. Nothing is queued.
 
 ## Deliberately not planned
 
@@ -115,9 +134,12 @@ Nothing gating.
   what makes compare teach rather than describe. Decide the *shape* of the
   vocabulary before adding another feature to `summarise`. Detail in
   [[Known Issues]].
-- **Whether the compare drawer is really a modal.** It claims `role="dialog"`
-  without `aria-modal`, a focus trap, or Escape. Either implement those or make
-  it a labelled section. Cheapest once Plan 5 rebuilds the layout anyway.
+- **Whether the compare drawer is really a modal.** Plan 5 gave it Escape,
+  focus movement in, and focus restore on close, and it is now `role="region"`
+  deliberately **without** `aria-modal` because Tab containment was not built —
+  a lying `aria-modal` is worse than none. Adding a real focus trap is what
+  would let it claim modal semantics honestly. Reduced from a decision to a
+  small piece of work.
 - **How the lesson rail should display a correct answer from a multi-entry
   `accept` list.** The *recorded* outcome was fixed 2026-08-06; the rail still
   shows "stepped off the line" for it. See [[Known Issues]].
