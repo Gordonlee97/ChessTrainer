@@ -57,6 +57,15 @@ describe('useLessonAutoplay', () => {
   });
 
   // The rule that stops the lesson fighting a player who looks back.
+  //
+  // The node selected here matters: it must be a position where it is the
+  // *opponent's* turn (so guard 3, the side-to-move check, does not already
+  // block on its own) that also already has a child (so guard 4, the
+  // tip-of-line check, is the only thing standing in the way). In this line
+  // that is the node after 'e4' — Black to move, and 'e5' is already its
+  // child. The root fails both conditions at once (White to move there is
+  // always the player's turn in this lesson), which is why selecting it
+  // could not tell guard 3 and guard 4 apart.
   it('does not move when the selection is not the tip of the line', () => {
     render(<Harness />);
     act(() => useLessonStore.getState().startLesson('italian-game'));
@@ -66,14 +75,17 @@ describe('useLessonAutoplay', () => {
     act(() => {
       vi.advanceTimersByTime(700);
     }); // now at e4 e5
-    const root = useTreeStore.getState().tree.rootId;
+    // pathTo returns root-first; index 1 is the node after 'e4', found by
+    // walking the path rather than by constructing an id string, so the
+    // test does not couple itself to the tree's id format.
+    const afterE4 = pathTo(useTreeStore.getState().tree, useTreeStore.getState().tree.selectedId)[1].id;
     act(() => {
-      useTreeStore.getState().selectNode(root);
-    }); // step back to the start
+      useTreeStore.getState().selectNode(afterE4);
+    }); // step back to review, but only as far as the position after 'e4'
     act(() => {
       vi.advanceTimersByTime(5000);
     });
-    expect(useTreeStore.getState().tree.selectedId).toBe(root); // still there
+    expect(useTreeStore.getState().tree.selectedId).toBe(afterE4); // still there
   });
 
   it('does nothing when no lesson is running', () => {
