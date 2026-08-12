@@ -239,10 +239,10 @@ export const italianGame = parseLesson({
           note: 'The last piece comes out. c3 is taken by your own pawn, so this knight takes the quiet route: here now, then f1, then g3 or e3 where it joins the kingside. It also keeps a second eye on e4. There is a cost — it shuts the c1 bishop in for a couple of moves — which is exactly why the knight does not stay. Once it moves on, every piece you own is doing a job, and that is what an opening is actually for.',
           checkpoint: {
             id: 'italian-last-piece-into-play',
-            prompt: 'One piece has still never moved, and its natural square is occupied by your own pawn. Find the modest route that brings it into the game anyway.',
+            prompt: 'One of your knights has still never moved, and its natural square is occupied by your own pawn. Find the modest route that brings it into the game anyway.',
             accept: ['Nbd2'],
             hints: [
-              'Count your pieces. One of them is sitting exactly where it started the game.',
+              'Count your knights. One of them is sitting exactly where it started the game.',
               'The square it would normally take is occupied by your own pawn, so it has to go the long way round — a quiet square first, then across towards the king.',
               'There is one square that keeps a second guard on e4 and leaves the knight a path to f1 and on to g3. It shuts your dark-squared bishop in for a move or two, and that is the price you pay.',
             ],

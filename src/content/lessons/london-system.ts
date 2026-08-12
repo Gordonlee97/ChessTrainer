@@ -96,7 +96,7 @@ export const londonSystem = parseLesson({
             prompt: 'Black has opened a diagonal for a bishop. Which knight move develops, brings you a step closer to safety, and puts a second eye on the e5 square?',
             accept: ['Nf3'],
             hints: [
-              'Two pieces still stand between your king and the rook beside it. One of them can move right now.',
+              'Two pieces still stand between your king and the rook beside it, and until both of them have moved you cannot castle at all.',
               'e5 is the square this whole opening wants to occupy one day. Your bishop already watches it; something else should watch it too.',
               'The knight on your kingside has three squares. One is on the rim, where it touches almost nothing. One stands directly across the only diagonal your last bishop has. The third covers e5 and d4 together.',
             ],
@@ -149,12 +149,12 @@ export const londonSystem = parseLesson({
             hints: [
               'Black castled a move ago. Look at what defends the pawn in front of that king: the king, and nothing else.',
               'One of your bishops already sits on a diagonal running towards Black\'s king. Your other bishop has the mirror-image diagonal, ending on h7 — get it onto that one.',
-              'Its route out has five squares. Two of them are captured by a pawn on arrival, one gives a check that Black answers by kicking the bishop away, and one is so timid it just stares at your own knight. The square that is left is the one that joins the other bishop in pointing at Black\'s king.',
+              'Its route out has five squares. Two of them are captured by a pawn on arrival, one is chased straight back by a pawn the moment it lands, and one is so timid it just stares at your own knight. The square that is left is the one that joins the other bishop in pointing at Black\'s king.',
             ],
             nearMiss: {
               Bc4: 'Count it before you play it: Black\'s pawn on d5 is looking straight at that square and simply takes the bishop. It is the best square in the Italian Game and it is not available here.',
               Ba6: 'The b7 pawn takes it. Reaching for the longest diagonal is not the same as reaching for a safe one.',
-              'Bb5+': 'A check, but Black answers with ...c6 and the bishop is kicked away, so you have spent two moves to end up worse than if you had gone straight to the right square. Checks that achieve nothing just lose time.',
+              Bb5: 'It looks like a threat and it is not: Black castled a move ago, so the diagonal in front of the bishop is empty all the way to e8. Then ...c6 kicks it away, and you have spent two moves to end up worse than if you had gone straight to the right square. Moves that only look aggressive just lose time.',
               Be2: 'Safe and completely passive — from there it looks at its own knight and takes no part in what happens on the kingside. The reason your other bishop stands on the h2-b8 diagonal is that this one has a matching diagonal of its own.',
               Nbd2: 'Also coming, and nothing is wrong with it. But the knight\'s square is not going anywhere, whereas Black\'s ...c5 and ...c4 is a plan to take away the bishop\'s square — take it while it is still there.',
               Ne5: 'The outpost is the big idea, but it works as a team: two bishops, a knight and a queen all aimed at the same corner. Sent on ahead alone the knight is just exchanged.',
@@ -197,10 +197,10 @@ export const londonSystem = parseLesson({
           note: 'The last piece, and it goes to the square its opposite number in the Italian Game dreads — because there, the dark-squared bishop is still sitting at home behind it. Here that bishop left on move three, so this square blocks absolutely nothing. This is the payoff for the one move order the London insists on. From d2 the knight guards e4 and c4, the two squares Black would most like to use: ...Ne4 has no future, and ...c4 stops being free. Later it can travel on to f1 and g3, or back up an e4 break of your own.',
           checkpoint: {
             id: 'london-last-piece-out',
-            prompt: 'One piece has still never moved, and its natural square is taken by your own pawn. Bring it out anyway — and notice how little the square it has to use costs you here.',
+            prompt: 'One of your knights has still never moved, and its natural square is taken by your own pawn. Bring it out anyway — and notice how little the square it has to use costs you here.',
             accept: ['Nbd2'],
             hints: [
-              'Look for the piece still standing exactly where the game began. There is only one left.',
+              'Look for the knight still standing exactly where the game began. There is only one left.',
               'Its natural central square is occupied by your own pawn, so it has to go the modest way — inwards, not to the rim, where it would guard nothing at all.',
               'There is one square that keeps an eye on both e4 and c4 — the two squares Black would most like to use — and that, because your dark-squared bishop left home on move three, blocks nothing whatsoever. That is what the opening\'s one fixed move order bought you.',
             ],

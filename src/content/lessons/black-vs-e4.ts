@@ -52,7 +52,7 @@ export const blackVsE4 = parseLesson({
             hints: [
               'You do have to answer the threat — but the best answers to a threat also do something you were going to do anyway, so the threat ends up costing you nothing.',
               'Ask what each defender costs you. A pawn defends and develops nothing; the queen defends and turns into a target. A defender that also joins the game is worth more than either.',
-              'Six different moves guard e5. Two are pawn moves that develop nothing, two bring your queen out to do a pawn\'s job, and one blocks the pawn you will want to move later. The sixth is a piece arriving on the square it belonged on anyway.',
+              'Seven different moves guard e5. Two are pawn moves that develop nothing, three bring your queen out to do a pawn\'s job, and one blocks the pawn you will want to move later. The seventh is a piece arriving on the square it belonged on anyway.',
             ],
             nearMiss: {
               d6: 'This does defend the pawn, and it is a real opening — but it develops nothing and shuts in your dark-squared bishop for now. Prefer the move that does two jobs.',
@@ -77,7 +77,7 @@ export const blackVsE4 = parseLesson({
             hints: [
               'Every square in White\'s camp is guarded by a pawn or a piece except one — and it is the mirror image of the square White is leaning on in yours.',
               'White\'s f2 pawn is guarded by nothing but the king, just as f7 was for you. A bishop is worth what its diagonal is worth, and the diagonal you want is the one that ends there.',
-              'Your dark-squared bishop has five squares. One is taken by a pawn the instant it arrives, one is chased off by the pawn move White wants to play next in any case, and one stands in front of the pawn you will need later to prop up e5. Of the two left over, only one puts the bishop on a diagonal that reaches into White\'s position at all.',
+              'Your dark-squared bishop has five squares. One is taken by a pawn the instant it arrives, one is chased off by the pawn move White wants to play next in any case, and one stands in front of the pawn you will need later to prop up e5. Of the two left over, both point into White\'s half — but one of them touches nothing that is actually there, while the other ends on f2, the square White\'s king is guarding by itself.',
             ],
             nearMiss: {
               Be7: 'Safe, but passive. From there the bishop takes part in nothing; the whole point of this moment is the long diagonal it is declining to take.',
@@ -101,7 +101,7 @@ export const blackVsE4 = parseLesson({
             hints: [
               'A move that only defends, or only develops, does one job. The moves that gain you time do two — and White has just handed you the chance by playing a pawn move that develops nothing.',
               'Look hard at e4 and count what guards it. Not the knight on f3, not the bishop, not a pawn: nothing at all. An undefended pawn in the centre is an invitation.',
-              'Two of your pawns could attack that square, but one is captured on arrival by the bishop on c4 and the other rips open the squares your king is about to move behind. The piece that can attack it instead is the one you have not developed yet, and it does so from the square it wanted in any case.',
+              'Two of your pawns could attack that square, but one is captured on arrival by the bishop on c4 and the other rips open the squares your king is about to move behind. Only two of your pieces can attack it, and one of those is your queen, who is simply taken by the knight on f3 the moment she arrives. The other has not moved all game, and it attacks e4 from the square it wanted in any case.',
             ],
             nearMiss: {
               d6: 'Solid, and you will play it in a moment anyway — but right now White\'s e4 pawn is undefended and White has just spent a move on a pawn that develops nothing. Ask the question while it is free.',
