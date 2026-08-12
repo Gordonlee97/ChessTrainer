@@ -5,6 +5,7 @@ import { Breadcrumb } from './ui/Breadcrumb';
 import { CandidateRail } from './ui/CandidateRail';
 import { LessonPicker } from './ui/LessonPicker';
 import { LessonRail } from './ui/LessonRail';
+import { MoveFeedback } from './ui/MoveFeedback';
 import { ProgressNotice } from './ui/ProgressNotice';
 import { SavedLines } from './ui/SavedLines';
 import { useLessonAutoplay } from './ui/useLessonAutoplay';
@@ -43,6 +44,7 @@ export function App() {
           <div className="board-wrap">
             <Board />
           </div>
+          <MoveFeedback />
         </div>
 
         <div className="app-rail app-rail-right">

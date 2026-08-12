@@ -3,6 +3,7 @@ import type { Alternative } from '../content/schema';
 import type { EvalResult } from '../engine/types';
 import type { AuthoredContrastPair } from '../explain/compare';
 import { askingCheckpoint, useActiveLesson, useLessonStore } from '../lesson/store';
+import { sounds } from '../sound';
 import { useSelectedNode } from '../tree/store';
 import { Button } from './Button';
 import { CompareDrawer } from './CompareDrawer';
@@ -64,8 +65,18 @@ export function CheckpointPanel({ result, status, onRetry }: CheckpointPanelProp
   const activeLesson = useActiveLesson();
   const hintsShown = useLessonStore((store) => store.hintsShown);
   const revealHint = useLessonStore((store) => store.revealHint);
+  const lastRejection = useLessonStore((store) => store.lastRejection);
   const node = useSelectedNode();
   const [comparing, setComparing] = useState(false);
+
+  /**
+   * The rejection to report, scoped to the node it happened at — the same
+   * guard `lastRejection.atNodeId` exists for (see `lesson/store.ts`): a
+   * stale attempt from a position the player has since left must not follow
+   * them here.
+   */
+  const rejectionHere =
+    lastRejection && lastRejection.atNodeId === node.id ? lastRejection : null;
 
   // Without this, leaving the drawer open and navigating to a position with
   // fewer than 2 candidates (which unmounts it) and then back to one with 2+
@@ -138,6 +149,12 @@ export function CheckpointPanel({ result, status, onRetry }: CheckpointPanelProp
           }}
         >
           Engine suggestions are hidden while the lesson is asking you for a move.
+          {rejectionHere && (
+            <>
+              {' '}
+              {rejectionHere.grade.kind === 'near-miss' ? rejectionHere.grade.reply : 'Try again.'}
+            </>
+          )}
         </p>
       )}
       <div>
@@ -150,7 +167,14 @@ export function CheckpointPanel({ result, status, onRetry }: CheckpointPanelProp
         </ol>
 
         {revealed < asking.hints.length && (
-          <Button variant="ghost" onClick={() => revealHint(asking.id)}>
+          <Button
+            variant="ghost"
+            sound={false}
+            onClick={() => {
+              revealHint(asking.id);
+              sounds.play('hint');
+            }}
+          >
             Hint
           </Button>
         )}

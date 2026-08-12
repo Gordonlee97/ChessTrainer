@@ -68,7 +68,13 @@ export function LessonRail() {
     }
 
     if (state.complete && !state.offScript && !hasNextSegment) {
+      // `noteLessonComplete` dedupes internally because this effect re-runs
+      // on every render while the lesson sits complete (see the comment
+      // above) — the sound needs the same guard, checked before the call, or
+      // it would replay on every one of those re-renders.
+      const alreadyComplete = useProgressStore.getState().progress.lessons[lesson.id]?.completedAt;
       noteLessonComplete(lesson.id);
+      if (!alreadyComplete) sounds.play('lessonComplete');
     }
   }, [active, hintsShown, selectedId, noteAttempt, noteLessonComplete]);
 
