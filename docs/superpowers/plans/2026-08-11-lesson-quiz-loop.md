@@ -616,9 +616,19 @@ git commit -m "feat(lesson): reject a wrong answer instead of playing it"
 ### Task 5: Feedback — sounds, a check mark, and "Try again"
 
 **Files:**
-- Create: `src/ui/MoveFeedback.tsx`
-- Modify: `src/ui/CheckpointPanel.tsx`, `src/ui/theme.css`
+- Create: `src/ui/MoveFeedback.tsx`, `src/ui/MoveFeedback.test.tsx`
+- Modify: `src/ui/CheckpointPanel.tsx`, `src/ui/theme.css`, `src/ui/Board.tsx`,
+  `src/ui/LessonRail.tsx`, `src/lesson/store.ts`, `src/App.tsx`
 - Extend: `src/ui/CheckpointPanel.test.tsx`
+
+**`src/lesson/store.ts` is in scope, and this matters.** A correct answer must
+be **recorded where it is known** — `Board.tsx`, at the moment it accepts the
+move — not inferred by `MoveFeedback` from state transitions. Inference looks
+workable and is not: stepping backwards during a lesson changes the selected
+node *and* the pending checkpoint id while the lesson and segment stay the
+same, which is indistinguishable from having just answered. That produces a
+green check for a move the player never made, and `Breadcrumb` makes it
+reachable today.
 
 **Interfaces:**
 - Consumes: `lastRejection` from the lesson store (Task 4).
