@@ -28,6 +28,8 @@ import { useTreeStore } from '../tree/store';
 
 const nodeCount = () => Object.keys(useTreeStore.getState().tree.nodes).length;
 
+type PieceDrop = (args: { sourceSquare: string; targetSquare: string | null }) => boolean;
+
 describe('Board during a lesson', () => {
   beforeEach(() => {
     act(() => {
@@ -69,5 +71,45 @@ describe('Board during a lesson', () => {
     const tree = useTreeStore.getState().tree;
     expect(tree.nodes[tree.selectedId].move?.san).toBe('e4');
     expect(useLessonStore.getState().lastRejection).toBeNull();
+  });
+
+  // Nothing else exercises the write side of this seam: MoveFeedback.test.tsx
+  // drives lastAcceptance directly (the right way to unit-test that
+  // component), which means it structurally cannot see whether Board.tsx
+  // ever calls noteAcceptance at all. Proven live: commenting out both
+  // Board.tsx call sites and running the full suite left it green — this is
+  // the only test that would catch that.
+  it('records the accepted answer at the node the move landed on', async () => {
+    render(<Board />);
+    const board = screen.getByRole('application', { name: /chess board/i });
+    board.focus();
+    for (const key of ['Enter', 'ArrowUp', 'ArrowUp', 'Enter']) {
+      await act(async () => {
+        board.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
+      });
+    }
+    const tree = useTreeStore.getState().tree;
+    // atNodeId must be where the move landed (selected id *after* the move),
+    // not the node it was played from — see lastAcceptance's doc in
+    // lesson/store.ts for why the two records differ on this.
+    expect(useLessonStore.getState().lastAcceptance).toEqual({
+      san: 'e4',
+      atNodeId: tree.selectedId,
+    });
+  });
+
+  // Deferred in Task 4's review: only the keyboard path was exercised, and
+  // the two branches are structurally identical by inspection only, not by
+  // test. The prop-capturing mock makes this cheap — no drag simulation
+  // needed, just calling the captured handler the same way Board.test.tsx
+  // already does for onPieceDrag.
+  it('refuses a wrong answer dropped on the board and adds no node to the tree', () => {
+    const before = nodeCount();
+    render(<Board />);
+    const onPieceDrop = chessboardOptions.current?.onPieceDrop as PieceDrop;
+    const result = onPieceDrop({ sourceSquare: 'e2', targetSquare: 'e3' });
+    expect(result).toBe(false); // react-chessboard returns the piece to its source square
+    expect(nodeCount()).toBe(before);
+    expect(useLessonStore.getState().lastRejection?.san).toBe('e3');
   });
 });
