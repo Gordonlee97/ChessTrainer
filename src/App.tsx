@@ -3,7 +3,7 @@ import { AppControls } from './ui/AppControls';
 import { Board } from './ui/Board';
 import { Breadcrumb } from './ui/Breadcrumb';
 import { CandidateRail } from './ui/CandidateRail';
-import { LessonPicker } from './ui/LessonPicker';
+import { LessonMenu } from './ui/LessonMenu';
 import { LessonRail } from './ui/LessonRail';
 import { MoveFeedback } from './ui/MoveFeedback';
 import { ProgressNotice } from './ui/ProgressNotice';
@@ -19,6 +19,7 @@ export function App() {
     <main className="app-shell">
       <header className="app-header">
         <h1 className="app-wordmark">ChessTrainer</h1>
+        <LessonMenu />
         <ProgressNotice />
         <span className="app-header-spacer" />
         <AppControls />
@@ -30,14 +31,7 @@ export function App() {
 
       <div className="app-main">
         <div className="app-rail app-rail-left">
-          {inLesson ? (
-            <LessonRail />
-          ) : (
-            <>
-              <LessonPicker />
-              <SavedLines />
-            </>
-          )}
+          {inLesson ? <LessonRail /> : <SavedLines />}
         </div>
 
         <div className="app-centre">

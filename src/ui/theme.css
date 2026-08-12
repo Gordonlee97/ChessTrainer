@@ -127,6 +127,15 @@ body {
   margin-bottom: 12px;
 }
 
+/* The outer section: the bordered explanation box, then "Leave lesson"
+   below it, not inside it. */
+.lesson-rail-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
 .lesson-rail {
   border: 2px solid var(--border);
   border-radius: var(--radius);
@@ -136,6 +145,29 @@ body {
   flex-direction: column;
   gap: 10px;
   align-items: flex-start;
+  width: 100%;
+}
+
+.lesson-menu {
+  position: relative;
+}
+
+.lesson-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: min(360px, 90vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(60, 40, 20, 0.18);
 }
 
 .compare-drawer {

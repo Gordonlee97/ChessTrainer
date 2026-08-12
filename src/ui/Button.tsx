@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { sounds } from '../sound';
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -13,10 +13,17 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
 }
 
-export function Button({ variant = 'primary', sound = true, children, onClick, className, ...rest }: ButtonProps) {
+// forwardRef so a caller can manage focus on the underlying <button> — e.g.
+// LessonMenu returning focus to its trigger when the panel closes. Every
+// other prop and behaviour is unchanged.
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { variant = 'primary', sound = true, children, onClick, className, ...rest },
+  ref,
+) {
   return (
     <button
       {...rest}
+      ref={ref}
       className={className ? `btn ${className}` : 'btn'}
       data-variant={variant}
       onClick={(event) => {
@@ -27,4 +34,4 @@ export function Button({ variant = 'primary', sound = true, children, onClick, c
       {children}
     </button>
   );
-}
+});
