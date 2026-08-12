@@ -15,11 +15,14 @@ vi.mock('howler', () => ({
 
 import { useLessonStore } from '../lesson/store';
 import { useProgressStore } from '../progress/store';
+import { useTreeStore } from '../tree/store';
 import { LessonMenu } from './LessonMenu';
+import { LessonRail } from './LessonRail';
 
 describe('LessonMenu', () => {
   beforeEach(() => {
     act(() => useLessonStore.getState().stopLesson());
+    useTreeStore.getState().reset();
     localStorage.clear();
     useProgressStore.getState().reset();
   });
@@ -125,5 +128,76 @@ describe('LessonMenu', () => {
     render(<LessonMenu />);
     await user.click(screen.getByRole('button', { name: /lessons/i }));
     expect(screen.getByText(/done/i)).toBeInTheDocument();
+  });
+
+  describe('switching lessons mid-lesson', () => {
+    // The dropped LessonPicker invariant was "the list is unreachable while
+    // a lesson runs" — no longer true by design (see the coordinator's
+    // review: startLesson reseeds rather than replays, so switching is safe,
+    // and a header menu that becomes unreachable mid-lesson would be
+    // strange). This is the invariant that replaced it: switching is clean.
+    it('reseeds the tree and leaves checkpoint credit exactly where it belongs when a different lesson is chosen mid-lesson', async () => {
+      // Set up state before the first render, same as LessonRail.test.tsx's
+      // recording tests: LessonRail's recording effect fires on mount, so by
+      // the time we render, the Italian's opening checkpoint is credited.
+      // (The effect only checks the move just passed — `segment.moves[ply -
+      // 1]` — so this stops at one move rather than also playing Black's
+      // scripted e5, which would silently skip past the intermediate render
+      // this test needs.) A hint and a rejection are also put in place
+      // directly, so the assertions below on `hintsShown` and
+      // `lastRejection` are checking a real clear, not two fields that were
+      // already at their empty default.
+      useLessonStore.getState().startLesson('italian-game');
+      useLessonStore.getState().revealHint('italian-open-with-e4');
+      useLessonStore
+        .getState()
+        .noteRejection('d4', { kind: 'wrong' }, useTreeStore.getState().tree.selectedId);
+      useTreeStore.getState().playMove('e4'); // the Italian's opening checkpoint, answered correctly
+
+      const user = userEvent.setup();
+      render(
+        <>
+          <LessonMenu />
+          <LessonRail />
+        </>,
+      );
+
+      expect(
+        useProgressStore.getState().progress.lessons['italian-game']?.checkpoints[
+          'italian-open-with-e4'
+        ]?.solved,
+      ).toBe(true);
+      // Confirms the hint and rejection set up above actually landed, so the
+      // "cleared" assertions after the switch are checking a real clear.
+      expect(useLessonStore.getState().hintsShown).toEqual({ 'italian-open-with-e4': 1 });
+      expect(useLessonStore.getState().lastRejection).not.toBeNull();
+
+      await user.click(screen.getByRole('button', { name: /lessons/i }));
+      await user.click(screen.getByRole('button', { name: /london system/i }));
+
+      expect(useLessonStore.getState().lessonId).toBe('london-system');
+      expect(useLessonStore.getState().segmentIndex).toBe(0);
+      expect(useLessonStore.getState().hintsShown).toEqual({});
+      expect(useLessonStore.getState().lastRejection).toBeNull();
+
+      // `startLesson` reseeds the tree from the new lesson's segment rather
+      // than replaying moves onto the old one (the way SavedLines.open does)
+      // — the tree the Italian's e4/e5 built is gone entirely, not merely
+      // deselected, so there is nothing left for London's own recording
+      // effect to misread as an answer.
+      const tree = useTreeStore.getState().tree;
+      expect(Object.keys(tree.nodes)).toEqual([tree.rootId]);
+      expect(tree.selectedId).toBe(tree.rootId);
+
+      // The Italian's credit survives untouched, and none of it leaked onto
+      // London: the two lessons' checkpoint ids never collide, so a leak
+      // would show up as London crediting a checkpoint id that isn't its own.
+      expect(
+        useProgressStore.getState().progress.lessons['italian-game']?.checkpoints[
+          'italian-open-with-e4'
+        ]?.solved,
+      ).toBe(true);
+      expect(useProgressStore.getState().progress.lessons['london-system']).toBeUndefined();
+    });
   });
 });
