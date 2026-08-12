@@ -885,10 +885,16 @@ than cross-referenced, because an implementer may read tasks out of order.
 1. **Add a `checkpoint` to every player-side move that lacks one**, listed
    above. Each needs a stable `id` prefixed with the lesson id, a `prompt`,
    `accept`, and `hints`.
-2. **No hint may name the move.** Not "Play e4.", not
-   "The bishop belongs on c4.", not "Castle kingside." A hint points at the
-   idea - which square is weak, what the position needs, which piece is idle.
-   The last tier may be very pointed; it may not be the answer.
+2. **No hint may name the move — in notation OR in words.** Not "Play e4.",
+   not "The bishop belongs on c4.", not "Castle kingside." **And equally not
+   "the pawn in front of your king steps one square" or "a move that tucks the
+   king behind its pawns and brings a rook into play"** — those are the move
+   written out in English, and a player can play from them without
+   understanding anything. A scan for SANs and destination squares will not
+   catch this; read each hint and ask *could a player make the move from this
+   sentence alone?* A hint points at the idea — which square is weak, what the
+   position needs, which piece is idle. The last tier may be very pointed; it
+   may not be the answer.
 3. **Rewrite the existing final-tier hints**, listed above. They all name their
    move today and are not exempt.
 4. **Deepen every `note`.** The left rail is now the lesson's main reading
@@ -984,10 +990,16 @@ than cross-referenced, because an implementer may read tasks out of order.
 1. **Add a `checkpoint` to every player-side move that lacks one**, listed
    above. Each needs a stable `id` prefixed with the lesson id, a `prompt`,
    `accept`, and `hints`.
-2. **No hint may name the move.** Not "Play e4.", not
-   "The bishop belongs on c4.", not "Castle kingside." A hint points at the
-   idea - which square is weak, what the position needs, which piece is idle.
-   The last tier may be very pointed; it may not be the answer.
+2. **No hint may name the move — in notation OR in words.** Not "Play e4.",
+   not "The bishop belongs on c4.", not "Castle kingside." **And equally not
+   "the pawn in front of your king steps one square" or "a move that tucks the
+   king behind its pawns and brings a rook into play"** — those are the move
+   written out in English, and a player can play from them without
+   understanding anything. A scan for SANs and destination squares will not
+   catch this; read each hint and ask *could a player make the move from this
+   sentence alone?* A hint points at the idea — which square is weak, what the
+   position needs, which piece is idle. The last tier may be very pointed; it
+   may not be the answer.
 3. **Rewrite the existing final-tier hints**, listed above. They all name their
    move today and are not exempt.
 4. **Deepen every `note`.** The left rail is now the lesson's main reading
@@ -1014,7 +1026,7 @@ the hardest kind to ask about well:
     hints: [
       'This one is small and solid rather than ambitious \u2014 it is about support, not space.',
       'Your d4 pawn would like a neighbour defending it.',
-      'The pawn in front of your king only needs to step one square to do both jobs.',
+      'Your light-squared bishop still has no way out, and d4 is held up by the queen alone. One modest pawn move fixes both.',
     ],
     nearMiss: {
       e4: 'Too ambitious here \u2014 it gives up the solid pawn chain the London is built on, and that square is better used supporting d4 than grabbing space.',
@@ -1082,10 +1094,16 @@ than cross-referenced, because an implementer may read tasks out of order.
 1. **Add a `checkpoint` to every player-side move that lacks one**, listed
    above. Each needs a stable `id` prefixed with the lesson id, a `prompt`,
    `accept`, and `hints`.
-2. **No hint may name the move.** Not "Play e4.", not
-   "The bishop belongs on c4.", not "Castle kingside." A hint points at the
-   idea - which square is weak, what the position needs, which piece is idle.
-   The last tier may be very pointed; it may not be the answer.
+2. **No hint may name the move — in notation OR in words.** Not "Play e4.",
+   not "The bishop belongs on c4.", not "Castle kingside." **And equally not
+   "the pawn in front of your king steps one square" or "a move that tucks the
+   king behind its pawns and brings a rook into play"** — those are the move
+   written out in English, and a player can play from them without
+   understanding anything. A scan for SANs and destination squares will not
+   catch this; read each hint and ask *could a player make the move from this
+   sentence alone?* A hint points at the idea — which square is weak, what the
+   position needs, which piece is idle. The last tier may be very pointed; it
+   may not be the answer.
 3. **Rewrite the existing final-tier hints**, listed above. They all name their
    move today and are not exempt.
 4. **Deepen every `note`.** The left rail is now the lesson's main reading
