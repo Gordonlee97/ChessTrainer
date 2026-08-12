@@ -104,9 +104,12 @@ describe('LessonRail', () => {
 
   describe('opening lessons', () => {
     it('never offers "Play the next move", even when the next move carries no checkpoint', () => {
-      // london-system's first move (d4) carries no checkpoint — exactly the
-      // shape that would offer the button on a theme lesson.
+      // Every player move in an opening lesson now carries a checkpoint, so
+      // the no-checkpoint shape only occurs at the opponent's replies: after
+      // d4, the next move (d5) is Black's and has none — exactly the shape
+      // that would offer the button on a theme lesson.
       useLessonStore.getState().startLesson('london-system');
+      useTreeStore.getState().playMove('d4');
       render(<LessonRail />);
       expect(screen.queryByRole('button', { name: /play the next move/i })).not.toBeInTheDocument();
     });
