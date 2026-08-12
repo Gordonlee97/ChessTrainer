@@ -62,11 +62,11 @@ describe('checkpoint panel', () => {
     const user = userEvent.setup();
     startAtCheckpoint();
     render(<CheckpointPanel {...noAnalysis} />);
-    expect(screen.queryByText(/central pawn moves are the ones/i)).toBeNull();
+    expect(screen.queryByText(/a pawn in the middle does two things/i)).toBeNull();
     await user.click(screen.getByRole('button', { name: /hint/i }));
-    expect(screen.getByText(/central pawn moves are the ones/i)).toBeInTheDocument();
+    expect(screen.getByText(/a pawn in the middle does two things/i)).toBeInTheDocument();
     // The second hint stays hidden until asked for.
-    expect(screen.queryByText(/pawn in front of your king/i)).toBeNull();
+    expect(screen.queryByText(/runs all the way to f7/i)).toBeNull();
   });
 
   it('plays the hint sound, not the generic button press, when a tier is revealed', async () => {
@@ -140,7 +140,7 @@ describe('checkpoint panel', () => {
       render(<CheckpointPanel {...noAnalysis} />);
       // The Italian's first move is itself a checkpoint.
       expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
-      expect(screen.queryByText(/play e4\./i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/should not stop half-way/i)).not.toBeInTheDocument();
     });
 
     it('reveals hints one at a time, in order', async () => {
@@ -148,12 +148,12 @@ describe('checkpoint panel', () => {
       render(<CheckpointPanel {...noAnalysis} />);
 
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-      expect(screen.getByText(/central pawn moves/i)).toBeInTheDocument();
-      expect(screen.queryByText(/play e4\./i)).not.toBeInTheDocument();
+      expect(screen.getByText(/a pawn in the middle does two things/i)).toBeInTheDocument();
+      expect(screen.queryByText(/should not stop half-way/i)).not.toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-      expect(screen.getByText(/play e4\./i)).toBeInTheDocument();
+      expect(screen.getByText(/should not stop half-way/i)).toBeInTheDocument();
     });
 
     it('stops offering hints once they are exhausted', async () => {
@@ -173,17 +173,17 @@ describe('checkpoint panel', () => {
       for (let i = 0; i < 3; i += 1) {
         await userEvent.click(screen.getByRole('button', { name: /hint/i }));
       }
-      expect(screen.getByText(/play e4\./i)).toBeInTheDocument();
+      expect(screen.getByText(/should not stop half-way/i)).toBeInTheDocument();
 
-      // ...then walk to the second one (Bc4).
+      // ...then walk on to the Bc4 checkpoint.
       act(() => {
         for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
       });
       rerender(<CheckpointPanel {...noAnalysis} />);
 
       expect(screen.getByText(/most aggressive square/i)).toBeInTheDocument();
-      expect(screen.queryByText(/the bishop belongs on c4\./i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/aim at the weakest point/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/looks straight at f7/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/guarded by a pawn or a piece/i)).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: /hint/i })).toBeInTheDocument();
     });
 
@@ -196,7 +196,7 @@ describe('checkpoint panel', () => {
       // question it answers and the Hint button both have to still be here.
       expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-      expect(screen.getByText(/central pawn moves/i)).toBeInTheDocument();
+      expect(screen.getByText(/a pawn in the middle does two things/i)).toBeInTheDocument();
     });
 
     it('keeps the question up after a near miss too', () => {

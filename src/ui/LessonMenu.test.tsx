@@ -119,7 +119,7 @@ describe('LessonMenu', () => {
     const user = userEvent.setup();
     render(<LessonMenu />);
     await user.click(screen.getByRole('button', { name: /lessons/i }));
-    expect(screen.getByText(/1 of 3 checkpoints/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 of 9 checkpoints/i)).toBeInTheDocument();
   });
 
   it('marks a completed lesson as done in text, not colour alone', async () => {
