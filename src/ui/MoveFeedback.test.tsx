@@ -1,6 +1,6 @@
 import { act } from 'react';
 import { render } from '@testing-library/react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MoveFeedback } from './MoveFeedback';
 import { useLessonStore } from '../lesson/store';
 import { useTreeStore } from '../tree/store';
@@ -159,5 +159,49 @@ describe('MoveFeedback', () => {
     });
     rerender(<MoveFeedback />);
     expect(container.querySelector('.move-feedback-mark--correct')).toBeNull();
+  });
+
+  /**
+   * The check is a moment, not a standing fact, and the spec's word is
+   * "brief". Before this, it was retired only by a node change - which
+   * autoplay supplied mid-lesson but nothing supplied at the end of a
+   * segment or in a theme lesson, so it stayed on screen indefinitely.
+   */
+  describe('retiring the marks', () => {
+    beforeEach(() => vi.useFakeTimers());
+    afterEach(() => vi.useRealTimers());
+
+    it('retires the check on its own, with no node change to do it', () => {
+      startAtCheckpoint();
+      const landedOn = useTreeStore.getState().tree.selectedId;
+      const view = render(<MoveFeedback />);
+      act(() => useLessonStore.getState().noteAcceptance('e4', landedOn));
+      expect(view.container.textContent).toContain('✓');
+
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(view.container.textContent).not.toContain('✓');
+    });
+
+    // The cross is the other half of the asymmetry: it is a standing fact
+    // about an unanswered position, so it waits for the player's next
+    // attempt rather than for a clock.
+    it('keeps the cross past the check window, and clears it on a correct answer', () => {
+      startAtCheckpoint();
+      const at = useTreeStore.getState().tree.selectedId;
+      const view = render(<MoveFeedback />);
+      act(() => useLessonStore.getState().noteRejection('e3', { kind: 'wrong' }, at));
+      expect(view.container.textContent).toContain('✕');
+
+      act(() => {
+        vi.advanceTimersByTime(5000);
+      });
+      expect(view.container.textContent).toContain('✕');
+
+      // Board calls clearRejection when an answer is accepted.
+      act(() => useLessonStore.getState().clearRejection());
+      expect(view.container.textContent).not.toContain('✕');
+    });
   });
 });

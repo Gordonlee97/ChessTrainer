@@ -6,6 +6,9 @@ const prefersReducedMotion =
   typeof window !== 'undefined' &&
   window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+/** How long the check stays on screen before retiring itself. */
+const CORRECT_MARK_MS = 900;
+
 /** The correct mark, tracked locally so it can be hidden the instant the
  * player leaves the node it landed on — see the component doc. */
 interface CorrectMark {
@@ -47,6 +50,15 @@ interface CorrectMark {
  *   until some future event happens to replace it. Without both halves,
  *   stepping away and back (e.g. via the breadcrumb) resurrects a check mark
  *   for an answer that was not just given.
+ *
+ * The check also retires itself on a timer. Leaving it to the node change
+ * alone made it depend on autoplay for its cleanup: mid-lesson the opponent's
+ * reply moved the node 700ms later and took the mark with it, but wherever
+ * autoplay does not run — the last player move of a segment, and every move
+ * of a theme lesson — nothing ever cleared it and the "brief" mark became
+ * permanent. The cross needs no timer: it is tied to `lastRejection` at this
+ * node, so answering correctly clears it (`Board` calls `clearRejection`) and
+ * answering wrongly again replaces it.
  */
 export function MoveFeedback() {
   const activeLesson = useActiveLesson();
@@ -84,6 +96,22 @@ export function MoveFeedback() {
 
     seenAcceptance.current = lastAcceptance;
   }, [node.id, lastAcceptance]);
+
+  /**
+   * Retire the check after a beat. Keyed on the mark's own sequence number so
+   * a replacement mark restarts the clock rather than inheriting the previous
+   * one's remaining time, and cleared on unmount so a pending timeout can
+   * never hide a mark that has just appeared.
+   *
+   * This runs under `prefers-reduced-motion` too: that setting suppresses the
+   * animation, not the feedback, and a mark that never leaves is a worse
+   * outcome than one that leaves without animating.
+   */
+  useEffect(() => {
+    if (!correctMark) return;
+    const timer = setTimeout(() => setCorrectMark(null), CORRECT_MARK_MS);
+    return () => clearTimeout(timer);
+  }, [correctMark?.key]);
 
   if (!activeLesson) return null;
 
