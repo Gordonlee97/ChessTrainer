@@ -137,7 +137,7 @@ export const londonSystem = parseLesson({
         },
         {
           san: 'O-O',
-          note: 'Black gets the king safe before anything opens, the same discipline you are about to show. It also tells you where to aim. The king now sits behind three pawns, and the one on h7 is guarded by nothing except the king itself — which is precisely the square your next two pieces are going to point at.',
+          note: 'Black gets the king safe before anything opens, the same discipline you are about to show. It also tells you where to aim. The king now sits behind three pawns, and the one on h7 has just two defenders: the king itself, and the knight on f6 you were told to keep an eye on. That is precisely the square your next two pieces are going to point at — and it is why every sacrifice on h7 in this system begins by removing that knight or luring it away. While it stands on f6 it can simply take on h7 itself, so the king is never forced out and the attack never gets going.',
         },
         {
           san: 'Bd3',
@@ -147,7 +147,7 @@ export const londonSystem = parseLesson({
             prompt: 'Black has just castled. Bring out your last bishop — and pick its square carefully, because most of that diagonal is not safe.',
             accept: ['Bd3'],
             hints: [
-              'Black castled a move ago. Look at what defends the pawn in front of that king: the king, and nothing else.',
+              'Black castled a move ago. Count the defenders of the pawn in front of that king: there are only two, and one of them is the king. A corner held that thinly is the one worth aiming at.',
               'One of your bishops already sits on a diagonal running towards Black\'s king. Your other bishop has the mirror-image diagonal, ending on h7 — get it onto that one.',
               'Its route out has five squares. Two of them are captured by a pawn on arrival, one is chased straight back by a pawn the moment it lands, and one is so timid it just stares at your own knight. The square that is left is the one that joins the other bishop in pointing at Black\'s king.',
             ],
