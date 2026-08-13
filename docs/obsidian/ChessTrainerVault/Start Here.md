@@ -18,8 +18,16 @@ can be reconstructed from the code, and this cannot.
 | Merged to `master` | Plans 1–5 |
 | Working tree | Clean |
 | Suite | 482 passing, 1 skipped (expected), **zero warnings** |
-| Last plan finished | Plan 6, the lesson quiz loop — ten tasks, a browser pass, a whole-branch review and its fix wave |
+| Last plan finished | Plan 6, the lesson quiz loop — ten tasks, **two independent browser passes**, a whole-branch review and its fix wave |
 | Merges cleanly into `master` | Yes, checked with `git merge-tree` |
+
+**Two Claude sessions worked this branch concurrently on 2026-08-12/13** and
+neither knew about the other until the end. It did no damage — the commits are
+disjoint and the second pass corroborated the first — but it is why the SDD
+ledger at `.superpowers/sdd/2026-08-11-lesson-quiz-loop/progress.md` and this
+vault were written by different hands and each records things the other does
+not. The ledger has the content-review detail; the vault has the review and fix
+wave. Read both if you need the full history of this branch.
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser. A second skip
@@ -37,6 +45,32 @@ three mechanisms and the boundaries between them.
 Content: **24 checkpoints, 72 hints, 110 near-miss replies** across the three
 openings. Theme lessons are deliberately untouched.
 
+## The second browser pass closed the last two never-observed behaviours
+
+A second, independent pass on 2026-08-13 (`0b931fb`) watched both of the things
+this project had never once seen, each measured rather than eyeballed:
+
+- **The opponent's auto-reply, on a real board.** Node count 11 → 12 at
+  **+291 ms** (Black to move, no reply yet) → 13 at **+7820 ms** with
+  `move.san === "c5"`. The +291 ms sample is the part that matters: it proves
+  the reply is deferred rather than same-tick. The earlier note that a hidden
+  tab prevents this was **wrong** — hiddenness alone does not stop timers; a tab
+  backgrounded for several minutes does. A fresh tab works fine.
+- **Segment-level board orientation after "Next part"** — unobserved since Plan
+  4 specified it. In `development-and-tempo`, `[data-square]` DOM order went
+  `a8…h1` → `h1, g1 … a8`, `segmentIndex` 0→1, tree reseeded to one node, and
+  the keyboard layer flipped with it (`ArrowUp` moved `b2 → b1`).
+
+It also watched the near-miss reply that the content review had found **dead in
+the app** — an authored key spelled `Bb5+` where the board produces `Bb5`, so
+`gradeMove` never matched it. After the fix: `grade.kind === "near-miss"`, tree
+11 → 11, and the authored text on screen instead of "Try again". A guard against
+that whole class now ships in `lessons.test.ts`.
+
+**Still never observed:** drag-and-drop (`onPieceDrop` remains unreachable to
+automation), and "Next part" inside an *opening* — all three openings have a
+single segment, so the control cannot appear there by construction.
+
 ## Do this next
 
 **1. Look at it, then decide about the cross.** The whole-branch review flagged
@@ -48,14 +82,11 @@ reason about exactly those squares. It has **never been seen at a real
 viewport**; the automation tab renders at zero size. Making it translucent is a
 one-liner. Filed in [[Known Issues]].
 
-**2. Watch the opponent reply.** Auto-play's 700ms move has never been observed
-on a real board — a backgrounded automation tab throttles timers, so it is
-covered only by unit tests with fake timers. Start any opening, answer the first
-question, and confirm Black answers on its own. Two seconds.
+**2. Then finish the branch** — push and open a PR, per [[Workflow]]. Nothing
+else is outstanding; this was left for a human because it is the one outward-
+facing step.
 
-**3. Then finish the branch** — push and open a PR, per [[Workflow]].
-
-**4. Plan 7 is the moves table.** Already specified, in
+**3. Plan 7 is the moves table.** Already specified, in
 `docs/superpowers/specs/2026-08-11-lesson-loop-and-moves-table-design.md` §4 —
 a lichess-style numbered move list that replaces the breadcrumb, clickable to
 jump, with arrows to step. It is deliberately *app furniture*, present in the

@@ -287,10 +287,14 @@ baseline to preserve.
 
 ### 8. A check that cannot tell its subject from a look-alike
 
-**Eight occurrences on Plan 6 alone**, and it is the shape underneath most of
+**Ten occurrences on Plan 6 alone**, and it is the shape underneath most of
 §2. A test, fixture or scan is written *about* the right rule and placed
 somewhere that rule cannot be the thing producing the outcome. It passes, it
 reads as coverage, and it is blind.
+
+The last two are the ones worth dwelling on, because they are in the
+**verification tooling** rather than in the app. Once you are hunting this
+shape, the checks you write to hunt it have it too.
 
 | The check | What it could not distinguish |
 |---|---|
@@ -302,6 +306,8 @@ reads as coverage, and it is blind.
 | A regex over SANs and squares | a hint naming its move vs. a hint naming it **in English** — "the pawn in front of your king steps one square" is `e3` |
 | A test whose fixture gained a checkpoint | the assertion still holding vs. its **premise** silently dissolving |
 | A browser check for "Play the next move still present" | the button surviving for its own reason vs. the regression it was meant to catch |
+| `section[aria-label="Candidate moves"]` as "the engine rail is visible" | the rail showing vs. hidden — `CheckpointPanel` reuses the same landmark, so the count is 1 either way |
+| `npm test 2>&1 > file` to count warnings | zero warnings vs. **stderr never captured** — the redirects are in the wrong order, so the first "0 warnings" of the branch was worthless |
 
 **Countermeasure — write the broken version and watch the check notice.** A
 mutation check is not "did something fail" but "did *this* check fail, for

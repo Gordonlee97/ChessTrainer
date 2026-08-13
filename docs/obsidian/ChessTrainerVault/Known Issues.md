@@ -319,6 +319,25 @@ Making the cross translucent is a one-line change if it proves obstructive in
 use. It has not been judged at a real viewport — the automation tab renders at
 a zeroed viewport, so its rendered size has never been observed.
 
+### One hint sits on the line the naming rule draws
+
+**Where:** `src/content/lessons/italian-game.ts` — `italian-open-with-e4`, tier 3
+**Severity:** low, and a judgement call rather than a defect. Recorded so it is
+re-decided deliberately rather than rediscovered.
+
+*"That is the bishop standing beside your king, and its pawn should not stop
+half-way: a pawn on the third rank never actually stands in the centre."*
+
+Measured against the rule's own test — *could a player make the move from this
+sentence alone?* — it identifies the piece and the distance, which is the same
+shape as the example the rule forbids, one square over. It is a **last** tier,
+and the plan explicitly allows the last tier to be "very pointed" so long as it
+is not the answer. Two readings are defensible and the branch shipped the
+permissive one.
+
+If the rule is ever tightened, this is the first hint to revisit; if it is
+loosened, this is the precedent.
+
 ## Found in the 2026-08-10 browser pass — all minor
 
 ### The keyboard cursor reads stale state within a single tick
