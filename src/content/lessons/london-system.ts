@@ -90,10 +90,10 @@ export const londonSystem = parseLesson({
         },
         {
           san: 'Nf3',
-          note: 'The knight takes the square it almost always takes here, and it does three things at once. It puts a second attacker on e5 — the square your bishop already watches and the one you would love to plant a knight on later. It clears one of the two pieces standing between your king and the rook. And note where it did not go: on e2 the knight would stand directly across the only diagonal your undeveloped bishop has, so one piece would be developed at the cost of burying another.',
+          note: 'The knight takes the square it almost always takes here, and it does three things at once. It puts a third attacker on e5 — the square your d-pawn and your bishop already watch, and the one you would love to plant a knight on later. It clears one of the two pieces standing between your king and the rook. And note where it did not go: on e2 the knight would stand directly across the only diagonal your undeveloped bishop has, so one piece would be developed at the cost of burying another.',
           checkpoint: {
             id: 'london-knight-to-the-natural-square',
-            prompt: 'Black has opened a diagonal for a bishop. Which knight move develops, brings you a step closer to safety, and puts a second eye on the e5 square?',
+            prompt: 'Black has opened a diagonal for a bishop. Which knight move develops, brings you a step closer to safety, and adds a third attacker to the e5 square?',
             accept: ['Nf3'],
             hints: [
               'Two pieces still stand between your king and the rook beside it, and until both of them have moved you cannot castle at all.',
@@ -164,7 +164,7 @@ export const londonSystem = parseLesson({
         },
         {
           san: 'c5',
-          note: 'Black hits the base of your centre from the side instead of head on, which is the standard way to fight a London. Do the counting rather than reacting: d4 is attacked once, by this pawn, and defended twice, by the pawn on e3 and the knight on f3. Nothing is hanging. But Black can keep adding — ...Nc6 and ...Qb6 both pile onto the same pawn — and the cheapest way to end that conversation permanently is to add a defender now.',
+          note: 'Black hits the base of your centre from the side instead of head on, which is the standard way to fight a London. Do the counting rather than reacting: d4 is attacked once, by this pawn, and defended twice, by the pawn on e3 and the knight on f3. Nothing is hanging. But Black can keep adding: ...Nc6 piles straight onto the same pawn, and ...Qb6 asks a second question, because the bishop that used to guard b2 left home on move three. The cheapest way to end that conversation permanently is to add a defender now.',
         },
         {
           san: 'c3',

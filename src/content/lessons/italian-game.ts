@@ -120,7 +120,7 @@ export const italianGame = parseLesson({
             prompt: 'You have mirrored each other move for move. You would love to take the whole centre with d4 — but played now, Black just trades it off. Which move makes d4 work?',
             accept: ['c3'],
             hints: [
-              'A pawn arriving on d4 is attacked twice, by the e5 pawn and the knight on c6. Attacked pawns need somebody behind them.',
+              'A pawn arriving on d4 would be attacked three times: by the e5 pawn, by the knight on c6, and by the bishop Black has just developed to c5. Attacked pawns need somebody behind them.',
               'You want to answer ...exd4 by taking back with a pawn, so that two of yours end up side by side in the middle.',
               'Only one of your pawns could ever recapture on d4, and it has not moved at all yet. Bring it up to the square from which it covers d4 — and accept that your queen\'s knight loses its best square as the price.',
             ],
@@ -236,7 +236,7 @@ export const italianGame = parseLesson({
         },
         {
           san: 'Nbd2',
-          note: 'The last piece comes out. c3 is taken by your own pawn, so this knight takes the quiet route: here now, then f1, then g3 or e3 where it joins the kingside. It also keeps a second eye on e4. There is a cost — it shuts the c1 bishop in for a couple of moves — which is exactly why the knight does not stay. Once it moves on, every piece you own is doing a job, and that is what an opening is actually for.',
+          note: 'The last piece comes out. c3 is taken by your own pawn, so this knight takes the quiet route: here now, then f1, then g3 or e3 where it joins the kingside. It also adds a third guard to e4, behind the pawn and the rook. There is a cost — it shuts the c1 bishop in for a couple of moves — which is exactly why the knight does not stay. Once it moves on, every piece you own is doing a job, and that is what an opening is actually for.',
           checkpoint: {
             id: 'italian-last-piece-into-play',
             prompt: 'One of your knights has still never moved, and its natural square is occupied by your own pawn. Find the modest route that brings it into the game anyway.',
@@ -244,7 +244,7 @@ export const italianGame = parseLesson({
             hints: [
               'Count your knights. One of them is sitting exactly where it started the game.',
               'The square it would normally take is occupied by your own pawn, so it has to go the long way round — a quiet square first, then across towards the king.',
-              'There is one square that keeps a second guard on e4 and leaves the knight a path to f1 and on to g3. It shuts your dark-squared bishop in for a move or two, and that is the price you pay.',
+              'There is one square that adds a third guard to e4 and leaves the knight a path to f1 and on to g3. It shuts your dark-squared bishop in for a move or two, and that is the price you pay.',
             ],
             nearMiss: {
               Na3: 'It does develop, and c4 is empty now, so it is not silly. But from the edge the knight guards nothing in the centre, and there is a route through the middle that reaches the kingside faster.',
