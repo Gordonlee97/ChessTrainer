@@ -126,23 +126,24 @@ because Left/Right already move the board cursor and cannot be taken globally.
 
 
 
-**Nothing is planned.** Plan 5 closed the queued items (clear progress, the
-`dismissNotice` caller, `tree.pinned`), so the roadmap's "Also queued" section
-below is now empty of work.
+### After Plan 7
 
-The strongest candidate for Plan 6 is **the compare drawer's contrast
-vocabulary** — see "Still undecided" below. It is the one item on this roadmap
-that changes whether the app *teaches* rather than *describes*, and it is a
-design decision before it is code.
+**The compare drawer's contrast vocabulary** — see "Still undecided" below. It
+is the one item on this roadmap that changes whether the app *teaches* rather
+than *describes*, and it is a design decision before it is code.
 
-Before planning it, two things want a human at the keyboard:
+One thing still wants a human at the keyboard, and it is the only item on this
+roadmap that no amount of automation will close:
 
-- **A design pass by eye.** Plan 5's layout has been *measured* — regions
-  aligned, board square, no overflow — but never *judged*. Nobody has looked at
-  it and said whether it feels right.
-- **Segment-level board orientation after "Next part"**, still the one
-  behaviour never observed. `Development and Tempo` flips to Black for its
-  second segment.
+- **A design pass by eye.** The layout has been *measured* — regions aligned,
+  board square, no overflow — but never *judged*. Nobody has looked at it and
+  said whether it feels right. The wrong-answer ✕ is the concrete instance: it
+  has never been seen at a real viewport, because the automation tab renders at
+  zero size. See [[Known Issues]].
+
+Segment-level board orientation after "Next part" was listed here as never
+observed from Plan 4 until 2026-08-13, when the second browser pass finally
+watched it. It is no longer outstanding — see [[Start Here]].
 
 ## Also queued
 
