@@ -115,3 +115,68 @@ not change any verdict.
   perfect play; it is far more than enough to catch a trap-losing move (the
   standard this project failed once before), which is what this spike exists
   to guard against.
+
+---
+
+# Browser verification — the lesson quiz loop, 2026-08-13
+
+Run against `npm run dev` in real Chrome on `feat/lesson-quiz-loop`.
+**Environment caveat:** the automation tab is backgrounded
+(`document.visibilityState === "hidden"`), which throttles timers to ~1s and
+zeroes the viewport. That does not affect any result below except auto-play's
+timing, noted explicitly.
+
+## The restructure
+
+**PASS.** The base page is the explorer: header carries a **Lessons** menu, the
+lesson list is hidden until opened, the left rail shows saved lines, and the
+candidate rail shows `e4 +0.39`, `d4 +0.27`, `Nf3 +0.23` with a compare button.
+
+Opening the menu lists the lessons; picking one starts it and **closes the
+menu**. During a lesson:
+
+| | |
+|---|---|
+| Left rail | "The Italian Game / Move 0 of 17 / [intro]" — the explanation |
+| Right rail | The hidden-engine notice, the prompt, and **Hint** |
+| Candidate rows | **0** |
+| "Play the next move" | **Absent**, as required for an opening |
+| "Leave lesson" | Present, outside the explanation box |
+
+## The quiz loop
+
+**Wrong answer — PASS, and this is the heart of it.** Played `e3` (legal, not
+the answer) by keyboard:
+
+- breadcrumb stayed `["start"]` — **the move never entered the game tree**;
+- a red **✕** appeared over the board;
+- the panel showed the *authored near-miss reply for `e3` specifically*:
+  "…lets the bishop out and claims no central square at all — and nothing is
+  stopping you taking the whole step.";
+- the question and Hint stayed on screen.
+
+**Retry retention — PASS.** The piece stays held after a rejection. Pressing
+Enter again on `e3` announced "e3 is not the answer" rather than dropping the
+piece or treating `e3` as a fresh pick-up.
+
+**Correct answer — PASS.** Moving the cursor to `e4` and placing gave
+breadcrumb `start › e4`, a green **✓**, announcement "e4", and the left rail
+advanced to "Move 1 of 17" with the authored note for the move.
+
+**Opponent's turn — PASS on the part that matters.** With the player's move
+made and no checkpoint pending, the right rail is **empty** — it does *not*
+fall back to showing engine candidates. That is the Task 6 fix confirmed in the
+running app: before it, the engine's top move would have appeared on screen
+during the opponent's turn, handing over the next answer.
+
+## Not verified
+
+- **Auto-play's 700ms reply.** The timer does not fire in a backgrounded tab.
+  Its logic is covered by unit tests with fake timers, including the
+  tip-of-line guard, but **the reply has not been watched arriving on a real
+  board.** A human should confirm this in two seconds: start any opening,
+  answer the first question, and watch Black respond on its own.
+- **Sound.** No audio files are committed by design, so `correct`, `incorrect`,
+  `hint` and `lessonComplete` play nothing. The calls are wired and unit-tested;
+  what they sound like is unverified because there is nothing to hear.
+- **The reduced-motion path** for the ✓/✕ mark.
