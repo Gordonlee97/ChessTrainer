@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-11
+updated: 2026-08-13
 status: current
 tags: [chesstrainer, process, lessons]
 ---
@@ -284,6 +284,61 @@ The fix was **two `act()` wraps**, and the idiom already existed in the repo.
 **Countermeasure — in `CLAUDE.md`:** record the warning count as a number in the
 task report, and treat any non-zero count as a finding with an owner, not a
 baseline to preserve.
+
+### 8. A check that cannot tell its subject from a look-alike
+
+**Eight occurrences on Plan 6 alone**, and it is the shape underneath most of
+§2. A test, fixture or scan is written *about* the right rule and placed
+somewhere that rule cannot be the thing producing the outcome. It passes, it
+reads as coverage, and it is blind.
+
+| The check | What it could not distinguish |
+|---|---|
+| Coverage fixtures all using `startFen: null` | side derived from the position vs. from index parity — a naive `moveIndex % 2` passed all 18 |
+| Tip-of-line test stepping back to the **root** | the tip-of-line guard vs. the side-to-move guard — the player is White, so the root is blocked by both |
+| Four keystrokes in one `act()` | four keystrokes vs. one — React never re-renders between them, so every handler after the first reads a stale closure |
+| `MoveFeedback` inferring "correct" from a transition | answering vs. navigating backwards — both change the node *and* the pending checkpoint id |
+| `MoveFeedback` unit tests driving the store directly | a store that is written vs. one nothing ever writes — commenting out both `noteAcceptance` calls left all 467 tests green |
+| A regex over SANs and squares | a hint naming its move vs. a hint naming it **in English** — "the pawn in front of your king steps one square" is `e3` |
+| A test whose fixture gained a checkpoint | the assertion still holding vs. its **premise** silently dissolving |
+| A browser check for "Play the next move still present" | the button surviving for its own reason vs. the regression it was meant to catch |
+
+**Countermeasure — write the broken version and watch the check notice.** A
+mutation check is not "did something fail" but "did *this* check fail, for
+*this* reason, cleanly". Two corollaries, both paid for:
+
+- **A failure caused by an exception is not evidence.** A later `try/catch`
+  silences it. Require a clean assertion mismatch.
+- **Confirm the mutation actually landed.** A regex that matches nothing looks
+  exactly like a guard that works — the controller nearly reported a defect
+  that did not exist this way. Assert the edited text differs before trusting a
+  green run.
+
+Placement is the other half: put the check where **only** the rule under test
+can produce the outcome. The tip-of-line test works at the node after `e4` and
+nowhere else in that line.
+
+### 9. Content claims that are true-sounding and false
+
+**Nine on Plan 6**, all in authored prose, none catchable by any test that
+exists. `validateLessonChess` proves a move is legal; nothing proves a sentence
+about the board is true.
+
+The worst: a London hint said h7 was "guarded by nothing except the king". The
+f6 knight also defends it — which is *precisely* why every h7 sacrifice in that
+system begins by removing that knight. A beginner would have learned the
+opposite of the truth, from a lesson that passed every gate.
+
+Also found: "one piece has still never moved" when several had; several
+attacker and defender counts off by one.
+
+**Countermeasure — count it against the board, do not read it.** Any claim of
+the form "X defends Y", "attacked N times", "nothing guards Z" gets replayed
+through chess.js and counted, including empty squares. This is how all nine
+were found, and how the review confirmed 13 of a 14-claim sample afterwards.
+
+**This is unguarded by any committed test** — see [[Known Issues]]. A false
+count still ships green today.
 
 ---
 

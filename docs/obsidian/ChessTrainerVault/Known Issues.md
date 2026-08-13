@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-11
+updated: 2026-08-13
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -278,6 +278,46 @@ grows endgame content.
 - **`tsconfig.json` includes `types: ["node"]`**, which is unnecessary —
   `node:fs` resolves via `@types/node` regardless. Drop it next time that file is
   touched.
+
+## Found on the lesson quiz loop branch (2026-08-13)
+
+### No test guards the factual claims in lesson prose
+
+**Where:** `src/content/lessons/`
+**Severity:** medium. Nine such defects were found on one branch.
+
+Hints and notes make countable claims about the board — "h7 is guarded by
+nothing except the king", "d4 is attacked three times", "one piece has still
+never moved". `validateLessonChess` proves every authored *move* is legal.
+**Nothing proves a sentence about the board is true.** All nine were found by
+replaying positions through chess.js and counting; a tenth would ship green.
+
+The h7 one is the example worth remembering: the f6 knight also defends h7,
+which is exactly why h7 sacrifices in that system start by removing it. The
+lesson taught the opposite.
+
+A guard is possible but not obvious — the claims are prose, so it would need
+either a structured field beside each claim or a convention a test can parse.
+That is a design question, which is why this is filed rather than fixed. See
+[[Lessons]] §9.
+
+### The wrong-answer mark sits over the centre of the board
+
+**Where:** `src/ui/MoveFeedback.tsx`, `src/ui/theme.css`
+**Severity:** low, and deliberate — flagged so it is not rediscovered as a bug.
+
+The cross persists until the player's next attempt, by design: it is a standing
+fact about a position they have not solved. It is an opaque disc of
+`clamp(28px, 10vw, 72px)` at `1.6em`, centred over the board, so on a 740px
+board it covers part of the four central squares while the hints are asking the
+player to reason about exactly those squares. `pointer-events: none`, so it
+never blocks interaction — only sight.
+
+The check no longer has this problem: it retires itself after 900ms.
+
+Making the cross translucent is a one-line change if it proves obstructive in
+use. It has not been judged at a real viewport — the automation tab renders at
+a zeroed viewport, so its rendered size has never been observed.
 
 ## Found in the 2026-08-10 browser pass — all minor
 
