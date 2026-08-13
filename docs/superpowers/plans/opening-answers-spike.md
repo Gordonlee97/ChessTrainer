@@ -180,3 +180,304 @@ during the opponent's turn, handing over the next answer.
   `hint` and `lessonComplete` play nothing. The calls are wired and unit-tested;
   what they sound like is unverified because there is nothing to hear.
 - **The reduced-motion path** for the ✓/✕ mark.
+
+---
+
+## 2026-08-13 — Task 10 browser pass, second run
+
+**This is a second, independent browser pass**, run without knowledge of the one
+recorded immediately above (`73b92f1`) — the two sessions overlapped on the same
+branch. It is kept as a separate section rather than merged, because two
+independent observations of the same behaviour are worth more than one, and
+because this run reaches three things the first one explicitly could not.
+
+**It closes the first pass's largest recorded gap.** That section lists under
+"Not verified": *"Auto-play's 700ms reply. The timer does not fire in a
+backgrounded tab… the reply has not been watched arriving on a real board. A
+human should confirm this in two seconds."* No human is needed — see Finding 3
+below, where the reply was watched arriving, twice, with timings. It also
+observes the segment-level board flip (Finding 4) and the revived `Bb5`
+near-miss (Finding 1), neither of which the first pass covered.
+
+Run against `npm run dev` on `http://localhost:5181` (5173-5180 were in use),
+branch `feat/lesson-quiz-loop`. Findings 4-8 were measured at HEAD `04ebeb4`.
+Findings 1-3 were first measured at `607b7b3`, before `65ec5a0`
+(`fix(lesson): keep autoplay out of theme lessons`) and `12d7361`
+(`fix(ui): retire the check mark on a timer`) landed from the parallel session;
+**both were then re-run from a cold page load at `04ebeb4` and reproduced
+exactly** — same SAN, same grade kind, same node counts, same authored reply.
+Every number below was read out of the live app, not judged from a screenshot.
+
+### Method, and why it is trustworthy
+
+Two channels, both established before any claim was made.
+
+**Store channel.** Vite dev serves the source modules, so
+`await import('/src/tree/store.ts')` in the page returns the *same* module
+singleton the running app holds. Identity was proven rather than assumed: the
+lesson was started by clicking "The Italian Game" in the real UI, and
+`useLessonStore.getState().lessonId` read through the imported module returned
+`"italian-game"`. Nothing was patched into the app to measure it.
+
+**Keyboard channel.** `react-chessboard` handles only drops, so pieces are moved
+through the app's own keyboard layer (`src/chess/boardCursor.ts`, the
+`div[role="application"]` in `src/ui/Board.tsx`) by dispatching
+`new KeyboardEvent('keydown', {key, bubbles:true})` at that element. The
+board's `role="status"` region names the square under the cursor after every
+press (`"f1, white bishop"`), so the cursor position is *read* before each
+`Enter` rather than inferred from a press count.
+
+Two mechanical cautions, recorded so the next pass does not relearn them:
+
+- **A press gap of 25 ms drops presses.** Four `ArrowRight` from `b1` landed on
+  `e1`, not `f1` — three of four registered. This is the stale-closure cursor
+  update already filed in `Known Issues`, reproduced here at 25 ms. At **90 ms**
+  no press was dropped in any subsequent run. It is a real defect with a real
+  trigger, not just a theoretical one.
+- **A CDP `Runtime.evaluate` timeout does not stop the page.** Two long await
+  chains timed out at 45 s and *kept running* in the renderer afterwards,
+  leaving a piece picked up that a later call then misread. Long driver chains
+  were abandoned in favour of short calls whose result is read back each time.
+
+### Finding 1 — the dead near-miss is alive (`london-system`, `Bd3`)
+
+The defect the content review found — a reply keyed `'Bb5+'` at a checkpoint
+where the board can only ever produce `Bb5`, so the player got the generic
+"Try again" — has now been **watched firing correctly in the running app**.
+This is the only way this fix could ever be confirmed; no test on this branch
+exercises the string the board actually emits.
+
+Setup: `london-system` started, then the ten authored moves before `Bd3`
+(`d4 d5 Bf4 Nf6 e3 e6 Nf3 Bd6 Bg3 O-O`) replayed into the tree, leaving
+`selectedId = root/d4/d5/Bf4/Nf6/e3/e6/Nf3/Bd6/Bg3/O-O`, FEN
+`rnbq1rk1/ppp2ppp/3bpn2/3p4/3P4/4PNB1/PPP2PPP/RN1QKB1R w KQ - 4 6`,
+**11 tree nodes**. The bishop was then carried f1 → b5 on the keyboard.
+
+| Measured | Value |
+|---|---|
+| Board's own SAN for the move | `"Bb5 is not the answer"` (board `role="status"`) |
+| `lastRejection.san` | `"Bb5"` |
+| `lastRejection.grade.kind` | `"near-miss"` — **not** `"wrong"` |
+| Tree nodes before → after | **11 → 11** |
+| `selectedId` before → after | unchanged |
+| FEN before → after | unchanged |
+
+**Re-run from a cold page load at HEAD `04ebeb4`**: reproduced exactly —
+announcement `"Bb5 is not the answer"`, `grade.kind === "near-miss"`, 11 → 11
+nodes, `selectedId` unchanged, same authored reply.
+
+The panel rendered the authored reply verbatim, not the generic one:
+
+> Engine suggestions are hidden while the lesson is asking you for a move. It
+> looks like a threat and it is not: Black castled a move ago, so the diagonal
+> in front of the bishop is empty all the way to e8. Then ...c6 kicks it away,
+> and you have spent two moves to end up worse than if you had gone straight to
+> the right square. Moves that only look aggressive just lose time.
+
+### Finding 2 — a generic wrong move is rejected, and the tree does not grow
+
+Same position and same checkpoint, playing `a3` (a pawn move carrying no
+authored reply), by keyboard a2 → a3.
+
+| Measured | Value |
+|---|---|
+| Announcement | `"a3 is not the answer"` |
+| `lastRejection.san` / `.grade.kind` | `"a3"` / `"wrong"` |
+| Panel tail | `"… asking you for a move. Try again."` |
+| Tree nodes before → after | **11 → 11** |
+| `selectedId`, FEN before → after | unchanged |
+
+Both rejection paths leave the game tree untouched, which is the actual claim —
+"the piece went back" is what it looks like, not what was measured.
+
+### Finding 3 — a correct move plays, and the opponent replies on its own
+
+Same checkpoint, playing the accepted answer `Bd3` (f1 → d3 on the keyboard).
+Timings measured with `performance.now()` from the moment the `Enter` was
+dispatched.
+
+| Measured | Value |
+|---|---|
+| Announcement | `"Bd3"` (not "is not the answer") |
+| Tree nodes before | 11 |
+| Tree nodes at **+291 ms** | **12** — `…/Bg3/O-O/Bd3`, FEN side-to-move `b` |
+| Tree nodes at **+7820 ms** | **13** — `…/Bg3/O-O/Bd3/c5` |
+| `nodes[selectedId].move.san` at the end | `"c5"` |
+
+So the player's move landed alone first and Black's reply arrived afterwards
+on its own, with no further input — the 700 ms `AUTOPLAY_DELAY_MS` beat in
+`useLessonAutoplay`. The +291 ms sample is the part that matters: it shows the
+reply is genuinely deferred rather than applied in the same tick.
+
+**Re-run from a cold page load at HEAD `04ebeb4`**, after `65ec5a0` changed
+`useLessonAutoplay`: identical shape — 12 nodes at +699 ms, **13 nodes with
+`nodes[selectedId].move.san === "c5"` at +6356 ms.**
+
+This is the observation the previous section asked a human to make. It did not
+need one: the tab is backgrounded here too, but a *freshly created* tab's timers
+still fire (see the environment note below), so the 700 ms reply is watchable
+from automation after all.
+
+### Environment: two limits that cost time, recorded so the next pass does not
+
+Neither is a defect in ChessTrainer.
+
+- **A backgrounded tab freezes and the driver dies with it.** After several
+  minutes with `document.hidden === true`, the tab entered Chrome's deep
+  background-throttle: `setTimeout` stopped firing entirely (`Promise.resolve()`
+  microtasks still ran), so every `await` in the driver — and every dynamic
+  `import()` — hung until the 45 s CDP timeout. The app itself was fine and
+  still rendering engine lines at depth 19; only the evaluation context's timers
+  were dead. **A screenshot did not revive it and neither did a reload; only a
+  brand-new tab did.** A fresh tab is also `hidden` but its timers fire, so
+  hiddenness alone is not the trigger — elapsed time in the background is.
+  Diagnose this with `setTimeout(()=>window.__tick=1,10)` and read `__tick` in
+  the next call; if it is still 0, open a new tab rather than debugging the page.
+  **This refines the caveat at the top of the previous section**, which treated
+  `visibilityState === "hidden"` as the blocker and concluded the 700 ms reply
+  was unwatchable from automation. Hiddenness alone is survivable; what kills
+  the driver is a tab that has been backgrounded for several minutes. Open a
+  fresh tab and the timer fires.
+- **Keep driver chains to about six key presses per call.** Chains of 16
+  presses hit the 45 s CDP timeout every time even at 90 ms spacing (~1.4 s of
+  intended work), while 4-6 press chains always returned promptly. Worse, a
+  timed-out evaluation *keeps running in the page*, so a later call can observe
+  a piece that a supposedly-abandoned chain picked up.
+
+### Finding 4 — segment-level board orientation after "Next part", observed at last
+
+**This is the behaviour `Start Here.md` has recorded as never once observed in
+this project.** It has now been watched, in `theme-development-and-tempo`,
+whose segment 1 carries `side: 'black'` against a lesson-level
+`side: 'white'`.
+
+Orientation is measured from the board's own DOM: `react-chessboard` emits 64
+`[data-square]` elements in visual reading order, so the first is the top-left
+square and the 64th is the bottom-right.
+
+| | Segment 0 | Segment 1 |
+|---|---|---|
+| `segmentIndex` | 0 | 1 |
+| First `[data-square]` (top-left) | `a8` | **`h1`** |
+| Second | `b8` | `g1` |
+| 64th (bottom-right) | `h1` | **`a8`** |
+| Tree | 8 nodes, segment played out | reseeded to **1 node** |
+| FEN | — | `rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 1 2` |
+
+The flip was triggered by clicking the real **"Next part"** button found in the
+DOM, not by calling `nextSegment()` — the button is half of what was being
+checked. It was present once the segment was complete.
+
+The keyboard layer flips with it, which is the stronger half of the claim
+because `moveCursor` takes `orientation` as an argument and would silently be
+wrong for every Black segment if it did not: after the flip, `ArrowUp` moved
+the cursor `b2 → b1` (rank *decreasing*) and `ArrowRight` moved it `b1 → a1`
+(file *decreasing*). Screen-up is board-down, as designed.
+
+### Finding 5 — `black-vs-e4` starts with Black on the near side, White having moved
+
+Measured immediately after `startLesson('black-vs-e4')` **and then again one
+tool call later** — the first read was taken in the same tick as the store
+write and returned stale DOM, which is worth recording because it would have
+produced a false defect report. The settled reading:
+
+| Measured | Value |
+|---|---|
+| First / 64th `[data-square]` | `h1` / `a8` — Black orientation, Black's back ranks nearest the player |
+| Tree nodes | **2** — White's `e4` has already played itself |
+| FEN | `rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1` (Black to move) |
+| `Hint` button | present |
+| "Play the next move" | absent |
+
+So White's move auto-played and the very first thing asked of the player is a
+Black move.
+
+### Finding 6 — "Play the next move" is gone from openings and present in a theme lesson
+
+Both halves measured by enumerating every `<button>` on the page.
+
+| Lesson | Kind | Nodes at start | "CANDIDATE MOVES" heading | "Play the next move" | `Hint` |
+|---|---|---|---|---|---|
+| `italian-game` | opening | 1 | absent | **absent** | present |
+| `london-system` | opening | 1 | absent | **absent** | present |
+| `black-vs-e4` | opening | 2 (after auto-`e4`) | absent | **absent** | present |
+| `theme-development-and-tempo`, segment 1 | theme | 1 | — | **present** | — |
+
+All three openings therefore ask a question immediately with no engine
+candidate rows on screen; the rail is replaced by "Engine suggestions are
+hidden while the lesson is asking you for a move."
+
+Note the landmark trap found while measuring this: `section[aria-label="Candidate
+moves"]` is **not** a valid test for "the engine rail is visible", because
+`CheckpointPanel` renders under the same `aria-label` when it stands in the
+rail's place. Counting that landmark returns 1 in both states. The heading text
+`CANDIDATE MOVES · depth N` is the thing that actually distinguishes them.
+
+### Finding 7 — the hint ladder reveals one tier per click and stops
+
+Measured at `black-vs-e4`'s first checkpoint (`black-e4-meet-with-e5`) by
+clicking the real `Hint` button and counting `<li>` elements after each click.
+
+| Clicks | `<li>` rendered | `hintsShown` in store | `Hint` button |
+|---|---|---|---|
+| 0 | 0 | `{}` | present |
+| 1 | 1 | `{black-e4-meet-with-e5: 1}` | present |
+| 2 | 2 | `{black-e4-meet-with-e5: 2}` | present |
+| 3 | 3 | `{black-e4-meet-with-e5: 3}` | **gone** |
+
+The counter is keyed by checkpoint id, as designed. Read as a player, none of
+the three tiers names `e5` — tier 3 ("Exactly one of your pawns can get into
+that pawn's way at all, and only if the two of them end up face to face…")
+is pointed, which the plan permits of a last tier, but stops short of the move.
+
+### Finding 8 — stepping back with the breadcrumb does not drag the player forward
+
+The autoplay guard that matters is `selectedNode.childIds.length !== 0`, so the
+test has to land on a node that is **both** the opponent's turn and already has
+a child — otherwise the guard is never exercised.
+
+`black-vs-e4` was played out to 13 nodes, then the breadcrumb button `Bc5` was
+clicked, selecting `root/e4/e5/Nf3/Nc6/Bc4/Bc5`: side to move `w` (the
+opponent, since the player is Black), `childIds.length = 1`.
+
+| Measured at +6311 ms | Value |
+|---|---|
+| `selectedId` | `root/e4/e5/Nf3/Nc6/Bc4/Bc5` — unchanged |
+| Total tree nodes | 13 — unchanged |
+
+6.3 s is nine times `AUTOPLAY_DELAY_MS`, so this is not a race that happened to
+be won.
+
+### One thing to adjudicate, not a measurement
+
+`italian-open-with-e4` hint 3 reads: *"That is the bishop standing beside your
+king, and its pawn should not stop half-way: a pawn on the third rank never
+actually stands in the centre."* The plan's own test for this rule (added in
+`2bfebcd`) is *"could a player make the move from this sentence alone?"*, and
+its worked counter-example is "the pawn in front of your king steps one square".
+This sentence identifies the piece (the f1 bishop's pawn) and the distance (not
+the third rank, so two squares), which is arguably the same shape one square
+over. It is a last tier, which the plan allows to be "very pointed", so this is
+a judgement call on prose rather than something measurement settles — recorded
+here for the controller, deliberately not changed.
+
+### What this pass did NOT check
+
+- **Drag-and-drop.** Every move above went through the keyboard layer.
+  `react-chessboard`'s drop path is still unreachable to automation, so
+  `onPieceDrop` in `src/ui/Board.tsx` is verified only by its unit tests.
+- **The `(min-width: 1100px) and (min-height: 640px)` breakpoint.** Not
+  attempted; the window cannot be resized in this environment, as four previous
+  agents established.
+- **Near-miss replies other than `london-bishop-at-the-king`'s `Bb5`.** One
+  near-miss and one generic rejection were watched; the other authored replies
+  are covered only by `lessons.test.ts` proving their keys are legal and
+  canonically spelled, which is not the same as reading them on screen.
+- **Hint tiers other than `black-e4-meet-with-e5`'s three.** The "no tier names
+  the move" reading was done for one checkpoint plus the `italian-open-with-e4`
+  tier flagged above, not for all 24.
+- **Sound.** No audio files are committed by design, so nothing was audible and
+  nothing was measured; the `sounds.play` calls were not observed firing.
+- **"Next part" in an opening.** All three openings have exactly one segment, so
+  the control cannot appear there; the segment transition was exercised in
+  `theme-development-and-tempo` only.
