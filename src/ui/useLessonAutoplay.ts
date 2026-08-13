@@ -35,6 +35,16 @@ export function useLessonAutoplay(): void {
     if (!active) return;
     const { lesson, segment, state } = active;
 
+    // Openings only. A theme lesson attaches a note to every move and paces
+    // itself with "Play the next move", so the player reads before advancing;
+    // autoplay would replace their note with the opponent's 700ms later,
+    // whether or not they had finished. The spec says twice that theme
+    // lessons are unchanged, and this is the guard that keeps that true —
+    // every other surface gates on `kind === 'opening'` (CandidateRail's
+    // hand-off to CheckpointPanel, LessonRail's button) and this one was
+    // written before that question had been asked.
+    if (lesson.kind !== 'opening') return;
+
     // Only when the line has a move left to give and the path hasn't left it
     // — off-script means the player is exploring, not answering.
     if (state.complete || state.offScript || !state.nextMove) return;

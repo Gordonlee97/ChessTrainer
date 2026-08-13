@@ -98,4 +98,25 @@ describe('useLessonAutoplay', () => {
     });
     expect(path()).toEqual(['e4']);
   });
+
+  /**
+   * Theme lessons pace themselves with "Play the next move" so the player
+   * reads each note before advancing. Autoplay would take that away, and the
+   * spec says twice that theme lessons are unchanged.
+   *
+   * The other guards do not cover this: a theme lesson has a `side` and
+   * alternating moves like any other, so at this point every one of them is
+   * satisfied and only `kind` distinguishes the two cases.
+   */
+  it('never plays for a theme lesson, however long it waits', () => {
+    render(<Harness />);
+    act(() => useLessonStore.getState().startLesson('theme-development-and-tempo'));
+    act(() => {
+      useTreeStore.getState().playMove('e4');
+    });
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(path()).toEqual(['e4']);
+  });
 });
