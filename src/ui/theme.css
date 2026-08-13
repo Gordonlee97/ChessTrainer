@@ -127,6 +127,15 @@ body {
   margin-bottom: 12px;
 }
 
+/* The outer section: the bordered explanation box, then "Leave lesson"
+   below it, not inside it. */
+.lesson-rail-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
 .lesson-rail {
   border: 2px solid var(--border);
   border-radius: var(--radius);
@@ -136,6 +145,29 @@ body {
   flex-direction: column;
   gap: 10px;
   align-items: flex-start;
+  width: 100%;
+}
+
+.lesson-menu {
+  position: relative;
+}
+
+.lesson-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: min(360px, 90vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(60, 40, 20, 0.18);
 }
 
 .compare-drawer {
@@ -278,6 +310,10 @@ body {
   min-height: 0;
   min-width: 0;
   container-type: size;
+  /* Positioning context for .move-feedback, which is a sibling of
+     .board-wrap absolutely positioned to overlay it — not a child, so Board
+     itself stays free of it. */
+  position: relative;
   grid-column: 2;
   grid-row: 1;
 }
@@ -286,6 +322,58 @@ body {
   width: min(100cqw, 100cqh);
   height: min(100cqw, 100cqh);
   margin: auto;
+}
+
+/* Mirrors .board-wrap's own box exactly (same formula, same breakpoint
+   override below) so the mark sits centred over the board regardless of
+   viewport shape. inset: 0 with auto margins is what centres it within that
+   box without needing to duplicate .board-wrap's layout math elsewhere. */
+.move-feedback {
+  position: absolute;
+  inset: 0;
+  width: min(100cqw, 100cqh);
+  height: min(100cqw, 100cqh);
+  margin: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.move-feedback-mark {
+  width: 1.6em;
+  height: 1.6em;
+  font-size: clamp(28px, 10vw, 72px);
+  font-weight: 800;
+  line-height: 1;
+  border-radius: 50%;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: move-feedback-pop 320ms var(--spring);
+}
+
+.move-feedback-mark--correct { background: var(--good); }
+.move-feedback-mark--wrong { background: var(--bad); }
+
+@keyframes move-feedback-pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Reduced motion still leaves a visible signal: the mark appears at full
+   scale and opacity immediately, with no entrance animation, and (like the
+   default case) is only ever replaced by the next event — never faded out
+   on its own. MoveFeedback also sets this class directly from the same
+   matchMedia check Board.tsx uses, so the two agree even in environments
+   (like jsdom in tests) where the media query itself never matches. */
+.move-feedback-mark--static {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .move-feedback-mark { animation: none; }
 }
 
 /* One screen only above the floor. Below either threshold the shell flows as
@@ -314,6 +402,10 @@ body {
     grid-row: 1;
   }
   .board-wrap { width: 100%; height: auto; aspect-ratio: 1; }
+  /* Same reasoning as .board-wrap immediately above: cqw/cqh resolve to zero
+     once .app-centre drops container-type: size, so the overlay needs the
+     same width-driven, aspect-ratio box the board itself switches to here. */
+  .move-feedback { width: 100%; height: auto; aspect-ratio: 1; }
 
   /* Board and candidates ahead of the picker and saved lines, so the two
      things a player is looking at do not sit below a list. Expressed as

@@ -466,6 +466,23 @@ describe('CandidateRail', () => {
     });
   });
 
+  it('hides engine suggestions for the whole of an opening lesson, not only while a checkpoint is pending', () => {
+    // After answering the opening checkpoint correctly, the position sits at
+    // ply 1 with nothing pending — Black's reply carries no checkpoint of its
+    // own — exactly the opponent's-turn / auto-play window whose engine
+    // suggestions must not flash on screen and hand over the next answer.
+    useLessonStore.getState().startLesson('italian-game');
+    useTreeStore.getState().playMove('e4');
+    analysis.value = {
+      status: 'idle',
+      result: { depth: 20, lines: [{ san: 'e5', cp: -20, mate: null, pv: ['e5'] }] },
+    } as never;
+
+    render(<CandidateRail />);
+    expect(screen.queryByRole('button', { name: /^e5/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('hides engine suggestions while a checkpoint is pending', () => {
     useLessonStore.getState().startLesson('italian-game');
     analysis.value = {

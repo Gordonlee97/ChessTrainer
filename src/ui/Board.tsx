@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { describeSquare, moveCursor } from '../chess/boardCursor';
 import { resolveDrop } from '../chess/resolveDrop';
-import { useActiveLesson } from '../lesson/store';
+import { gradeMove } from '../lesson/grade';
+import { askingCheckpoint, useActiveLesson, useLessonStore } from '../lesson/store';
 import { sounds } from '../sound';
 import { useSelectedNode, useTreeStore } from '../tree/store';
 
@@ -13,6 +14,9 @@ const prefersReducedMotion =
 export function Board() {
   const node = useSelectedNode();
   const playMove = useTreeStore((state) => state.playMove);
+  const noteRejection = useLessonStore((state) => state.noteRejection);
+  const clearRejection = useLessonStore((state) => state.clearRejection);
+  const noteAcceptance = useLessonStore((state) => state.noteAcceptance);
   const activeLesson = useActiveLesson();
   const orientation = activeLesson?.segment.side ?? activeLesson?.lesson.side ?? 'white';
 
@@ -79,10 +83,28 @@ export function Board() {
       return; // keep the piece held so the player can try another square
     }
 
+    const checkpoint = askingCheckpoint(activeLesson);
+    let checkpointAccepted = false;
+    if (checkpoint) {
+      const grade = gradeMove(checkpoint, resolved.san);
+      if (grade.kind !== 'correct') {
+        noteRejection(resolved.san, grade, node.id);
+        sounds.play('incorrect');
+        setAnnouncement(`${resolved.san} is not the answer`);
+        return; // keep the piece held so the player can try another square
+      }
+      clearRejection();
+      sounds.play('correct');
+      checkpointAccepted = true;
+    }
+
     const played = playMove(resolved.san);
     if (played) {
       sounds.play(resolved.sound === 'quiet' ? 'move' : resolved.sound);
       setAnnouncement(resolved.san);
+      // Recorded at the node the move landed on, not the one it was played
+      // from — see lastAcceptance's doc in lesson/store.ts.
+      if (checkpointAccepted) noteAcceptance(resolved.san, played);
     }
     setPicked(null);
   }
@@ -99,10 +121,27 @@ export function Board() {
     const resolved = resolveDrop(node.fen, sourceSquare, targetSquare);
     if (!resolved) return false;
 
+    const checkpoint = askingCheckpoint(activeLesson);
+    let checkpointAccepted = false;
+    if (checkpoint) {
+      const grade = gradeMove(checkpoint, resolved.san);
+      if (grade.kind !== 'correct') {
+        noteRejection(resolved.san, grade, node.id);
+        sounds.play('incorrect');
+        return false; // react-chessboard returns the piece to its source square
+      }
+      clearRejection();
+      sounds.play('correct');
+      checkpointAccepted = true;
+    }
+
     const played = playMove(resolved.san);
     if (!played) return false;
 
     sounds.play(resolved.sound === 'quiet' ? 'move' : resolved.sound);
+    // Recorded at the node the move landed on, not the one it was played
+    // from — see lastAcceptance's doc in lesson/store.ts.
+    if (checkpointAccepted) noteAcceptance(resolved.san, played);
     return true;
   }
 

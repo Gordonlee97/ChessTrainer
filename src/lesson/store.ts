@@ -18,10 +18,43 @@ interface LessonStore {
    * solved-cold from solved-after-three-hints.
    */
   hintsShown: Record<string, number>;
+  /**
+   * The most recent wrong or near-miss answer, deliberately kept out of the
+   * game tree — a rejected guess must never become part of the source of
+   * truth. Everything else in the lesson runner re-derives from the tree;
+   * this is the one thing that can't, because it is defined by its absence
+   * from it. `atNodeId` stops a stale attempt from rendering at a position
+   * the player has since left, the same way the progress store's dedupe key
+   * scopes an attempt to where it happened.
+   */
+  lastRejection: { san: string; grade: Grade; atNodeId: string } | null;
+  /**
+   * The most recent accepted checkpoint answer, recorded by `Board.tsx` at
+   * the point of truth — the same instant it calls `clearRejection()` and
+   * plays the `correct` sound. `atNodeId` is the node the move *landed on*,
+   * deliberately unlike `lastRejection`'s (the node the attempt was made
+   * from): a rejection never plays a move, so the attempted-from node stays
+   * selected throughout, but an acceptance always does, so by the time
+   * anything reads this the selected node has already moved on.
+   *
+   * Read by `MoveFeedback` for the correct-answer mark, by object identity
+   * as well as `atNodeId`: nothing else treats this as a standing fact about
+   * a position (unlike `lastRejection`, which `CheckpointPanel` reads as
+   * "still unresolved here"), so matching `atNodeId` alone would resurrect
+   * the mark every time the player revisits the node later — e.g. via the
+   * breadcrumb — with no new answer given. A stale, cross-lesson version of
+   * the same problem (two different lessons can produce the same
+   * deterministic node id) is why this is still reset in `startLesson`,
+   * `stopLesson`, and `nextSegment`, the same as `lastRejection`.
+   */
+  lastAcceptance: { san: string; atNodeId: string } | null;
   startLesson: (id: string) => void;
   stopLesson: () => void;
   nextSegment: () => void;
   revealHint: (checkpointId: string) => void;
+  noteRejection: (san: string, grade: Grade, atNodeId: string) => void;
+  clearRejection: () => void;
+  noteAcceptance: (san: string, atNodeId: string) => void;
 }
 
 /**
@@ -38,15 +71,18 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
   lessonId: null,
   segmentIndex: 0,
   hintsShown: {},
+  lastRejection: null,
+  lastAcceptance: null,
 
   startLesson: (id) => {
     const lesson = lessonById(id);
     if (!lesson) return;
     seedTree(lesson.segments[0]);
-    set({ lessonId: id, segmentIndex: 0, hintsShown: {} });
+    set({ lessonId: id, segmentIndex: 0, hintsShown: {}, lastRejection: null, lastAcceptance: null });
   },
 
-  stopLesson: () => set({ lessonId: null, segmentIndex: 0, hintsShown: {} }),
+  stopLesson: () =>
+    set({ lessonId: null, segmentIndex: 0, hintsShown: {}, lastRejection: null, lastAcceptance: null }),
 
   nextSegment: () => {
     const { lessonId, segmentIndex } = get();
@@ -57,13 +93,19 @@ export const useLessonStore = create<LessonStore>((set, get) => ({
     seedTree(next);
     // Hint counts are keyed by checkpoint id, which is unique across every
     // lesson, so they survive the move without leaking into the next segment.
-    set({ segmentIndex: segmentIndex + 1 });
+    set({ segmentIndex: segmentIndex + 1, lastRejection: null, lastAcceptance: null });
   },
 
   revealHint: (checkpointId) =>
     set((prior) => ({
       hintsShown: { ...prior.hintsShown, [checkpointId]: (prior.hintsShown[checkpointId] ?? 0) + 1 },
     })),
+
+  noteRejection: (san, grade, atNodeId) => set({ lastRejection: { san, grade, atNodeId } }),
+
+  clearRejection: () => set({ lastRejection: null }),
+
+  noteAcceptance: (san, atNodeId) => set({ lastAcceptance: { san, atNodeId } }),
 }));
 
 export interface ActiveLesson {

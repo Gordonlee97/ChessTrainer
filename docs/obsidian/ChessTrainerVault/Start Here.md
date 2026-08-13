@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-10
+updated: 2026-08-13
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,72 +10,103 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-10
+## Repo state as of 2026-08-13
 
 | | |
 |---|---|
-| Branch | `feat/app-shell-and-keyboard` |
-| Merged to `master` | PR #1 (Plan 1) · #2 (Plan 2) · #3 (Plan 3) · #4 (Plan 4) |
+| Branch | `feat/lesson-quiz-loop` — **not pushed, not merged** |
+| Merged to `master` | Plans 1–5 |
 | Working tree | Clean |
-| Suite | 443 passing, 1 skipped (expected — see below), **zero warnings** |
-| Last plan finished | Plan 5, app shell and keyboard navigation — eight tasks, each individually reviewed, plus a browser pass |
-| Whole-branch review | Run 2026-08-10. One Critical and three Importants; **all four fixed** in one wave — see `.superpowers/sdd/2026-08-09-app-shell-and-keyboard/fix-wave-report.md` |
-| Fix-wave re-review | Run 2026-08-10. **All four ADDRESSED, merge recommended.** Mutations reproduced independently. |
-| Fix-wave browser pass | Run 2026-08-10 on merged `master`. C1 verified **both** halves — including with the engine physically removed — and I3 verified. See `docs/superpowers/plans/spike-results-shell.md` |
-| Verification debt | "One search per checkpoint" is proven structurally and by test, never watched on the wire |
+| Suite | 482 passing, 1 skipped (expected), **zero warnings** |
+| Last plan finished | Plan 6, the lesson quiz loop — ten tasks, **two independent browser passes**, a whole-branch review and its fix wave |
+| Merges cleanly into `master` | Yes, checked with `git merge-tree` |
+
+**Two Claude sessions worked this branch concurrently on 2026-08-12/13** and
+neither knew about the other until the end. It did no damage — the commits are
+disjoint and the second pass corroborated the first — but it is why the SDD
+ledger at `.superpowers/sdd/2026-08-11-lesson-quiz-loop/progress.md` and this
+vault were written by different hands and each records things the other does
+not. The ledger has the content-review detail; the vault has the review and fix
+wave. Read both if you need the full history of this branch.
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
-`Worker`. jsdom has none, so the engine is verified in a browser instead. A
-second skip is a real failure.
+`Worker`. jsdom has none, so the engine is verified in a browser. A second skip
+is a real failure.
 
-## Two of the three never-observed behaviours have now been observed
+## What Plan 6 changed
 
-Until this branch, `react-chessboard` handled only drag-and-drop drops, so
-**nothing requiring a piece to move could be verified without a human**. Plan 5's
-keyboard layer is our own DOM and *is* drivable. On 2026-08-10:
+Opening lessons became a **move-by-move quiz**. Every player-side move is asked;
+a wrong answer bounces off the board without entering the game tree; the
+opponent replies on its own 700ms later. Lessons moved into a header dropdown,
+so the base page is now the explorer. The left rail became the lesson's
+explanation panel. [[Current State]] has the detail; [[Architecture]] has the
+three mechanisms and the boundaries between them.
 
-- **Answering a checkpoint** — watched working.
-- **The wrong-answer path** — watched working, including the near-miss reply
-  with the Hint control still on screen beside it.
-- **Segment-level orientation after "Next part"** — **still unobserved.**
-  Lesson-level orientation was verified (`a8` first for White, `h1` first for
-  Black) and shares the same derivation, but the segment flip itself has not
-  been watched.
+Content: **24 checkpoints, 72 hints, 110 near-miss replies** across the three
+openings. Theme lessons are deliberately untouched.
 
-Numbers, method, and an explicit list of what could *not* be checked are in
-`docs/superpowers/plans/spike-results-shell.md`.
+## The second browser pass closed the last two never-observed behaviours
 
-**Known environment limit, confirmed by four separate agents:** the browser
-window cannot be resized here. `resize_window` reports success without moving
-the viewport; `window.resizeTo()`, an OS restore-down keystroke and CSS `zoom`
-all fail, and no CDP device-metrics tool is exposed. So the real
-`(min-width: 1100px) and (min-height: 640px)` breakpoint **trigger** has never
-been exercised — only the fallback's declarations, via an injected stylesheet.
-Do not burn time rediscovering this.
+A second, independent pass on 2026-08-13 (`0b931fb`) watched both of the things
+this project had never once seen, each measured rather than eyeballed:
+
+- **The opponent's auto-reply, on a real board.** Node count 11 → 12 at
+  **+291 ms** (Black to move, no reply yet) → 13 at **+7820 ms** with
+  `move.san === "c5"`. The +291 ms sample is the part that matters: it proves
+  the reply is deferred rather than same-tick. The earlier note that a hidden
+  tab prevents this was **wrong** — hiddenness alone does not stop timers; a tab
+  backgrounded for several minutes does. A fresh tab works fine.
+- **Segment-level board orientation after "Next part"** — unobserved since Plan
+  4 specified it. In `development-and-tempo`, `[data-square]` DOM order went
+  `a8…h1` → `h1, g1 … a8`, `segmentIndex` 0→1, tree reseeded to one node, and
+  the keyboard layer flipped with it (`ArrowUp` moved `b2 → b1`).
+
+It also watched the near-miss reply that the content review had found **dead in
+the app** — an authored key spelled `Bb5+` where the board produces `Bb5`, so
+`gradeMove` never matched it. After the fix: `grade.kind === "near-miss"`, tree
+11 → 11, and the authored text on screen instead of "Try again". A guard against
+that whole class now ships in `lessons.test.ts`.
+
+**Still never observed:** drag-and-drop (`onPieceDrop` remains unreachable to
+automation), and "Next part" inside an *opening* — all three openings have a
+single segment, so the control cannot appear there by construction.
 
 ## Do this next
 
-**1. Plan 5 is done and merged (PR #6, 2026-08-10).** The whole-branch review,
-its fix wave, the scoped re-review, and a fix-wave browser pass are all
-complete. The C1 fix was verified with the engine *physically removed* from
-`public/engine/`, so a lesson is now answerable with no engine at all — the
-banner's "lesson content still works" is finally true.
+**1. Look at it, then decide about the cross.** The whole-branch review flagged
+one thing it explicitly would not settle without a human at a real viewport: the
+red ✕ for a wrong answer persists until the next attempt — that is the intended
+behaviour, since it is a standing fact about an unsolved position — but it is an
+opaque disc over the centre of the board, and the hints often ask the player to
+reason about exactly those squares. It has **never been seen at a real
+viewport**; the automation tab renders at zero size. Making it translucent is a
+one-liner. Filed in [[Known Issues]].
 
-Pick the next plan from [[Roadmap]].
+**2. Then finish the branch** — push and open a PR, per [[Workflow]]. Nothing
+else is outstanding; this was left for a human because it is the one outward-
+facing step.
 
-**2. Three open minors**, all in [[Known Issues]] and none blocking: a
-stale-closure cursor update in `Board.tsx` (rapid same-tick arrow presses
-collapse — the functional-update form fixes it), two `role="status"` regions
-inside the board wrapper (ours plus `react-chessboard`'s), and the keyboard
-cursor not resetting on "New game".
+**3. Plan 7 is the moves table.** Already specified, in
+`docs/superpowers/specs/2026-08-11-lesson-loop-and-moves-table-design.md` §4 —
+a lichess-style numbered move list that replaces the breadcrumb, clickable to
+jump, with arrows to step. It is deliberately *app furniture*, present in the
+explorer as well as in lessons. `Breadcrumb.tsx` survives until it lands.
 
-A fourth was filed during the browser pass as "a possible engine gating of the
-checkpoint prompt, pre-existing and transient". It was neither — it was the
-whole-branch review's Critical, introduced by Plan 5 and permanent when the
-engine is unavailable. Fixed, and the record corrected in
-`docs/superpowers/plans/spike-results-shell.md`. Worth remembering as a case
-where an explanation for an observation was wrong in a way that nearly buried
-it.
+## Two things this branch learned, worth reading before the next plan
+
+Both are in [[Lessons]], and both cost real rework here:
+
+- **§8 — a check that cannot tell its subject from a look-alike.** Eight
+  instances on this branch. A test placed where the rule under test is not the
+  only thing producing the outcome passes while blind. The fix is to write the
+  broken version and watch the check notice — *and* to confirm the mutation
+  actually landed, because a mutation that changes nothing looks exactly like a
+  guard that works.
+- **§9 — content claims that sound true and are false.** Nine on this branch,
+  none catchable by any test that exists. A hint claimed h7 was defended only by
+  the king; the f6 knight defends it too, which is the whole reason h7
+  sacrifices begin by removing that knight. Count claims against the board with
+  chess.js; do not read them.
 
 ## Where to look for what
 

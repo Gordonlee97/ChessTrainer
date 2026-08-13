@@ -83,20 +83,61 @@ describe('LessonRail', () => {
     expect(screen.getByRole('heading', { name: /italian game/i })).toBeInTheDocument();
   });
 
+  // "Play the next move" is a theme-lesson affordance only (see the
+  // "opening lessons" describe block below) — theme-control-the-centre's
+  // first move (e4) carries no checkpoint, the same shape london-system's
+  // first move used to exercise here before opening lessons lost the button.
   it('advances the line when the player asks for the next move', async () => {
-    useLessonStore.getState().startLesson('london-system');
+    useLessonStore.getState().startLesson('theme-control-the-centre');
     render(<LessonRail />);
-    // The London's first move is not a checkpoint, so the rail offers to play it.
     await userEvent.click(screen.getByRole('button', { name: /play the next move/i }));
-    expect(useTreeStore.getState().tree.selectedId).toContain('d4');
+    expect(useTreeStore.getState().tree.selectedId).toContain('e4');
   });
 
   it('plays the move sound for "Play the next move", not the generic button press', async () => {
-    useLessonStore.getState().startLesson('london-system');
+    useLessonStore.getState().startLesson('theme-control-the-centre');
     render(<LessonRail />);
     await userEvent.click(screen.getByRole('button', { name: /play the next move/i }));
     expect(mocks.soundPlay).toHaveBeenCalledWith('move');
     expect(mocks.soundPlay).not.toHaveBeenCalledWith('buttonPress');
+  });
+
+  describe('opening lessons', () => {
+    it('never offers "Play the next move", even when the next move carries no checkpoint', () => {
+      // Every player move in an opening lesson now carries a checkpoint, so
+      // the no-checkpoint shape only occurs at the opponent's replies: after
+      // d4, the next move (d5) is Black's and has none — exactly the shape
+      // that would offer the button on a theme lesson.
+      useLessonStore.getState().startLesson('london-system');
+      useTreeStore.getState().playMove('d4');
+      render(<LessonRail />);
+      expect(screen.queryByRole('button', { name: /play the next move/i })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('progress line', () => {
+    it('reads "Move 0 of N" before any move is played, counting both sides', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      render(<LessonRail />);
+      expect(screen.getByText(/move 0 of \d+/i)).toBeInTheDocument();
+    });
+
+    it('advances by one for each move played, on either side', () => {
+      useLessonStore.getState().startLesson('italian-game');
+      useTreeStore.getState().playMove('e4');
+      useTreeStore.getState().playMove('e5');
+      render(<LessonRail />);
+      expect(screen.getByText(/move 2 of \d+/i)).toBeInTheDocument();
+    });
+  });
+
+  it('puts "Leave lesson" outside the bordered explanation box, not inside it', () => {
+    useLessonStore.getState().startLesson('italian-game');
+    const { container } = render(<LessonRail />);
+    const leaveButton = screen.getByRole('button', { name: /leave lesson/i });
+    const box = container.querySelector('.lesson-rail');
+    expect(box).not.toBeNull();
+    expect(box?.contains(leaveButton)).toBe(false);
   });
 
   it('offers a way back when the player has gone off script', () => {

@@ -1,18 +1,21 @@
 import { act } from 'react';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CheckpointPanel } from './CheckpointPanel';
 import { LessonRail } from './LessonRail';
 import { useLessonStore } from '../lesson/store';
 import { useTreeStore } from '../tree/store';
 
-// The Hint button plays the shared buttonPress sound; jsdom has no real
-// HTMLMediaElement, so an unmocked Howl throws "not implemented" noise into
-// every run that clicks it. Other UI test files mock 'howler' for the same
-// reason.
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: vi.fn(), rate: vi.fn() })),
+// Spied on by name, not counted through Howl: the point of the assertion
+// below is *which* sound the Hint button plays, and the shared manager
+// caches one Howl per name for the process, so a call count on the mock
+// constructor can't tell "hint" apart from "buttonPress". Matches the
+// pattern LessonRail.test.tsx and Board.lesson.test.tsx use for the same
+// call path.
+const mocks = vi.hoisted(() => ({ soundPlay: vi.fn() }));
+vi.mock('../sound', () => ({
+  sounds: { play: mocks.soundPlay, setMuted: vi.fn(), muted: false },
 }));
 
 /**
@@ -42,6 +45,10 @@ function startAtCheckpoint() {
 const noAnalysis = { result: null, status: 'idle' as const, onRetry: () => {} };
 
 describe('checkpoint panel', () => {
+  beforeEach(() => {
+    mocks.soundPlay.mockClear();
+  });
+
   // Guards the whole file: if content changes so that e4 no longer carries a
   // checkpoint, every test below would pass vacuously against an empty
   // render. That is the exact failure mode Lessons.md §2 records six times.
@@ -55,11 +62,20 @@ describe('checkpoint panel', () => {
     const user = userEvent.setup();
     startAtCheckpoint();
     render(<CheckpointPanel {...noAnalysis} />);
-    expect(screen.queryByText(/central pawn moves are the ones/i)).toBeNull();
+    expect(screen.queryByText(/a pawn in the middle does two things/i)).toBeNull();
     await user.click(screen.getByRole('button', { name: /hint/i }));
-    expect(screen.getByText(/central pawn moves are the ones/i)).toBeInTheDocument();
+    expect(screen.getByText(/a pawn in the middle does two things/i)).toBeInTheDocument();
     // The second hint stays hidden until asked for.
-    expect(screen.queryByText(/pawn in front of your king/i)).toBeNull();
+    expect(screen.queryByText(/runs all the way to f7/i)).toBeNull();
+  });
+
+  it('plays the hint sound, not the generic button press, when a tier is revealed', async () => {
+    const user = userEvent.setup();
+    startAtCheckpoint();
+    render(<CheckpointPanel {...noAnalysis} />);
+    await user.click(screen.getByRole('button', { name: /hint/i }));
+    expect(mocks.soundPlay).toHaveBeenCalledWith('hint');
+    expect(mocks.soundPlay).not.toHaveBeenCalledWith('buttonPress');
   });
 
   it('still tells the player why the engine lines are hidden', () => {
@@ -68,6 +84,42 @@ describe('checkpoint panel', () => {
     expect(screen.getByRole('status')).toHaveTextContent(
       /hidden while the lesson is asking/i,
     );
+  });
+
+  describe('feedback on a rejected answer', () => {
+    it('says try again after a rejected answer', () => {
+      startAtCheckpoint();
+      act(() =>
+        useLessonStore.getState().noteRejection(
+          'e3',
+          { kind: 'wrong' },
+          useTreeStore.getState().tree.selectedId,
+        ),
+      );
+      render(<CheckpointPanel {...noAnalysis} />);
+      expect(screen.getByRole('status')).toHaveTextContent(/try again/i);
+    });
+
+    it('prefers the authored near-miss reply over the generic message', () => {
+      startAtCheckpoint();
+      act(() =>
+        useLessonStore.getState().noteRejection(
+          'd4',
+          { kind: 'near-miss', reply: 'That is the Queen’s Gambit family.' },
+          useTreeStore.getState().tree.selectedId,
+        ),
+      );
+      render(<CheckpointPanel {...noAnalysis} />);
+      expect(screen.getByRole('status')).toHaveTextContent(/Queen’s Gambit family/i);
+    });
+
+    // An attempt made at another position must not follow the player here.
+    it('ignores an attempt recorded at a different node', () => {
+      startAtCheckpoint();
+      act(() => useLessonStore.getState().noteRejection('e3', { kind: 'wrong' }, 'some-other-node'));
+      render(<CheckpointPanel {...noAnalysis} />);
+      expect(screen.queryByText(/try again/i)).toBeNull();
+    });
   });
 
   // The shared surface. If both render hints, the player sees them twice.
@@ -88,7 +140,7 @@ describe('checkpoint panel', () => {
       render(<CheckpointPanel {...noAnalysis} />);
       // The Italian's first move is itself a checkpoint.
       expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
-      expect(screen.queryByText(/play e4\./i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/should not stop half-way/i)).not.toBeInTheDocument();
     });
 
     it('reveals hints one at a time, in order', async () => {
@@ -96,12 +148,12 @@ describe('checkpoint panel', () => {
       render(<CheckpointPanel {...noAnalysis} />);
 
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-      expect(screen.getByText(/central pawn moves/i)).toBeInTheDocument();
-      expect(screen.queryByText(/play e4\./i)).not.toBeInTheDocument();
+      expect(screen.getByText(/a pawn in the middle does two things/i)).toBeInTheDocument();
+      expect(screen.queryByText(/should not stop half-way/i)).not.toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-      expect(screen.getByText(/play e4\./i)).toBeInTheDocument();
+      expect(screen.getByText(/should not stop half-way/i)).toBeInTheDocument();
     });
 
     it('stops offering hints once they are exhausted', async () => {
@@ -121,17 +173,17 @@ describe('checkpoint panel', () => {
       for (let i = 0; i < 3; i += 1) {
         await userEvent.click(screen.getByRole('button', { name: /hint/i }));
       }
-      expect(screen.getByText(/play e4\./i)).toBeInTheDocument();
+      expect(screen.getByText(/should not stop half-way/i)).toBeInTheDocument();
 
-      // ...then walk to the second one (Bc4).
+      // ...then walk on to the Bc4 checkpoint.
       act(() => {
         for (const san of ['e4', 'e5', 'Nf3', 'Nc6']) useTreeStore.getState().playMove(san);
       });
       rerender(<CheckpointPanel {...noAnalysis} />);
 
       expect(screen.getByText(/most aggressive square/i)).toBeInTheDocument();
-      expect(screen.queryByText(/the bishop belongs on c4\./i)).not.toBeInTheDocument();
-      expect(screen.queryByText(/aim at the weakest point/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/looks straight at f7/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/guarded by a pawn or a piece/i)).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: /hint/i })).toBeInTheDocument();
     });
 
@@ -144,7 +196,7 @@ describe('checkpoint panel', () => {
       // question it answers and the Hint button both have to still be here.
       expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
       await userEvent.click(screen.getByRole('button', { name: /hint/i }));
-      expect(screen.getByText(/central pawn moves/i)).toBeInTheDocument();
+      expect(screen.getByText(/a pawn in the middle does two things/i)).toBeInTheDocument();
     });
 
     it('keeps the question up after a near miss too', () => {

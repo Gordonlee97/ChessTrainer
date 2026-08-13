@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { checkpointIds, parseLesson, validateLessonChess } from './load';
+import { checkpointIds, parseLesson, validateLessonChess, validateOpeningCoverage } from './load';
 import type { Lesson } from './schema';
 
 const minimal = {
@@ -133,6 +133,74 @@ describe('segment side override', () => {
     };
     bad.segments[0].side = 'green';
     expect(() => parseLesson(bad)).toThrow();
+  });
+});
+
+describe('validateOpeningCoverage', () => {
+  it('flags an opening move on the player side that has no checkpoint', () => {
+    const lesson = parseLesson({
+      id: 'x', title: 'X', kind: 'opening', side: 'white',
+      summary: 'S', tags: [],
+      segments: [{
+        startFen: null,
+        moves: [
+          { san: 'e4', checkpoint: { id: 'c1', prompt: 'p', accept: ['e4'], hints: ['h'] } },
+          { san: 'e5' },
+          { san: 'Nf3' }, // White's, and unasked — this is the defect
+        ],
+      }],
+    });
+    expect(validateOpeningCoverage(lesson)).toEqual([
+      'segment 0, move 2: "Nf3" is played by the player (white) but has no checkpoint',
+    ]);
+  });
+
+  it('says nothing about a theme lesson', () => {
+    const lesson = parseLesson({
+      id: 'y', title: 'Y', kind: 'theme', side: 'white',
+      summary: 'S', tags: [],
+      segments: [{ startFen: null, moves: [{ san: 'e4' }] }],
+    });
+    expect(validateOpeningCoverage(lesson)).toEqual([]);
+  });
+
+  it('honours a segment side override', () => {
+    const lesson = parseLesson({
+      id: 'z', title: 'Z', kind: 'opening', side: 'white',
+      summary: 'S', tags: [],
+      segments: [{
+        startFen: null, side: 'black',
+        moves: [
+          { san: 'e4' }, // White's — the opponent here, so no checkpoint needed
+          { san: 'e5' }, // Black's, and the player's — must be asked
+        ],
+      }],
+    });
+    expect(validateOpeningCoverage(lesson)).toEqual([
+      'segment 0, move 1: "e5" is played by the player (black) but has no checkpoint',
+    ]);
+  });
+
+  it('reads side from the position, not from index parity', () => {
+    // Derived, not hand-written: new Chess(), .move('e4'), .fen() — Black to
+    // move after White's first move. Move index 0 is then Black's turn even
+    // though it's the first move of the segment, so an implementation that
+    // infers side by counting plies (even index = white) gets both moves in
+    // this segment backwards.
+    const lesson = parseLesson({
+      id: 'w', title: 'W', kind: 'opening', side: 'white',
+      summary: 'S', tags: [],
+      segments: [{
+        startFen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1',
+        moves: [
+          { san: 'e5' }, // Black's — the opponent, no checkpoint needed
+          { san: 'Nf3' }, // White's, and the player's — must be asked
+        ],
+      }],
+    });
+    expect(validateOpeningCoverage(lesson)).toEqual([
+      'segment 0, move 1: "Nf3" is played by the player (white) but has no checkpoint',
+    ]);
   });
 });
 

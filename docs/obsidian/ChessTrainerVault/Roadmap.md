@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-11
+updated: 2026-08-13
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -90,25 +90,60 @@ re-review closed all four (suite 410 → 443).
 keyboard, so two behaviours never once observed in this project were watched
 working. See [[Lessons]] §6.
 
+**Plan 6 — The lesson quiz loop.** Ten tasks, complete 2026-08-13 on
+`feat/lesson-quiz-loop` (not yet merged). Opening lessons became a move-by-move
+quiz: every player-side move asked, wrong answers rejected before they reach the
+game tree, the opponent replying automatically. Lessons moved to a header
+dropdown so the base page is the explorer, and the left rail became the lesson's
+explanation. Content: 24 checkpoints, 72 hints, 110 near-miss replies. Plan:
+`docs/superpowers/plans/2026-08-11-lesson-quiz-loop.md`; spec:
+`docs/superpowers/specs/2026-08-11-lesson-loop-and-moves-table-design.md`.
+
+**Reviewed and fixed 2026-08-13.** An opening spike engine-checked all 24 taught
+moves at depth 18 before any prose was written (all CLEAR). The whole-branch
+review then found autoplay leaking into the four theme lessons the plan twice
+promised to leave alone, and a feedback mark that never expired where autoplay
+did not run; both fixed. Three commits during authoring corrected *false chess
+claims* in hints — see [[Lessons]] §9.
+
 ## Next
 
-**Nothing is planned.** Plan 5 closed the queued items (clear progress, the
-`dismissNotice` caller, `tree.pinned`), so the roadmap's "Also queued" section
-below is now empty of work.
+### Plan 7 — The moves table
 
-The strongest candidate for Plan 6 is **the compare drawer's contrast
-vocabulary** — see "Still undecided" below. It is the one item on this roadmap
-that changes whether the app *teaches* rather than *describes*, and it is a
-design decision before it is code.
+**Already specified**, in §4 of the Plan 6 spec, and deliberately deferred out
+of it. A lichess-style numbered move list — move number, White's move, Black's
+move — that **replaces `Breadcrumb.tsx`**: click any move to jump to that
+position, arrows to step through. Linear, never rendering a branch; where a
+node has several children it follows the most recently visited, which
+`TreeNode.lastSelectedAt` already supports.
 
-Before planning it, two things want a human at the keyboard:
+It is **app furniture, not a lesson feature** — present in the explorer as much
+as in a lesson. That was the user's explicit framing and it is why it replaces
+the breadcrumb rather than sitting alongside it.
 
-- **A design pass by eye.** Plan 5's layout has been *measured* — regions
-  aligned, board square, no overflow — but never *judged*. Nobody has looked at
-  it and said whether it feels right.
-- **Segment-level board orientation after "Next part"**, still the one
-  behaviour never observed. `Development and Tempo` flips to Black for its
-  second segment.
+One interaction already settled in the spec: arrow keys are resolved by focus,
+because Left/Right already move the board cursor and cannot be taken globally.
+
+
+
+### After Plan 7
+
+**The compare drawer's contrast vocabulary** — see "Still undecided" below. It
+is the one item on this roadmap that changes whether the app *teaches* rather
+than *describes*, and it is a design decision before it is code.
+
+One thing still wants a human at the keyboard, and it is the only item on this
+roadmap that no amount of automation will close:
+
+- **A design pass by eye.** The layout has been *measured* — regions aligned,
+  board square, no overflow — but never *judged*. Nobody has looked at it and
+  said whether it feels right. The wrong-answer ✕ is the concrete instance: it
+  has never been seen at a real viewport, because the automation tab renders at
+  zero size. See [[Known Issues]].
+
+Segment-level board orientation after "Next part" was listed here as never
+observed from Plan 4 until 2026-08-13, when the second browser pass finally
+watched it. It is no longer outstanding — see [[Start Here]].
 
 ## Also queued
 

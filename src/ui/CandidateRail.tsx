@@ -119,15 +119,29 @@ export function CandidateRail() {
     }
   }
 
-  // The single gate for "a checkpoint is being asked", and it sits *above*
-  // the engine-status returns on purpose. The prompt and the hint ladder are
-  // lesson content: they were an unconditional sibling of this rail before
-  // the panel absorbed them, and with the gate below the unavailable/thinking
-  // returns a dead engine made the lesson unanswerable while LessonRail's
-  // reply went on naming a Hint control that was not on screen. What the
-  // panel can say about the *engine* — the authored comparison — degrades to
-  // absent from a null `result`; the question never does.
-  if (askingCheckpoint(activeLesson)) {
+  // Two different questions, and they must not be conflated.
+  // `askingCheckpoint` stays the single decider of "is a checkpoint being
+  // asked right now" — both this rail and `CheckpointPanel` call it, and it
+  // sits *above* the engine-status returns on purpose. The prompt and the
+  // hint ladder are lesson content: they were an unconditional sibling of
+  // this rail before the panel absorbed them, and with the gate below the
+  // unavailable/thinking returns a dead engine made the lesson unanswerable
+  // while LessonRail's reply went on naming a Hint control that was not on
+  // screen. What the panel can say about the *engine* — the authored
+  // comparison — degrades to absent from a null `result`; the question
+  // never does.
+  //
+  // The opening-lesson clause is a separate, wider question: "is an opening
+  // lesson running at all", not "is a checkpoint pending". During the
+  // opponent's turn — including the 700ms auto-play window — nothing is
+  // pending, so `askingCheckpoint` alone would let the engine's suggestions
+  // flash on screen and hand over the next answer. Mounting `CheckpointPanel`
+  // for the whole of an opening lesson costs nothing while nothing is being
+  // asked: it renders null itself whenever `askingCheckpoint` says there is
+  // no question (see its own early return). Theme lessons are unaffected —
+  // they keep today's behaviour of falling through to the ordinary candidate
+  // list between checkpoints.
+  if (activeLesson?.lesson.kind === 'opening' || askingCheckpoint(activeLesson)) {
     return <CheckpointPanel result={result} status={status} onRetry={retry} />;
   }
 

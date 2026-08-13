@@ -1,24 +1,51 @@
 ---
-updated: 2026-08-10
+updated: 2026-08-13
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-08-10.** Plans 1 (foundation and line explorer), 2 (the explainer
-and compare), 3 (the teaching layer), 4 (progress, saved lines, and controls)
-and 5 (the app shell and keyboard navigation) are all complete in code. Plans
-1–4 are merged to `master`. Plan 5 sits on `feat/app-shell-and-keyboard`, eight
-implementation tasks plus a browser pass, **not yet merged and not yet given a
-whole-branch review**.
+**As of 2026-08-13.** Plans 1 (foundation and line explorer), 2 (the explainer
+and compare), 3 (the teaching layer), 4 (progress, saved lines, and controls),
+5 (the app shell and keyboard navigation) and 6 (the lesson quiz loop) are all
+complete in code. Plans 1-5 are merged to `master`. Plan 6 sits on
+`feat/lesson-quiz-loop` - ten tasks, a browser pass, a whole-branch review and
+its fix wave - **not yet merged**.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **434 passing, 1 skipped**, 46 test files, **zero warnings**.
+Suite: **482 passing, 1 skipped**, 51 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
+
+## Opening lessons are a quiz now (Plan 6)
+
+The biggest change to how the app *feels*. An opening lesson no longer narrates
+with a "Play the next move" button; it asks.
+
+- **Every player-side move is a question.** The three openings carry 24
+  checkpoints between them, one per player move, each with its own prompt and
+  up to three hints.
+- **A wrong answer never reaches the game tree.** The piece returns to its
+  square, a red mark appears, and the panel gives the authored near-miss reply
+  when there is one. The tree gains no node, so the position is untouched and
+  the question stands.
+- **The opponent replies on its own**, 700ms after a correct answer, so the
+  player only ever supplies their own side.
+- **Lessons live in a header dropdown**, which makes the base page the
+  explorer: you arrive at a board with candidate moves and pick a lesson when
+  you want one.
+- **The left rail is the explanation** during a lesson - title, "Move 3 of 17",
+  and the note for the move just played. The right rail is the question.
+
+**No hint names its move**, in notation or in words, across all 72 hints. That
+rule is enforced by reading, not by a test - see [[Lessons]] for why a scan
+cannot catch it.
+
+Theme lessons are deliberately untouched: occasional checkpoints, visible
+candidates, and "Play the next move".
 
 ## The board can finally be driven without a mouse
 
@@ -63,6 +90,8 @@ Run `npm run dev`, open the local URL, and you can:
 | Look at the whole app | A one-screen shell: header, breadcrumb, then three columns — lesson region, board, candidates. The board never moves between modes; only the rails change contents. Below 1100x640 it flows as a single scrolling column, board first. |
 | Open a comparison | Opens as an overlay spanning the centre and right columns — real width for three mini-boards — closing on Escape and restoring focus. |
 | Reach a checkpoint | The candidate rail hands its column to a checkpoint panel: the prompt, the hint ladder, and the authored comparison. Hints live here, not in the lesson rail, and stay put while an answer is graded. |
+| Start an opening lesson | Every move on your side is asked. Wrong answers bounce off the board with a red mark and an authored reply; right ones play, flash a check, and the opponent answers 700ms later. |
+| Open the Lessons menu | A header dropdown listing all seven lessons with their progress. Available mid-lesson - switching reseeds the tree cleanly and credits nothing. |
 | Reach a checkpoint with no engine | The question and the hints still appear — they are lesson content and no longer sit behind the rail's "Thinking…"/"Engine unavailable" returns. Only the authored comparison is lost; the Retry control comes along into the panel. |
 | Have unreadable stored progress | The notice appears in the **header**, survives starting a lesson, and can be dismissed. |
 | Want a clean slate | "Clear progress" in the header wipes durable storage behind a two-click "Really clear?" confirmation — no blocking modal. |

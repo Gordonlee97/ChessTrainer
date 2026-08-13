@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-10
+updated: 2026-08-13
 status: current
 tags: [chesstrainer, architecture]
 ---
@@ -210,3 +210,42 @@ engine-unavailable notice and its retry live in
 
 Keyboard board navigation is documented in
 [[Decisions/Keyboard Board Navigation Model]].
+
+
+## The lesson quiz loop (Plan 6, 2026-08-13)
+
+An opening lesson asks for every move on the player's side. Three mechanisms
+carry it, and the boundaries between them are where the bodies were buried.
+
+**Auto-play lives in exactly one hook**, `src/ui/useLessonAutoplay.ts`, called
+once from `App`. It fires only when four guards agree: an opening lesson is
+running, the line is on-script and unfinished, the side to move is *not* the
+player's, and the selected node has no children.
+
+- **Side-to-move, never "this move has no checkpoint."** Those coincide only
+  once the content is finished; inferring from the missing checkpoint would
+  have played the player's own moves for them throughout the build.
+- **Tip-of-line, or the lesson fights the player.** Without it, stepping back to
+  review drags you forward again 700ms later.
+- **Openings only.** Theme lessons pace themselves with "Play the next move";
+  this guard was missing for three tasks and quietly changed all four of them.
+
+**A rejected answer is the one piece of lesson state that is stored**, because
+it is the one thing that cannot be derived: the tree is the source of truth for
+position, and a rejected move deliberately never enters it. `Board` writes
+`lastRejection` and `lastAcceptance` (both carrying the node they belong to);
+`CheckpointPanel` and `MoveFeedback` read them. Everything else in the runner is
+re-derived from the tree by `deriveLessonState`.
+
+**`askingCheckpoint(active)` in `src/lesson/store.ts` is the single decider of
+"is a checkpoint being asked".** Three components call it. Do not add a fourth
+copy of the rule - a duplicate of exactly this condition caused a Critical in
+Plan 5. Note that "is an *opening lesson* running" is a genuinely different
+question, and `CandidateRail` asks both: the first to hide the candidates for
+the whole lesson, the second to decide whether there is a question to show.
+
+**Content is validated in two directions.** `validateLessonChess` replays every
+authored move, answer and near-miss key through chess.js; `validateOpeningCoverage`
+proves every player-side move in an opening carries a checkpoint - with whose
+turn it is taken **from the position**, never from index parity, because a
+segment may start Black-to-move or override its lesson's side.

@@ -68,7 +68,13 @@ export function LessonRail() {
     }
 
     if (state.complete && !state.offScript && !hasNextSegment) {
+      // `noteLessonComplete` dedupes internally because this effect re-runs
+      // on every render while the lesson sits complete (see the comment
+      // above) — the sound needs the same guard, checked before the call, or
+      // it would replay on every one of those re-renders.
+      const alreadyComplete = useProgressStore.getState().progress.lessons[lesson.id]?.completedAt;
       noteLessonComplete(lesson.id);
+      if (!alreadyComplete) sounds.play('lessonComplete');
     }
   }, [active, hintsShown, selectedId, noteAttempt, noteLessonComplete]);
 
@@ -105,57 +111,72 @@ export function LessonRail() {
   }
 
   return (
-    <section aria-label="Lesson" className="lesson-rail">
-      <h2 style={{ fontSize: 16, margin: '0 0 6px' }}>{lesson.title}</h2>
+    <section aria-label="Lesson" className="lesson-rail-wrap">
+      <div className="lesson-rail">
+        <h2 style={{ fontSize: 16, margin: '0 0 6px' }}>{lesson.title}</h2>
 
-      {state.ply === 0 && segment.intro && (
-        <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{segment.intro}</p>
-      )}
+        {/* Counts both sides, as `segment.moves` already does — a checkpoint
+            on Black's reply is still one more move of progress. */}
+        <p className="lesson-progress" style={{ margin: '0 0 6px' }}>
+          Move {state.ply} of {segment.moves.length}
+        </p>
 
-      {/*
-        The note belongs to the move just played, so it renders whenever the
-        path is on the line past ply 0 — including when the next move carries
-        a checkpoint (the note is usually what justifies the question) and
-        when the line has finished (otherwise every lesson drops its last
-        note).
-      */}
-      {lastNote && <p style={{ fontSize: 13 }}>{lastNote}</p>}
+        {state.ply === 0 && segment.intro && (
+          <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{segment.intro}</p>
+        )}
 
-      {state.complete && !state.offScript && (
-        <>
-          <p style={{ fontSize: 14, fontWeight: 800 }}>
-            {hasNextSegment ? 'That part is done — nicely played.' : 'Lesson complete — nicely done.'}
-          </p>
-          {hasNextSegment && <Button onClick={nextSegment}>Next part</Button>}
-        </>
-      )}
+        {/*
+          The note belongs to the move just played, so it renders whenever the
+          path is on the line past ply 0 — including when the next move carries
+          a checkpoint (the note is usually what justifies the question) and
+          when the line has finished (otherwise every lesson drops its last
+          note).
+        */}
+        {lastNote && <p style={{ fontSize: 13 }}>{lastNote}</p>}
 
-      {state.offScript && (
-        <>
-          {attemptedGrade?.kind === 'near-miss' ? (
-            <p role="status" style={{ fontSize: 13 }}>
-              {attemptedGrade.reply}
+        {state.complete && !state.offScript && (
+          <>
+            <p style={{ fontSize: 14, fontWeight: 800 }}>
+              {hasNextSegment ? 'That part is done — nicely played.' : 'Lesson complete — nicely done.'}
             </p>
-          ) : attemptedGrade?.kind === 'wrong' ? (
-            <p role="status" style={{ fontSize: 13 }}>
-              Not this time — take a hint, or use Return to the lesson to go back and try again.
-            </p>
-          ) : (
-            <p style={{ fontSize: 13 }}>
-              You have stepped off the lesson line. Explore as long as you like — the lesson waits.
-            </p>
+            {hasNextSegment && <Button onClick={nextSegment}>Next part</Button>}
+          </>
+        )}
+
+        {state.offScript && (
+          <>
+            {attemptedGrade?.kind === 'near-miss' ? (
+              <p role="status" style={{ fontSize: 13 }}>
+                {attemptedGrade.reply}
+              </p>
+            ) : attemptedGrade?.kind === 'wrong' ? (
+              <p role="status" style={{ fontSize: 13 }}>
+                Not this time — take a hint, or use Return to the lesson to go back and try again.
+              </p>
+            ) : (
+              <p style={{ fontSize: 13 }}>
+                You have stepped off the lesson line. Explore as long as you like — the lesson waits.
+              </p>
+            )}
+            <Button variant="ghost" onClick={returnToLesson}>
+              Return to the lesson
+            </Button>
+          </>
+        )}
+
+        {/* Theme lessons only: an opening lesson quizzes every one of the
+            player's moves, so a shortcut that plays the move for them would
+            hand over the very answer the lesson is asking for. */}
+        {lesson.kind !== 'opening' &&
+          !state.offScript &&
+          !state.complete &&
+          !state.pendingCheckpoint &&
+          state.nextMove && (
+            <Button onClick={() => playNextMove(state.nextMove!.san)} sound={false}>
+              Play the next move
+            </Button>
           )}
-          <Button variant="ghost" onClick={returnToLesson}>
-            Return to the lesson
-          </Button>
-        </>
-      )}
-
-      {!state.offScript && !state.complete && !state.pendingCheckpoint && state.nextMove && (
-        <Button onClick={() => playNextMove(state.nextMove!.san)} sound={false}>
-          Play the next move
-        </Button>
-      )}
+      </div>
 
       <Button variant="ghost" onClick={stopLesson}>
         Leave lesson

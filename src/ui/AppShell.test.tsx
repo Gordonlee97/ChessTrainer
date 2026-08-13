@@ -13,9 +13,10 @@ describe('app shell', () => {
     });
   });
 
-  it('offers the picker and saved lines when no lesson is running', () => {
+  it('offers saved lines in the left rail and the lessons menu in the header when no lesson is running', () => {
     render(<App />);
     expect(screen.getByRole('region', { name: /my lines/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /lessons/i })).toBeInTheDocument();
   });
 
   // Saved lines must not be reachable mid-lesson: opening one resets the tree,
