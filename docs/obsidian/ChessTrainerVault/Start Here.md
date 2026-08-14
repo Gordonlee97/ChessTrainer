@@ -14,8 +14,8 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| Branch | `feat/lesson-quiz-loop` — **pushed; PR #7 open, not merged** |
-| Merged to `master` | Plans 1–5 |
+| Branch | `feat/lesson-quiz-loop` — pushed, 3 commits ahead of `master`, **PR #8 open** |
+| Merged to `master` | Plans 1–6 (#7 merged 2026-08-13 21:38 UTC, *without* the two fixes in #8) |
 | Working tree | Clean |
 | Suite | 482 passing, 1 skipped (expected), **zero warnings** |
 | Last plan finished | Plan 6, the lesson quiz loop — ten tasks, **two independent browser passes**, a whole-branch review and its fix wave |
@@ -105,9 +105,17 @@ the player to look, so the two changes belong together.
 
 ## Do this next
 
-**1. PR #7 is ready for review.** Branch pushed, suite green (485 passing, 1
-expected skip, zero warnings), both blockers fixed and verified in the browser
-rather than only in tests. Nothing outstanding.
+**1. Review and merge PR #8.** Branch pushed, suite green (485 passing, 1
+expected skip, zero warnings), both defects fixed and verified in the browser
+rather than only in tests. Nothing outstanding on it.
+
+**PR #7 (Plan 6) was merged on 2026-08-13 at 21:38 UTC, before these fixes
+existed** — so `master` currently carries the quiz loop *with* the autoplay
+dead-end in it. Two sessions were working this branch again; #7 was merged by
+one of them while the other was still fixing. PR #8 is the follow-up, from the
+same `feat/lesson-quiz-loop` branch (which is three commits ahead of `master`
+rather than a fresh branch — worth knowing if you go looking for a
+`fix/` branch and cannot find one).
 
 **2. Plan 7 is the moves table.** Already specified, in
 `docs/superpowers/specs/2026-08-11-lesson-loop-and-moves-table-design.md` §4 —
