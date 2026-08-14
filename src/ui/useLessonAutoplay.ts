@@ -71,7 +71,20 @@ export function useLessonAutoplay(): void {
     // either. The lesson stopped dead with a blank rail. `lastPlayedId` (see
     // `tree/store.ts`) records the transition rather than inferring it from
     // the destination, which is what the two cases actually differ in.
-    if (useTreeStore.getState().lastPlayedId !== selectedNode.id) return;
+    //
+    // That fix alone regressed with the moves table's `next`/`last` controls,
+    // which reach a position with `selectNode` — clearing `lastPlayedId` even
+    // when a reply is still owed there. So the rule is a union, not a
+    // replacement: fire when the player moved here *or* when the node is a
+    // genuine tip with no child at all. Restoring the old tip-of-the-line
+    // check as the second half is safe this time, because it is only ever
+    // reached after the arrival-by-move check has already failed — a node
+    // stepped back to for review always has a child (it is, by definition,
+    // not the end of the line), so the review case stays protected by the
+    // first half being false and this half also being false there.
+    const arrivedByMove = useTreeStore.getState().lastPlayedId === selectedNode.id;
+    const childlessTip = selectedNode.childIds.length === 0;
+    if (!arrivedByMove && !childlessTip) return;
 
     const san = state.nextMove.san;
     const timer = setTimeout(() => {

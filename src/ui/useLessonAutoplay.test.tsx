@@ -89,6 +89,50 @@ describe('useLessonAutoplay', () => {
   });
 
   /**
+   * The case this plan's `next`/`last` controls create. Navigating *forward*
+   * to a tip that never received its reply is not reviewing — the reply is
+   * still owed — but the arrival was a `selectNode`, so `lastPlayedId` is
+   * null and the arrival-by-move rule alone declines.
+   *
+   * The tree is left in exactly that state here: the player answers, and the
+   * pending reply is cancelled by navigating away before the 700ms elapses.
+   */
+  it('plays a reply still owed at a childless tip, even when reached by navigating', () => {
+    render(<Harness />);
+    act(() => useLessonStore.getState().startLesson('italian-game'));
+    act(() => {
+      useTreeStore.getState().playMove('e4');
+    });
+
+    const afterE4 = useTreeStore.getState().tree.selectedId;
+    const root = pathTo(useTreeStore.getState().tree, afterE4)[0].id;
+
+    // Navigate away before the reply lands: the effect's cleanup clears the
+    // armed timer, so the tip keeps no child.
+    act(() => {
+      useTreeStore.getState().selectNode(root);
+    });
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    // `path()` reads the *current* selection, and that's root now — it can't
+    // speak to whether the tip picked up a child. Check the tip directly: no
+    // child means the pending reply really was cancelled, not just delayed.
+    expect(useTreeStore.getState().tree.nodes[afterE4].childIds).toEqual([]);
+
+    // Now walk forward to the tip the way `last` will.
+    act(() => {
+      useTreeStore.getState().selectNode(afterE4);
+    });
+    expect(useTreeStore.getState().lastPlayedId).toBeNull(); // arrived by navigation
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(path()).toEqual(['e4', 'e5']);
+  });
+
+  /**
    * The counterpart to the guard above, and the defect it originally caused.
    *
    * Stepping back and *replaying* a move is not the same act as stepping back
