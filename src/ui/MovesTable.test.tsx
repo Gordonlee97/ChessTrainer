@@ -70,9 +70,11 @@ describe('MovesTable', () => {
     expect(screen.getByRole('button', { name: /last/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /next/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /first/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /previous/i })).toBeEnabled();
 
     act(() => useTreeStore.getState().selectNode('root'));
     expect(screen.getByRole('button', { name: /first/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /previous/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /next/i })).toBeEnabled();
   });
 
@@ -81,5 +83,18 @@ describe('MovesTable', () => {
 
     expect(screen.getByRole('button', { name: /first/i })).toBeDisabled();
     expect(screen.getByRole('button', { name: /last/i })).toBeDisabled();
+  });
+
+  it('renders the white cell elision when the line begins with black', () => {
+    act(() => {
+      useTreeStore.getState().reset('rnbqkbnr/pppp1ppp/8/4p2Q/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 1 2');
+      useTreeStore.getState().playMove('Nc6');
+    });
+    render(<MovesTable />);
+
+    const elision = screen.getByText('…');
+    expect(elision).toBeInTheDocument();
+    expect(elision).toHaveClass('moves-table-elision');
+    expect(screen.getByRole('button', { name: 'Nc6' })).toBeInTheDocument();
   });
 });
