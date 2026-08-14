@@ -58,9 +58,20 @@ export function useLessonAutoplay(): void {
     const playerSide = segment.side ?? lesson.side;
     if (sideToMove(selectedNode.fen) === playerSide) return;
 
-    // Only at the tip of the line, so stepping back with Breadcrumb to
-    // review a position doesn't get dragged forward again.
-    if (selectedNode.childIds.length !== 0) return;
+    // Only when the player got here by *playing* a move, so stepping back
+    // with Breadcrumb to review a position doesn't get dragged forward again.
+    //
+    // This was a tip-of-the-line check (`childIds.length !== 0`) until
+    // 2026-08-13. That stood in for the same idea and got the review case
+    // right, but it also caught a case it was never meant to: replaying a move
+    // the player had already played. `insertMove` reuses the node, so the
+    // arrival node already had the opponent's reply as a child and looked
+    // exactly like a position being reviewed — autoplay declined, and since it
+    // was then not the player's turn, `CheckpointPanel` had nothing to render
+    // either. The lesson stopped dead with a blank rail. `lastPlayedId` (see
+    // `tree/store.ts`) records the transition rather than inferring it from
+    // the destination, which is what the two cases actually differ in.
+    if (useTreeStore.getState().lastPlayedId !== selectedNode.id) return;
 
     const san = state.nextMove.san;
     const timer = setTimeout(() => {

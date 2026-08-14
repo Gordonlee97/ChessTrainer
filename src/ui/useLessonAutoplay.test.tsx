@@ -88,6 +88,45 @@ describe('useLessonAutoplay', () => {
     expect(useTreeStore.getState().tree.selectedId).toBe(afterE4); // still there
   });
 
+  /**
+   * The counterpart to the guard above, and the defect it originally caused.
+   *
+   * Stepping back and *replaying* a move is not the same act as stepping back
+   * to look: the player has answered again and is owed the opponent's reply.
+   * `insertMove` reuses the node when the same move is replayed from the same
+   * parent, so the node arrived at already carries the opponent's reply as a
+   * child — which the tip-of-line guard read as "the player is reviewing" and
+   * declined. The reply never came, the checkpoint panel had nothing to show
+   * (it is not the player's turn), and the lesson could not advance at all.
+   *
+   * Observed in the browser on 2026-08-13, at `start` → `e4` → back to
+   * `start` → `e4`: the right-hand rail went blank and stayed blank.
+   */
+  it('plays the reply again when the player replays a move they already played', () => {
+    render(<Harness />);
+    act(() => useLessonStore.getState().startLesson('italian-game'));
+    act(() => {
+      useTreeStore.getState().playMove('e4');
+    });
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+    expect(path()).toEqual(['e4', 'e5']); // the first pass, for contrast
+
+    const root = pathTo(useTreeStore.getState().tree, useTreeStore.getState().tree.selectedId)[0].id;
+    act(() => {
+      useTreeStore.getState().selectNode(root);
+    }); // step back to the start …
+    act(() => {
+      useTreeStore.getState().playMove('e4');
+    }); // … and answer the same question again
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(path()).toEqual(['e4', 'e5']); // Black replied a second time
+  });
+
   it('does nothing when no lesson is running', () => {
     render(<Harness />);
     act(() => {

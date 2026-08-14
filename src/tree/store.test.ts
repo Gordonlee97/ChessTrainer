@@ -27,6 +27,36 @@ describe('tree store', () => {
     expect(useTreeStore.getState().tree.nodes[nodeId].eval?.depth).toBe(14);
   });
 
+  /**
+   * `lastPlayedId` exists so a consumer can tell "the player moved here" from
+   * "the player navigated here" — the two are indistinguishable from the node
+   * itself, because `insertMove` reuses a node when the same move is replayed
+   * from the same parent. `useLessonAutoplay` depends on it; see
+   * `Decisions/Arrival By Move Versus Navigation`.
+   *
+   * The clearing half is the fragile one: any future action that moves the
+   * selection without going through `playMove` has to clear it too, or a
+   * lesson will autoplay at a position the player only walked back to.
+   */
+  it('records the node a move landed on, and clears it on navigation', () => {
+    expect(useTreeStore.getState().lastPlayedId).toBeNull(); // fresh tree
+
+    const e4 = useTreeStore.getState().playMove('e4');
+    expect(useTreeStore.getState().lastPlayedId).toBe(e4);
+
+    useTreeStore.getState().selectNode(useTreeStore.getState().tree.rootId);
+    expect(useTreeStore.getState().lastPlayedId).toBeNull();
+
+    // Replaying reuses the node (same id as the first time) — and must still
+    // count as an arrival by move, which is the case the tip-of-line guard
+    // this replaced got wrong.
+    expect(useTreeStore.getState().playMove('e4')).toBe(e4);
+    expect(useTreeStore.getState().lastPlayedId).toBe(e4);
+
+    useTreeStore.getState().reset();
+    expect(useTreeStore.getState().lastPlayedId).toBeNull();
+  });
+
   it('navigates back to an ancestor and branches from there', () => {
     const store = useTreeStore.getState();
     store.playMove('e4');
