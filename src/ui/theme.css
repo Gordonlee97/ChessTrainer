@@ -324,16 +324,24 @@ body {
   margin: auto;
 }
 
-/* Mirrors .board-wrap's own box exactly (same formula, same breakpoint
-   override below) so the mark sits centred over the board regardless of
-   viewport shape. inset: 0 with auto margins is what centres it within that
-   box without needing to duplicate .board-wrap's layout math elsewhere. */
+/* Mirrors .board-wrap's own box: same size formula, and — the part that has
+   to match and once didn't — the same *placement rule*.
+   .board-wrap is a block child, where a vertical `margin: auto` computes to
+   zero and the board therefore sits flush to the top of .app-centre; only its
+   horizontal autos actually centre. An absolutely positioned box with
+   `inset: 0` honours auto margins on BOTH axes, so this rule used to centre
+   the mark vertically in a column the board was not centred in — measured
+   210.5px low on a 2552x1308 viewport, putting the mark on the second rank
+   instead of over the middle of the board. Pinning the top and leaving only
+   the horizontal margins auto reproduces block layout exactly.
+   (`aspect-ratio` cannot substitute for the size formula here — see the note
+   on .app-centre above.) */
 .move-feedback {
   position: absolute;
-  inset: 0;
+  inset: 0 0 auto 0;
   width: min(100cqw, 100cqh);
   height: min(100cqw, 100cqh);
-  margin: auto;
+  margin: 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -354,8 +362,15 @@ body {
   animation: move-feedback-pop 320ms var(--spring);
 }
 
-.move-feedback-mark--correct { background: var(--good); }
-.move-feedback-mark--wrong { background: var(--bad); }
+/* Translucent, not solid. Now that the mark lands where it was always meant
+   to — over the middle of the board — it covers part of the four central
+   squares, and the hints routinely ask the player to reason about exactly
+   those squares. The cross in particular is a standing fact about an unsolved
+   position, so it can sit there for as long as the player is thinking. At 80%
+   the piece underneath reads through it while the mark stays unmistakable
+   against both board colours. */
+.move-feedback-mark--correct { background: color-mix(in srgb, var(--good) 80%, transparent); }
+.move-feedback-mark--wrong { background: color-mix(in srgb, var(--bad) 80%, transparent); }
 
 @keyframes move-feedback-pop {
   from { transform: scale(0.6); opacity: 0; }

@@ -17,6 +17,23 @@ const MAX_CACHED_EVALS = 1000;
 
 interface TreeStore {
   tree: GameTree;
+  /**
+   * The node the most recent `playMove` landed on, or `null` if the current
+   * selection was not arrived at by playing a move.
+   *
+   * How a node was *reached* is not a property of the tree — the same node is
+   * the same node whether you moved to it or navigated to it — but it is the
+   * one thing that separates "the player just answered" from "the player is
+   * looking back at an earlier position", and those two want opposite
+   * behaviour from `useLessonAutoplay`. `insertMove` reuses an existing node
+   * when a move is replayed from the same parent, so the arrival node's own
+   * shape (its children, its move, its FEN) is identical in both cases and
+   * cannot tell them apart. This records the transition instead.
+   *
+   * Cleared by `selectNode` and `reset`: navigating away means the last move
+   * played is no longer where the player is standing.
+   */
+  lastPlayedId: NodeId | null;
   playMove: (san: string) => NodeId | null;
   selectNode: (nodeId: NodeId) => void;
   cacheEval: (nodeId: NodeId, evaluation: EvalResult) => void;
@@ -25,6 +42,7 @@ interface TreeStore {
 
 export const useTreeStore = create<TreeStore>((set, get) => ({
   tree: createTree(),
+  lastPlayedId: null,
 
   playMove: (san) => {
     const { tree } = get();
@@ -34,15 +52,18 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
     } catch {
       return null;
     }
-    set({ tree: evict(select(inserted.tree, inserted.nodeId), MAX_CACHED_EVALS) });
+    set({
+      tree: evict(select(inserted.tree, inserted.nodeId), MAX_CACHED_EVALS),
+      lastPlayedId: inserted.nodeId,
+    });
     return inserted.nodeId;
   },
 
-  selectNode: (nodeId) => set({ tree: select(get().tree, nodeId) }),
+  selectNode: (nodeId) => set({ tree: select(get().tree, nodeId), lastPlayedId: null }),
 
   cacheEval: (nodeId, evaluation) => set({ tree: setEval(get().tree, nodeId, evaluation) }),
 
-  reset: (startFen) => set({ tree: createTree(startFen) }),
+  reset: (startFen) => set({ tree: createTree(startFen), lastPlayedId: null }),
 }));
 
 export function useSelectedNode(): TreeNode {

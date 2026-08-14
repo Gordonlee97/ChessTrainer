@@ -34,3 +34,49 @@ describe('theme.css reduced-motion feedback', () => {
     expect(feedbackProperties.length).toBeGreaterThan(0);
   });
 });
+
+describe('theme.css feedback overlay placement', () => {
+  /**
+   * Guards the defect found in the browser on 2026-08-13, and it is worth
+   * being clear about what this can and cannot do.
+   *
+   * The overlay must sit on the board, and the board is a *block* child of
+   * .app-centre — so its vertical `margin: auto` computes to zero and it hangs
+   * from the top, while only its horizontal autos centre it. An absolutely
+   * positioned overlay with `inset: 0` and `margin: auto` centres on both
+   * axes, which put the mark 210.5px below the board's centre — on the second
+   * rank — on a 2552x1308 viewport. The two rules looked like they matched and
+   * did not.
+   *
+   * jsdom performs no layout, so the honest assertion (measure both boxes and
+   * compare) is not available here at any price; that check lives in a browser
+   * pass. This is the same deliberately weak, text-level shape as the
+   * reduced-motion test above: it cannot prove the overlay lands on the board,
+   * only that nobody has restored the specific declaration pair that is known
+   * to move it off.
+   */
+  it('does not centre .move-feedback vertically inside .app-centre', () => {
+    const css = readFileSync(THEME_CSS_PATH, 'utf8');
+
+    const ruleMatch = css.match(/\n\.move-feedback \{([^}]*)\}/);
+    expect(ruleMatch).not.toBeNull();
+    const declarations = ruleMatch![1];
+
+    const value = (property: string) =>
+      declarations.match(new RegExp(`(?:^|;|\\n)\\s*${property}\\s*:\\s*([^;]+)`))?.[1].trim();
+
+    // `inset: 0` alone stretches top AND bottom, which is what lets an auto
+    // vertical margin centre the box. The bottom edge has to be released.
+    const inset = value('inset');
+    expect(inset).toBeDefined();
+    expect(inset!.split(/\s+/)).toHaveLength(4);
+    expect(inset!.split(/\s+/)[2]).toBe('auto'); // bottom
+
+    // …and the vertical margin must not be auto, so the top pin actually
+    // decides the position. A one- or two-value shorthand's first token is
+    // the vertical one.
+    const margin = value('margin');
+    expect(margin).toBeDefined();
+    expect(margin!.split(/\s+/)[0]).not.toBe('auto');
+  });
+});

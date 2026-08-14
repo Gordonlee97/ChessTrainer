@@ -33,7 +33,11 @@ with a "Play the next move" button; it asks.
   when there is one. The tree gains no node, so the position is untouched and
   the question stands.
 - **The opponent replies on its own**, 700ms after a correct answer, so the
-  player only ever supplies their own side.
+  player only ever supplies their own side. It replies whenever the player
+  *moved* to the position — including replaying a move they had already played
+  after stepping back — and never when they merely navigated there. Until
+  2026-08-13 this was inferred from the node being childless, which dead-ended
+  the lesson on a replay; see [[Decisions/Arrival By Move Versus Navigation]].
 - **Lessons live in a header dropdown**, which makes the base page the
   explorer: you arrive at a board with candidate moves and pick a lesson when
   you want one.
@@ -90,7 +94,7 @@ Run `npm run dev`, open the local URL, and you can:
 | Look at the whole app | A one-screen shell: header, breadcrumb, then three columns — lesson region, board, candidates. The board never moves between modes; only the rails change contents. Below 1100x640 it flows as a single scrolling column, board first. |
 | Open a comparison | Opens as an overlay spanning the centre and right columns — real width for three mini-boards — closing on Escape and restoring focus. |
 | Reach a checkpoint | The candidate rail hands its column to a checkpoint panel: the prompt, the hint ladder, and the authored comparison. Hints live here, not in the lesson rail, and stay put while an answer is graded. |
-| Start an opening lesson | Every move on your side is asked. Wrong answers bounce off the board with a red mark and an authored reply; right ones play, flash a check, and the opponent answers 700ms later. |
+| Start an opening lesson | Every move on your side is asked. Wrong answers bounce off the board with a red mark and an authored reply; right ones play, flash a check, and the opponent answers 700ms later. Both marks are translucent discs centred on the board — measured there, not assumed. |
 | Open the Lessons menu | A header dropdown listing all seven lessons with their progress. Available mid-lesson - switching reseeds the tree cleanly and credits nothing. |
 | Reach a checkpoint with no engine | The question and the hints still appear — they are lesson content and no longer sit behind the rail's "Thinking…"/"Engine unavailable" returns. Only the authored comparison is lost; the Retry control comes along into the panel. |
 | Have unreadable stored progress | The notice appears in the **header**, survives starting a lesson, and can be dismissed. |

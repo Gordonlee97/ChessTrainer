@@ -301,23 +301,39 @@ either a structured field beside each claim or a convention a test can parse.
 That is a design question, which is why this is filed rather than fixed. See
 [[Lessons]] §9.
 
-### The wrong-answer mark sits over the centre of the board
+### Stepping back throws away the forward path
 
-**Where:** `src/ui/MoveFeedback.tsx`, `src/ui/theme.css`
-**Severity:** low, and deliberate — flagged so it is not rediscovered as a bug.
+**Where:** `src/ui/Breadcrumb.tsx`
+**Severity:** medium, and **already scheduled** — Plan 7's moves table replaces
+this control. Recorded because it is the reason the autoplay dead-end (fixed
+2026-08-13) had no escape hatch, and because the same trap will exist until
+Plan 7 lands.
 
-The cross persists until the player's next attempt, by design: it is a standing
-fact about a position they have not solved. It is an opaque disc of
-`clamp(28px, 10vw, 72px)` at `1.6em`, centred over the board, so on a 740px
-board it covers part of the four central squares while the hints are asking the
-player to reason about exactly those squares. `pointer-events: none`, so it
-never blocks interaction — only sight.
+The breadcrumb renders the path from the root to the *selected* node, so
+selecting an earlier node drops every crumb after it. The nodes are still in
+the tree — nothing is lost — but the UI has no forward control, so a player who
+steps back to re-read an explanation cannot return to where they were except by
+replaying the moves. A lichess-style move list (Plan 7, §4 of the spec) shows
+the whole line rather than the ancestor path and fixes this by construction.
 
-The check no longer has this problem: it retires itself after 900ms.
+### The near-miss reply is concatenated onto the engine-hidden notice
 
-Making the cross translucent is a one-line change if it proves obstructive in
-use. It has not been judged at a real viewport — the automation tab renders at
-a zeroed viewport, so its rendered size has never been observed.
+**Where:** `src/ui/CheckpointPanel.tsx:151-157`
+**Severity:** low. Found in the 2026-08-13 browser pass.
+
+Authored feedback is appended inside the *same* `<p role="status">` as the
+standing "Engine suggestions are hidden while the lesson is asking you for a
+move." boilerplate, so a wrong answer renders as one run-on paragraph:
+
+> Engine suggestions are hidden while the lesson is asking you for a move. The
+> bishop belongs there and you will play it next, but developing with a threat
+> first makes Black answer you rather than the other way round.
+
+Deliberate in the code (`{' '}` between them), not an accident. Two costs: the
+two sentences are unrelated and read as one, and because the whole paragraph is
+a single live region, assistive technology re-announces the boilerplate on
+every rejected move before reaching the part that changed. Splitting them into
+two elements, with only the feedback live, would fix both.
 
 ### One hint sits on the line the naming rule draws
 
