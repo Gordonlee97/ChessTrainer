@@ -105,7 +105,10 @@ correctness gap.
 Break any of these and the failure will be subtle and late.
 
 1. **The core imports no React.** Enforced by `src/test/purity.test.ts`.
-2. **The tree is the only source of position state.** No parallel copy.
+2. **The tree is the only source of position state.** No parallel copy. The
+   store's `lastPlayedId` is not one: it records how the current node was
+   *reached*, which the tree deliberately does not keep — see
+   [[Decisions/Arrival By Move Versus Navigation]].
 3. **One search, three lines.** Candidates come from a single `MultiPV=3`
    search — see [[Decisions/Single MultiPV Search]].
 4. **Evaluations are White-relative above the UCI layer.** UCI reports

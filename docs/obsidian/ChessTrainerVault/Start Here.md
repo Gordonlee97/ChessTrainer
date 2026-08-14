@@ -14,7 +14,7 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| Branch | `feat/lesson-quiz-loop` — **not pushed, not merged** |
+| Branch | `feat/lesson-quiz-loop` — **pushed; PR #7 open, not merged** |
 | Merged to `master` | Plans 1–5 |
 | Working tree | Clean |
 | Suite | 482 passing, 1 skipped (expected), **zero warnings** |
@@ -68,25 +68,48 @@ the app** — an authored key spelled `Bb5+` where the board produces `Bb5`, so
 that whole class now ships in `lessons.test.ts`.
 
 **Still never observed:** drag-and-drop (`onPieceDrop` remains unreachable to
-automation), and "Next part" inside an *opening* — all three openings have a
-single segment, so the control cannot appear there by construction.
+automation), "Next part" inside an *opening* — all three openings have a single
+segment, so the control cannot appear there by construction — and **the flowing
+fallback layout below 1100×640**, which no pass has ever rendered.
+
+**Moves *can* be automated, via the keyboard layer.** A third pass on
+2026-08-13 drove real moves end to end — focus the board, arrow keys to the
+square, Enter to pick up and place — and played wrong answers, near-misses and
+correct answers this way. `CLAUDE.md`'s "anything requiring a piece to move on
+the board cannot be automated today" is true only of *drag-and-drop*; the
+keyboard path in `Board.tsx`'s `onKeyDown` is fully drivable, and it is what
+found the autoplay dead-end. Worth correcting in `CLAUDE.md`.
+
+## The third browser pass found a blocker, and it is fixed
+
+The pass on 2026-08-13 drove the quiz loop through the keyboard layer and found
+two defects that every prior pass had missed, both now fixed on this branch:
+
+- **Replaying a move after stepping back dead-ended the lesson.** Step back to
+  `start`, play `e4` again → the opponent never replied and the checkpoint panel
+  went blank, permanently. `insertMove` reuses the node, so the tip-of-line
+  guard in `useLessonAutoplay` read "already has a child" as "the player is
+  reviewing" and declined. The tree store now records `lastPlayedId`, so the
+  hook tests *how the player arrived* rather than inferring it from where they
+  landed. See [[Decisions/Arrival By Move Versus Navigation]].
+- **The feedback mark was 210.5px below the board's centre** — on the second
+  rank, covering the d2 pawn — because `.board-wrap` is centred by block layout
+  (vertical `auto` margin computes to 0) while `.move-feedback` was centred by
+  absolute positioning (`inset: 0` + `auto` margin). The CSS comment asserting
+  the two boxes matched was simply wrong. Now measured at offset 0.01px.
+
+The mark is also translucent now (80%), which was the open judgement call the
+whole-branch review deferred to a human at a real viewport. Correct placement
+put it back over the four central squares, which is exactly where the hints ask
+the player to look, so the two changes belong together.
 
 ## Do this next
 
-**1. Look at it, then decide about the cross.** The whole-branch review flagged
-one thing it explicitly would not settle without a human at a real viewport: the
-red ✕ for a wrong answer persists until the next attempt — that is the intended
-behaviour, since it is a standing fact about an unsolved position — but it is an
-opaque disc over the centre of the board, and the hints often ask the player to
-reason about exactly those squares. It has **never been seen at a real
-viewport**; the automation tab renders at zero size. Making it translucent is a
-one-liner. Filed in [[Known Issues]].
+**1. PR #7 is ready for review.** Branch pushed, suite green (485 passing, 1
+expected skip, zero warnings), both blockers fixed and verified in the browser
+rather than only in tests. Nothing outstanding.
 
-**2. Then finish the branch** — push and open a PR, per [[Workflow]]. Nothing
-else is outstanding; this was left for a human because it is the one outward-
-facing step.
-
-**3. Plan 7 is the moves table.** Already specified, in
+**2. Plan 7 is the moves table.** Already specified, in
 `docs/superpowers/specs/2026-08-11-lesson-loop-and-moves-table-design.md` §4 —
 a lichess-style numbered move list that replaces the breadcrumb, clickable to
 jump, with arrows to step. It is deliberately *app furniture*, present in the
