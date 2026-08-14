@@ -241,11 +241,106 @@ body {
   flex: 1 1 auto;
 }
 
+/* ---- Moves table -------------------------------------------------------
+   An ordinary flex child of .app-rail — no scroll region of its own. The
+   rail is already `overflow-y: auto` with `min-height: 0` (see .app-rail
+   above); a second scrolling mechanism here would be two definitions of one
+   idea. A long line simply grows this section and the rail scrolls it. */
+
+.moves-table {
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.moves-table-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.moves-table-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.moves-table-rows li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.moves-table-number {
+  flex: 0 0 28px;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.moves-table-move {
+  flex: 1 1 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  text-align: left;
+  cursor: pointer;
+  /* box-shadow only — never a box-model property. Collapsing a border or
+     padding on :active reflows the rail on every click. */
+  box-shadow: none;
+  transition: background 90ms ease, border-color 90ms ease, box-shadow 90ms ease;
+}
+
+.moves-table-move:hover {
+  background: var(--bg);
+}
+
+.moves-table-move:focus-visible {
+  outline: 3px solid var(--secondary);
+  outline-offset: 1px;
+}
+
+.moves-table-move:not([aria-current='true']):active {
+  box-shadow: inset 0 0 0 2px var(--border);
+}
+
+/* The selected move: not colour alone. Filled background, bold weight and a
+   solid border together mark it, and aria-current carries it for assistive
+   tech — the DOM attribute the tests key on, not just this rule. */
+.moves-table-move[aria-current='true'] {
+  background: var(--primary);
+  border-color: var(--primary-shadow);
+  color: #fff;
+  font-weight: 800;
+}
+
+.moves-table-move[aria-current='true']:active {
+  box-shadow: inset 0 0 0 2px var(--primary-shadow);
+}
+
+.moves-table-elision {
+  color: var(--ink-soft);
+  cursor: default;
+  padding: 4px 8px;
+}
+
 /* ---- App shell -------------------------------------------------------- */
 
 .app-shell {
   display: grid;
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto 1fr;
   gap: 12px;
   padding: 16px 20px 20px;
   max-width: 1600px;
@@ -268,11 +363,26 @@ body {
 
 .app-header-spacer { flex: 1; }
 
-.app-crumb { min-width: 0; overflow-x: auto; }
-
+/* min-height: 0 plus a bounded row track, for the same reason .app-rail
+   needs both below — and discovered the same way: measured in a browser,
+   not inferred. .app-main has no overflow of its own, so without these two
+   declarations its single implicit row sizes to *content*, not to the
+   space .app-shell's `1fr` row actually has. A rail's overflow-y: auto
+   only caps that rail once ITS OWN grid cell is a fixed size; past a
+   one-line count where .app-rail's synthetic overflow-y: auto should have
+   already been clipping, this repo's own live page showed the row instead
+   growing past the viewport (1350px, later 2945px against a 1308px-tall
+   shell) with .app-shell's overflow: hidden silently eating the excess —
+   full lines vanishing off the bottom of the screen, unscrollable. `1fr`
+   alone carries an implicit `auto` minimum, which is content-based unless
+   the item's own overflow says otherwise; minmax(0, 1fr) removes that
+   minimum outright, and only then does the rail below get a real ceiling
+   to scroll inside of. */
 .app-main {
   display: grid;
   grid-template-columns: minmax(220px, 22%) 1fr minmax(260px, 28%);
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
   gap: 20px;
 }
 
