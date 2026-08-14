@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-13
+updated: 2026-08-14
 status: current
 tags: [chesstrainer, process, lessons]
 ---
@@ -345,6 +345,40 @@ were found, and how the review confirmed 13 of a 14-claim sample afterwards.
 
 **This is unguarded by any committed test** — see [[Known Issues]]. A false
 count still ships green today.
+
+### 10. Repo state read once and reported as if it were still true
+
+**Three instances, all on Plan 6**, and the third one shipped a blocker to
+`master`. Every one is the same shape: a fact about the *repository* — branch
+pushed, PR open, plan merged — established at one moment and then repeated later
+as current, in a repo where more than one session is working at a time.
+
+| Claim | What was actually true |
+|---|---|
+| `Start Here.md`: branch "**not pushed, not merged**", next action "push and open a PR" | Branch was pushed and PR #7 was open. Written by a session that had not pushed *yet* and never came back to the note |
+| A background job's state: "Plan 6 merged, Plan 7 ready" | #7 was still open at the time |
+| A session report: "**PR #7 is ready for review**" | #7 had been merged ~an hour earlier, mid-session, by another session. The two fixes just written were therefore *not* in the merge, and `master` carried a lesson-breaking dead-end until a second PR (#8) took it back out |
+
+The third is the expensive one, and note what made it possible: the PR state
+*was* checked, correctly, at the start of the session. It simply was not checked
+again before being reported. Everything else in that report was verified by
+running the app; the one unverified sentence was the one about the repository.
+
+**Countermeasure — re-read PR and branch state immediately before claiming a
+branch is finished, and treat the earlier reading as expired.** `gh pr view`
+and `git fetch && git log --oneline origin/master..HEAD` cost one command each.
+Specifically:
+
+- **`--state open` is a filter, not a fact.** A PR missing from that list may be
+  merged rather than absent; ask for `--state all` when the question is "does a
+  PR exist for this work".
+- **After pushing, confirm the commits are where you think.**
+  `git merge-base --is-ancestor <sha> origin/master` answers "did this actually
+  land" — a push to a branch whose PR already merged is silent and leaves no PR
+  pointing at the work.
+- **Concurrent sessions are the normal case here, not the exception** — see the
+  banner in [[Start Here]]. Any statement of the form "nothing else has changed"
+  is a guess unless a fetch backs it.
 
 ---
 

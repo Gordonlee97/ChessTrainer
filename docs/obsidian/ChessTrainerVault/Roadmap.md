@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-13
+updated: 2026-08-14
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -90,8 +90,9 @@ re-review closed all four (suite 410 → 443).
 keyboard, so two behaviours never once observed in this project were watched
 working. See [[Lessons]] §6.
 
-**Plan 6 — The lesson quiz loop.** Ten tasks, complete 2026-08-13 on
-`feat/lesson-quiz-loop` (not yet merged). Opening lessons became a move-by-move
+**Plan 6 — The lesson quiz loop.** Ten tasks, complete 2026-08-13, **merged
+2026-08-13/14** as PR #7 (the plan) and PR #8 (two fixes a third browser pass
+found after #7 had already merged). Opening lessons became a move-by-move
 quiz: every player-side move asked, wrong answers rejected before they reach the
 game tree, the opponent replying automatically. Lessons moved to a header
 dropdown so the base page is the explorer, and the left rail became the lesson's
@@ -105,6 +106,13 @@ review then found autoplay leaking into the four theme lessons the plan twice
 promised to leave alone, and a feedback mark that never expired where autoplay
 did not run; both fixed. Three commits during authoring corrected *false chess
 claims* in hints — see [[Lessons]] §9.
+
+**A third browser pass (2026-08-13/14) found what three reviews had not**, and it
+took PR #8 because #7 merged first: replaying a move after stepping back
+dead-ended the lesson outright, and the feedback mark had never once been on the
+board — 210.5px low, on the second rank. Both were found by driving the board's
+*keyboard* layer, which is automatable even though drag-and-drop is not. See
+[[Decisions/Arrival By Move Versus Navigation]] and [[Lessons]] §10.
 
 ## Next
 
