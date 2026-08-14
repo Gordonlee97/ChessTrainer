@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-13
+updated: 2026-08-14
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,24 +10,29 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-13
+## Repo state as of 2026-08-14
 
 | | |
 |---|---|
-| Branch | `feat/lesson-quiz-loop` — pushed, 3 commits ahead of `master`, **PR #8 open** |
-| Merged to `master` | Plans 1–6 (#7 merged 2026-08-13 21:38 UTC, *without* the two fixes in #8) |
+| Branch | `master`. Nothing in flight; `feat/lesson-quiz-loop` is merged and can be deleted |
+| Merged to `master` | Plans 1–6, complete — #7 (the plan) and #8 (its two browser-found fixes) |
 | Working tree | Clean |
-| Suite | 482 passing, 1 skipped (expected), **zero warnings** |
-| Last plan finished | Plan 6, the lesson quiz loop — ten tasks, **two independent browser passes**, a whole-branch review and its fix wave |
-| Merges cleanly into `master` | Yes, checked with `git merge-tree` |
+| Suite | 485 passing, 1 skipped (expected), **zero warnings** |
+| Last plan finished | Plan 6, the lesson quiz loop — ten tasks, **three independent browser passes**, a whole-branch review and two fix waves |
+| CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
 
-**Two Claude sessions worked this branch concurrently on 2026-08-12/13** and
-neither knew about the other until the end. It did no damage — the commits are
-disjoint and the second pass corroborated the first — but it is why the SDD
-ledger at `.superpowers/sdd/2026-08-11-lesson-quiz-loop/progress.md` and this
-vault were written by different hands and each records things the other does
-not. The ledger has the content-review detail; the vault has the review and fix
-wave. Read both if you need the full history of this branch.
+**Three Claude sessions have now worked this branch concurrently**, and the third
+time it cost something: PR #7 was merged on 2026-08-13 at 21:38 UTC by one
+session while another was mid-fix on a blocker, so Plan 6 reached `master` with a
+lesson-breaking bug in it and needed a second PR (#8, merged 2026-08-14 07:42
+UTC) to take it back out. Nothing was lost, but two hours of `master` carried a
+dead-end.
+
+The lesson generalises past this branch and is recorded in [[Lessons]] §10:
+**re-read the PR state immediately before claiming a branch is finished**, not at
+the start of the session. Both fixes in #8 were also invisible to the SDD ledger
+at `.superpowers/sdd/2026-08-11-lesson-quiz-loop/progress.md`, which is
+local-only — the vault is the only shared record.
 
 The one expected skip is `src/engine/engine.smoke.test.ts`, which needs a real
 `Worker`. jsdom has none, so the engine is verified in a browser. A second skip
@@ -83,7 +88,7 @@ found the autoplay dead-end. Worth correcting in `CLAUDE.md`.
 ## The third browser pass found a blocker, and it is fixed
 
 The pass on 2026-08-13 drove the quiz loop through the keyboard layer and found
-two defects that every prior pass had missed, both now fixed on this branch:
+two defects that every prior pass had missed, both fixed and merged in PR #8:
 
 - **Replaying a move after stepping back dead-ended the lesson.** Step back to
   `start`, play `e4` again → the opponent never replied and the checkpoint panel
@@ -105,27 +110,24 @@ the player to look, so the two changes belong together.
 
 ## Do this next
 
-**1. Review and merge PR #8.** Branch pushed, suite green (485 passing, 1
-expected skip, zero warnings), both defects fixed and verified in the browser
-rather than only in tests. Nothing outstanding on it.
+**Plan 6 is done and merged. Start Plan 7.** Nothing is in flight, nothing is
+half-finished, and `master` is the state to build on.
 
-**PR #7 (Plan 6) was merged on 2026-08-13 at 21:38 UTC, before these fixes
-existed** — so `master` currently carries the quiz loop *with* the autoplay
-dead-end in it. Two sessions were working this branch again; #7 was merged by
-one of them while the other was still fixing. PR #8 is the follow-up, from the
-same `feat/lesson-quiz-loop` branch (which is three commits ahead of `master`
-rather than a fresh branch — worth knowing if you go looking for a
-`fix/` branch and cannot find one).
-
-**2. Plan 7 is the moves table.** Already specified, in
+**1. Plan 7 is the moves table.** Already specified, in
 `docs/superpowers/specs/2026-08-11-lesson-loop-and-moves-table-design.md` §4 —
 a lichess-style numbered move list that replaces the breadcrumb, clickable to
 jump, with arrows to step. It is deliberately *app furniture*, present in the
 explorer as well as in lessons. `Breadcrumb.tsx` survives until it lands.
 
-## Two things this branch learned, worth reading before the next plan
+## Three things this branch learned, worth reading before the next plan
 
-Both are in [[Lessons]], and both cost real rework here:
+All are in [[Lessons]], and all cost real rework here:
+
+- **§10 — repo state read once and reported as if it were still true.** Three
+  instances, and the third one is why `master` briefly shipped a broken lesson.
+  Re-read PR and branch state *immediately* before calling a branch finished;
+  the reading you took at the start of the session has expired, because another
+  session is probably working too.
 
 - **§8 — a check that cannot tell its subject from a look-alike.** Eight
   instances on this branch. A test placed where the rule under test is not the
