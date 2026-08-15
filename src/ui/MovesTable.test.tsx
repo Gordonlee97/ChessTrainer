@@ -1,8 +1,25 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Mirrors Board.test.tsx: react-chessboard renders a full drag-and-drop
+// board that jsdom cannot usefully exercise (no real layout, so its own
+// move-animation code throws), and Howler logs noise onto a missing
+// HTMLMediaElement. Neither is relevant to whether an arrow key reaches the
+// tree, so both are stubbed here the same way, only for the one test below
+// that renders the full `<App />`.
+const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
+vi.mock('howler', () => ({
+  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
+}));
+vi.mock('react-chessboard', () => ({
+  Chessboard: () => null,
+}));
+
+import { App } from '../App';
 import { MovesTable } from './MovesTable';
+import { useLessonStore } from '../lesson/store';
 import { useTreeStore } from '../tree/store';
 
 function playLine(...sans: string[]) {
@@ -96,5 +113,76 @@ describe('MovesTable', () => {
     expect(elision).toBeInTheDocument();
     expect(elision).toHaveClass('moves-table-elision');
     expect(screen.getByRole('button', { name: 'Nc6' })).toBeInTheDocument();
+  });
+
+  it('walks the line with arrow keys when the table has focus', async () => {
+    const user = userEvent.setup();
+    playLine('e4', 'e5', 'Nf3');
+    render(<MovesTable />);
+
+    const table = screen.getByRole('region', { name: 'Moves' });
+    table.focus();
+    expect(table).toHaveFocus();
+
+    await user.keyboard('{ArrowLeft}');
+    expect(useTreeStore.getState().tree.selectedId).toBe('root/e4/e5');
+
+    await user.keyboard('{ArrowLeft}');
+    expect(useTreeStore.getState().tree.selectedId).toBe('root/e4');
+
+    await user.keyboard('{ArrowRight}');
+    expect(useTreeStore.getState().tree.selectedId).toBe('root/e4/e5');
+  });
+
+  it('prevents the default arrow-key scroll while the table has focus', () => {
+    playLine('e4', 'e5', 'Nf3');
+    render(<MovesTable />);
+
+    const table = screen.getByRole('region', { name: 'Moves' });
+    table.focus();
+
+    const event = fireEvent.keyDown(table, { key: 'ArrowLeft' });
+    // fireEvent.keyDown returns false when a handler called preventDefault().
+    expect(event).toBe(false);
+  });
+
+  it('does not steer past either end of the line with arrow keys', async () => {
+    const user = userEvent.setup();
+    playLine('e4');
+    render(<MovesTable />);
+
+    const table = screen.getByRole('region', { name: 'Moves' });
+    table.focus();
+
+    await user.keyboard('{ArrowRight}');
+    expect(useTreeStore.getState().tree.selectedId).toBe('root/e4');
+
+    await user.keyboard('{ArrowLeft}');
+    expect(useTreeStore.getState().tree.selectedId).toBe('root');
+
+    await user.keyboard('{ArrowLeft}');
+    expect(useTreeStore.getState().tree.selectedId).toBe('root');
+  });
+
+  it('leaves the tree alone when the board has focus, even though the table could still step forward', async () => {
+    const user = userEvent.setup();
+    act(() => useLessonStore.getState().stopLesson());
+    render(<App />);
+
+    act(() => {
+      useTreeStore.getState().playMove('e4');
+      useTreeStore.getState().playMove('e5');
+      useTreeStore.getState().selectNode('root/e4'); // not at the end — forward is still possible
+    });
+
+    const before = useTreeStore.getState().tree.selectedId;
+    expect(before).toBe('root/e4');
+    const board = screen.getByRole('application');
+    board.focus();
+    expect(board).toHaveFocus();
+
+    await user.keyboard('{ArrowRight}');
+
+    expect(useTreeStore.getState().tree.selectedId).toBe(before);
   });
 });

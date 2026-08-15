@@ -27,8 +27,18 @@ export function MovesTable() {
   const atStart = selectedIndex <= 0;
   const atEnd = selectedIndex >= lineIds.length - 1;
 
+  function onKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      if (!atStart) go(selectedIndex - 1);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      if (!atEnd) go(selectedIndex + 1);
+    }
+  }
+
   return (
-    <section className="moves-table" aria-label="Moves">
+    <section className="moves-table" aria-label="Moves" tabIndex={0} onKeyDown={onKeyDown}>
       <div className="moves-table-controls">
         <button type="button" className="btn" onClick={() => go(0)} disabled={atStart}>
           <span aria-hidden="true">⏮</span>
