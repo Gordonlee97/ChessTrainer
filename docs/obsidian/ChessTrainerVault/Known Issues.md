@@ -271,6 +271,119 @@ grows endgame content.
 **Where:** `src/explain/types.ts`
 **Severity:** trivial. Vocabulary declared and never produced.
 
+## Found in the 2026-08-15 whole-branch review of `feat/moves-table`
+
+### The moves table can only ever show one child of a branch point
+
+**Where:** `src/tree/movesTable.ts` — `continuationFrom`
+**Severity:** medium. Long-standing behaviour, not introduced by this branch —
+the breadcrumb it replaced had the same limit, just less visibly (it only ever
+rendered the ancestor path, never a continuation at all). Found in the
+2026-08-15 whole-branch review.
+
+When a node has more than one child, `continuationFrom` walks forward through
+whichever child has the greatest `lastSelectedAt` and stops there — so the
+table shows exactly one line at a time. Playing `e4 e5 Nf3`, stepping back to
+after `e4`, and playing `c5` instead replaces the table's continuation with the
+`c5` line; the `e5` branch's nodes are still in the tree (nothing is deleted),
+but there is no control that lists or reaches them again — the only way back
+is to know the position existed and navigate there some other way (e.g.
+replaying the moves). A line you navigate away from is effectively
+unreachable through the UI.
+
+Showing variations — a table that branches rather than a single flat list —
+was considered for this plan and rejected as substantially larger work (design
+spec §4): it changes the row shape, the navigation controls, and what
+"selected" means when more than one line is visible at once. This entry is
+what the spec's §4 sentence "it stays in `Known Issues.md`" refers to; the
+code comment above `continuationFrom` in `src/tree/movesTable.ts` names this
+file directly.
+
+### A reply owed at a node whose only children are off-script is never played
+
+**Where:** `src/ui/useLessonAutoplay.ts`
+**Severity:** medium — it dead-ends a lesson with no error and no visible
+cause. Pre-existing: the guard behaved identically before this branch. The
+moves table makes it worse, because the continuation follows the most recently
+selected child and so lists and walks the off-script line, inviting the player
+back into it. Found in the 2026-08-15 whole-branch review.
+
+Repro, Italian Game: play `e4`, autoplay replies `e5`; click the `e4` cell to
+go back to `root/e4`; from there play any non-lesson Black move (opponent
+moves carry no checkpoint, so nothing rejects it) — say `d5`; then click
+"Return to the lesson", which selects `root/e4`. Autoplay now declines because
+that node has children, but none of them is the lesson's next move, so the
+opponent never moves, the checkpoint panel renders nothing, and the right rail
+is blank. The only escape is playing `e5` by hand. The correct rule would be
+"a reply is owed when no child of the selected node matches the lesson's next
+move," not "the node has no children at all."
+
+### The trailing White-only row spans both columns
+
+**Where:** `src/ui/MovesTable.tsx` / `theme.css` — `.moves-table-move { flex: 1
+1 0 }`
+**Severity:** low, cosmetic. Found in the 2026-08-15 whole-branch review.
+
+When a row's last move is White's with no Black reply yet, there is no Black
+sibling to share the row with, so the White button's `flex: 1 1 0` lets it fill
+the whole row — including the empty Black column — and `aria-current`'s fill
+spans both, which is usually true of the selected row. Asymmetric with the
+leading-Black case (a segment starting Black-to-move), which does render an
+elision placeholder for the missing White cell. Fix would be an elision span
+in the `row.black === null` branch, or `flex: 0 0 50%` on `.moves-table-move`.
+
+### Nothing carries `aria-current` when the root is selected
+
+**Where:** `src/ui/MovesTable.tsx`
+**Severity:** low. Found in the 2026-08-15 whole-branch review.
+
+After clicking `First`, the table shows no "you are here" row — the root has
+no move and so no cell — and the only cue that the root is selected is the
+disabled First/Previous buttons. The design spec wanted a selectable start row;
+the plan that built the table deliberately omitted it as a gap, not a defect,
+but no `aria-current` element exists anywhere in that state either.
+
+### `preventDefault()` fires even when the arrow-key step is a no-op
+
+**Where:** `src/ui/MovesTable.tsx`
+**Severity:** low. Found in the 2026-08-15 whole-branch review.
+
+At either end of the line, `ArrowLeft`/`ArrowRight` cannot move the selection
+further, but the handler still calls `preventDefault()` before finding that
+out — swallowing a scroll key for nothing when the table has focus in the
+flowing sub-1100px layout, where the table is one scrollable region among
+several.
+
+### No `scrollIntoView` on the selected row
+
+**Where:** `src/ui/MovesTable.tsx`
+**Severity:** low. Found in the 2026-08-15 whole-branch review.
+
+Selecting a row — via click or the four controls — never scrolls it into view.
+On a long line, `next`/`last` can move the selection outside the rail's
+visible scroll area with no indication that anything changed.
+
+### `buildMovesTable` constructs a `Chess` twice per move
+
+**Where:** `src/tree/movesTable.ts` — `buildMovesTable`, via `src/chess/side.ts`
+**Severity:** trivial; a performance note, not a bug. Found in the 2026-08-15
+whole-branch review.
+
+`sideToMove(from)` and `moveNumber(from)` each parse the same FEN into a fresh
+`Chess` instance rather than sharing one. Negligible at current line lengths
+(tens of plies); would matter only if lines grew far longer than any lesson or
+saved line does today.
+
+### Repeated SANs produce duplicate accessible names
+
+**Where:** `src/ui/MovesTable.tsx`
+**Severity:** low, accessibility. Found in the 2026-08-15 whole-branch review.
+
+A line containing the same SAN twice — e.g. `Nf3 … Ng1 … Nf3` — yields two
+buttons with identical accessible names and no positional context, so a screen
+reader user cannot tell them apart by name alone. An `aria-label` such as
+"Move 12, White: Nf3" (fullmove number, side, SAN) would disambiguate them.
+
 ## Dead code and cleanup
 
 - **`Engine.stop()` has no callers** and does no bookkeeping.
