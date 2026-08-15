@@ -303,7 +303,11 @@ body {
   transition: background 90ms ease, border-color 90ms ease, box-shadow 90ms ease;
 }
 
-.moves-table-move:hover {
+/* :not(.moves-table-elision) on both of these: the elision span carries
+   .moves-table-move for column alignment, but it is aria-hidden and inert —
+   without the guard a mouse hovering "…" picked up the same highlight and
+   press ring as an actual move button. */
+.moves-table-move:not(.moves-table-elision):hover {
   background: var(--bg);
 }
 
@@ -312,7 +316,7 @@ body {
   outline-offset: 1px;
 }
 
-.moves-table-move:not([aria-current='true']):active {
+.moves-table-move:not(.moves-table-elision):not([aria-current='true']):active {
   box-shadow: inset 0 0 0 2px var(--border);
 }
 
@@ -363,25 +367,28 @@ body {
 
 .app-header-spacer { flex: 1; }
 
-/* min-height: 0 plus a bounded row track, for the same reason .app-rail
-   needs both below — and discovered the same way: measured in a browser,
-   not inferred. .app-main has no overflow of its own, so without these two
-   declarations its single implicit row sizes to *content*, not to the
-   space .app-shell's `1fr` row actually has. A rail's overflow-y: auto
-   only caps that rail once ITS OWN grid cell is a fixed size; past a
-   one-line count where .app-rail's synthetic overflow-y: auto should have
-   already been clipping, this repo's own live page showed the row instead
-   growing past the viewport (1350px, later 2945px against a 1308px-tall
-   shell) with .app-shell's overflow: hidden silently eating the excess —
-   full lines vanishing off the bottom of the screen, unscrollable. `1fr`
-   alone carries an implicit `auto` minimum, which is content-based unless
-   the item's own overflow says otherwise; minmax(0, 1fr) removes that
-   minimum outright, and only then does the rail below get a real ceiling
-   to scroll inside of. */
+/* min-height: 0, for the same reason .app-rail needs it below — and
+   discovered the same way: measured in a browser, not inferred. .app-main
+   has no overflow of its own, so without this its single implicit row sizes
+   to *content*, not to the space .app-shell's `1fr` row actually has. A
+   rail's overflow-y: auto only caps that rail once ITS OWN grid cell is a
+   fixed size; past a certain line count where .app-rail's overflow-y: auto
+   should have already been clipping, this repo's own live page showed the
+   row instead growing past the viewport (1350px, later 2945px against a
+   1308px-tall shell) with .app-shell's overflow: hidden silently eating the
+   excess — full lines vanishing off the bottom of the screen, unscrollable.
+   `min-height: 0` alone fixes it: measured with a 3000px probe appended to
+   .app-rail-right at 2552×1308 (base layout, with the compare overlay open,
+   and mid-lesson), removing only `min-height: 0` reproduced the unbounded
+   growth (.app-main height 1203px → 3568px, rail stopped scrolling
+   internally) every time; removing only an explicit `grid-template-rows`
+   track changed nothing measurable in any of those three states, so no such
+   track is declared here — one inert declaration left in "because it seemed
+   related" is exactly the kind of thing the next edit trusts and keeps
+   while deleting the line that actually matters. */
 .app-main {
   display: grid;
   grid-template-columns: minmax(220px, 22%) 1fr minmax(260px, 28%);
-  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   gap: 20px;
 }

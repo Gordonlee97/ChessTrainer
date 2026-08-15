@@ -59,7 +59,8 @@ export function useLessonAutoplay(): void {
     if (sideToMove(selectedNode.fen) === playerSide) return;
 
     // Only when the player got here by *playing* a move, so stepping back
-    // with Breadcrumb to review a position doesn't get dragged forward again.
+    // with the moves table to review a position doesn't get dragged forward
+    // again.
     //
     // This was a tip-of-the-line check (`childIds.length !== 0`) until
     // 2026-08-13. That stood in for the same idea and got the review case
