@@ -1,24 +1,76 @@
 ---
-updated: 2026-08-13
+updated: 2026-08-15
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-08-13.** Plans 1 (foundation and line explorer), 2 (the explainer
-and compare), 3 (the teaching layer), 4 (progress, saved lines, and controls),
-5 (the app shell and keyboard navigation) and 6 (the lesson quiz loop) are all
-complete in code. Plans 1-5 are merged to `master`. Plan 6 sits on
-`feat/lesson-quiz-loop` - ten tasks, a browser pass, a whole-branch review and
-its fix wave - **not yet merged**.
+**As of 2026-08-15.** Plans 1 through 6 are merged to `master`. Plan 7 (the
+moves table) is complete in code on `feat/moves-table` - six tasks and a
+browser pass - **not yet merged, no PR opened yet**.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **482 passing, 1 skipped**, 51 test files, **zero warnings**.
+Suite: **505 passing, 1 skipped**, 52 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
+
+## The breadcrumb is gone; a moves table replaced it (Plan 7)
+
+`Breadcrumb.tsx` is deleted. In its place, `src/ui/MovesTable.tsx` renders a
+lichess-style numbered list — White's move and Black's in one row — derived
+fresh on every render by `buildMovesTable` (`src/tree/movesTable.ts`) from the
+tree's current path plus its continuation. Nothing about the line is stored
+outside the tree.
+
+- **The behaviour the breadcrumb couldn't do**: stepping back with `previous`
+  no longer drops the moves ahead of you. The table walks the path to the
+  selected node and then keeps walking forward through whichever child each
+  node last had selected (`TreeNode.lastSelectedAt`), so the continuation stays
+  listed and clickable. Playing a genuinely different move from a branch point
+  replaces that continuation, in place, the next time the table renders.
+- **Four controls** — first, previous, next, last — step `lineIds`, the same
+  array the rows are built from, so the controls and the rows can never
+  disagree about what the line is.
+- **Arrow keys are resolved by focus.** `ArrowLeft`/`ArrowRight` only step the
+  table when the table itself has focus (`tabIndex={0}` on the section); the
+  board's own arrow-key cursor is unaffected, since Left/Right are already
+  claimed there.
+- **The root is reachable** via `lineIds[0]` and the `First` control, but there
+  is no rendered "start" row — a row with no move has no cell for a numbered
+  pair. Stated as a gap in the plan, not fixed here.
+- **Numbering comes from the position, never index parity.** A segment that
+  starts Black-to-move (`development-and-tempo`'s second part) renders its
+  first row as `2.` with an elided White cell (`…`), matching the FEN's own
+  fullmove number. Confirmed in a browser 2026-08-15.
+
+**Browser-verified 2026-08-15** (see [[Start Here]] for the session note): the
+continuation-survives-stepping-back behaviour, branching replacing the table's
+continuation, the Black-to-move numbering case, and — the one that mattered
+most — that the autoplay-owed-reply fix (below) survives navigating away from
+and back to the tip mid-lesson. All five checks in the plan's browser pass held.
+
+## The autoplay dead-end from Plan 6 is fixed (`bd37bb7`)
+
+Reaching the tip of a lesson line **by navigation** (clicking an earlier moves-
+table row, then `last`) now still fires the opponent's owed reply if one was
+pending, matching the fix already shipped for reaching it by replaying a move.
+Both paths go through the same tip-of-line guard in `useLessonAutoplay`, keyed
+off `lastPlayedId` rather than "the node has no children." See
+[[Decisions/Arrival By Move Versus Navigation]].
+
+## A layout defect found and fixed on this branch
+
+`.app-main` lacked `min-height: 0`, so `.app-shell`'s `1fr` row grew to fit
+content instead of the viewport — measured at 2945px against a 1308px shell —
+and `overflow: hidden` silently clipped the excess. A long moves table or a
+long candidate rail simply vanished off the bottom, unscrollable. Fixed by
+adding `min-height: 0` to `.app-main`, the same fix `.app-rail` already needed
+for the same reason (see the CSS comment above `.app-main` in
+`src/ui/theme.css`). The defect predates the moves table — it reproduced on the
+left rail too — and was only surfaced by the moves table's longer rows.
 
 ## Opening lessons are a quiz now (Plan 6)
 
@@ -85,13 +137,14 @@ Run `npm run dev`, open the local URL, and you can:
 | Watch the rail mid-search | Scores and eval bars stream; **badges and ideas are withheld until the search settles**, because comparing two lines only means something at equal depth |
 | Click a candidate | Plays it — identical result to dragging the same move |
 | Click "Compare X and Y" | Opens a drawer with two mini-boards (each captioned with the plies actually walked, at most 8), eval bars, pros/cons, and a verdict — mate distances when either line mates, "practically equal" under a 30cp gap, otherwise "X is stronger by N pawns" |
-| Click a breadcrumb chip | Jumps back to that position |
+| Click a move in the moves table | Jumps to that position; the rest of the line stays listed, even the moves ahead of where you land |
+| Click first / previous / next / last below the table | Steps through the current line one position at a time |
 | Play a different move from an earlier position | **Branches the tree.** The original line survives and is one click away. |
 | Reach checkmate or stalemate | The rail says so rather than spinning |
 | Lose the engine | "Engine unavailable" card with a working Retry button |
 | Revisit a transposed position | Analysis is served from a FEN-keyed cache instead of re-searched — see `src/engine/evalCache.ts` |
 | Tab to the board and use the keyboard | Arrows move a cursor, Enter picks up and places, Escape puts down. Direction follows board orientation. A visually-hidden `aria-live` region announces each square with its occupant, and refuses illegal moves aloud without playing them. |
-| Look at the whole app | A one-screen shell: header, breadcrumb, then three columns — lesson region, board, candidates. The board never moves between modes; only the rails change contents. Below 1100x640 it flows as a single scrolling column, board first. |
+| Look at the whole app | A one-screen shell: header, then three columns — lesson region, board, candidates. The board never moves between modes; only the rails change contents. The moves table sits in the right rail, below the candidates or the checkpoint panel. Below 1100x640 it flows as a single scrolling column, board first — **unverified this session**, same as every prior pass; the automation window cannot be resized. |
 | Open a comparison | Opens as an overlay spanning the centre and right columns — real width for three mini-boards — closing on Escape and restoring focus. |
 | Reach a checkpoint | The candidate rail hands its column to a checkpoint panel: the prompt, the hint ladder, and the authored comparison. Hints live here, not in the lesson rail, and stay put while an answer is graded. |
 | Start an opening lesson | Every move on your side is asked. Wrong answers bounce off the board with a red mark and an authored reply; right ones play, flash a check, and the opponent answers 700ms later. Both marks are translucent discs centred on the board — measured there, not assumed. |
@@ -237,6 +290,13 @@ See [[Roadmap]] for ordering.
 
 ## Recent history
 
+- **2026-08-15** — Plan 7 (the moves table) finished on `feat/moves-table`: six
+  tasks — the autoplay-owed-reply fix, the pure derivation
+  (`buildMovesTable`), the component and its four controls, mounting it in
+  place of `Breadcrumb.tsx` (plus the `.app-main` layout fix), and focus-scoped
+  arrow keys. A browser pass confirmed all five checks in the plan, including
+  the one unit tests cannot show: the owed-reply fix survives navigating away
+  from and back to a lesson's tip. Suite 482 → 505. **Not yet merged.**
 - **2026-08-06** — Plan 4 (progress, saved lines, and controls) finished on
   `feat/progress-and-controls`: six tasks — segment-level board orientation,
   the progress schema/reducers/storage, the progress store recording

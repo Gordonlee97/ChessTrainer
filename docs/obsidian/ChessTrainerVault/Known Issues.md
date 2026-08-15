@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-13
+updated: 2026-08-15
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -300,21 +300,6 @@ A guard is possible but not obvious — the claims are prose, so it would need
 either a structured field beside each claim or a convention a test can parse.
 That is a design question, which is why this is filed rather than fixed. See
 [[Lessons]] §9.
-
-### Stepping back throws away the forward path
-
-**Where:** `src/ui/Breadcrumb.tsx`
-**Severity:** medium, and **already scheduled** — Plan 7's moves table replaces
-this control. Recorded because it is the reason the autoplay dead-end (fixed
-2026-08-13) had no escape hatch, and because the same trap will exist until
-Plan 7 lands.
-
-The breadcrumb renders the path from the root to the *selected* node, so
-selecting an earlier node drops every crumb after it. The nodes are still in
-the tree — nothing is lost — but the UI has no forward control, so a player who
-steps back to re-read an explanation cannot return to where they were except by
-replaying the moves. A lichess-style move list (Plan 7, §4 of the spec) shows
-the whole line rather than the ancestor path and fixes this by construction.
 
 ### The near-miss reply is concatenated onto the engine-hidden notice
 

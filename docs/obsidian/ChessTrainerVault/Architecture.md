@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-13
+updated: 2026-08-15
 status: current
 tags: [chesstrainer, architecture]
 ---
@@ -32,12 +32,12 @@ with no rendering involved.
 | `src/chess/` | Helpers over chess.js: position feature extraction (`features.ts`), pawn structure (`pawnStructure.ts`), fork/pin detection (`tactics.ts`), drop resolution (`resolveDrop.ts`), and PGN round-tripping for saved lines (`pgn.ts`) |
 | `src/engine/` | UCI protocol parsing, the Stockfish Worker transport, the `Engine` class that serializes searches, and a position-keyed eval cache (`evalCache.ts`) shared across transposed positions. Its key is the first four FEN fields — placement, side to move, castling, en passant — deliberately excluding the move clocks, which are how a position was reached rather than what it is |
 | `src/explain/` | Pure functions over `PvLine`s and position features, no React: move-quality banding (`quality.ts`), the rule-based explainer with a FEN fixture table (`rules.ts`, `explain.ts`), and line comparison with a calibrated verdict (`compare.ts`) |
-| `src/tree/` | The immutable game tree (`tree.ts`) and its Zustand store (`store.ts`) |
+| `src/tree/` | The immutable game tree (`tree.ts`), its Zustand store (`store.ts`), and the pure derivation of a numbered moves table from it (`movesTable.ts`) |
 | `src/sound/` | Howler wrapper: preload, pooling, mute, graceful degradation |
 | `src/content/` | The authored corpus: the Zod schema (`schema.ts`), the parsing and chess-validating loader (`load.ts`), and seven lessons under `lessons/`. Validation replays every authored move, every accepted checkpoint answer, every `nearMiss` key and every `alternative` through chess.js — legality only; it cannot tell a legal move from a good one |
 | `src/lesson/` | The runner. `lessonState.ts` derives where the player is by matching the tree's path against the segment's moves; `grade.ts` judges an attempted answer; `store.ts` is the only stateful piece and holds just the lesson id, the segment index, and per-checkpoint hint counts |
 | `src/progress/` | A versioned progress object, reduced by pure functions (`progress.ts`) over a Zod-validated shape (`schema.ts`), read/written through resilient localStorage I/O (`storage.ts`) and a Zustand store (`store.ts`) that dedupes repeat attempts within a session and reports write failures. Nothing here knows about the tree or the lesson runner — recording is the UI's job, keyed by the authored checkpoint `id` the content layer guarantees is unique |
-| `src/ui/` | Board, EvalBar, Breadcrumb, CandidateRail, QualityBadge, CompareDrawer, MiniBoard, Button, LessonPicker, LessonRail, SavedLines, AppControls, the analysis hook, theme tokens |
+| `src/ui/` | Board, EvalBar, MovesTable, CandidateRail, QualityBadge, CompareDrawer, MiniBoard, Button, LessonPicker, LessonRail, SavedLines, AppControls, the analysis hook, theme tokens |
 
 **The lesson layer stores no position.** `useActiveLesson` recomputes everything
 from the tree's path on every render, which is why branching off a lesson and
@@ -252,3 +252,38 @@ authored move, answer and near-miss key through chess.js; `validateOpeningCovera
 proves every player-side move in an opening carries a checkpoint - with whose
 turn it is taken **from the position**, never from index parity, because a
 segment may start Black-to-move or override its lesson's side.
+
+## The moves table (Plan 7, 2026-08-15)
+
+`Breadcrumb.tsx` is deleted. `src/tree/movesTable.ts`'s `buildMovesTable` is
+the only place that turns the tree into a displayed line, and it is called
+fresh on every render from `src/ui/MovesTable.tsx` — **the table stores no
+line of its own**, the same discipline the lesson layer follows for position.
+
+- **One walk produces both the rows and the navigation order.** `pathTo` gives
+  the ancestors of the selected node; a second walk then follows whichever
+  child had the greatest `lastSelectedAt` at each branch, for as long as
+  children exist. Rows are numbered from each position's own FEN fullmove
+  field, never from index parity — the same rule `validateOpeningCoverage`
+  already enforces on lesson content, now enforced on display too.
+- **This is what makes the table survive stepping back.** The breadcrumb it
+  replaced rendered only the ancestor path, so selecting an earlier node
+  dropped everything after it from view (though never from the tree). The
+  moves table's forward walk means the continuation stays listed and
+  clickable — confirmed in a browser 2026-08-15, the whole reason this plan
+  existed.
+- **Deriving the rows and the four controls (first/previous/next/last) from
+  one `lineIds` array** is deliberate: this repo's recurring failure mode is
+  two correct-looking definitions of the same idea drifting apart
+  ([[Lessons]] §5), and a control that disagreed with a row about what the
+  line is would be exactly that.
+- **Arrow keys are focus-scoped.** The table only intercepts `ArrowLeft` /
+  `ArrowRight` when it holds DOM focus; the board's own keyboard cursor (also
+  Arrow-key driven) is a different focus target and unaffected.
+
+**One fix travelled with this plan but predates it.** `.app-main` was missing
+`min-height: 0` — the same rule `.app-rail` already needed (see "The app
+shell" above) — so `.app-shell`'s `1fr` row grew to fit content instead of the
+viewport, and `overflow: hidden` silently clipped the excess. Long rail
+content, including a long moves table, vanished off the bottom unscrollable.
+Full measurement in the CSS comment above `.app-main` in `src/ui/theme.css`.

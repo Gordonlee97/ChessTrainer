@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-14
+updated: 2026-08-15
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,16 +10,21 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-14
+## Repo state as of 2026-08-15
 
 | | |
 |---|---|
-| Branch | `master`. Nothing in flight; `feat/lesson-quiz-loop` is merged and can be deleted |
-| Merged to `master` | Plans 1–6, complete — #7 (the plan) and #8 (its two browser-found fixes) |
+| Branch | `feat/moves-table`, 8 commits ahead of `origin/master` (`bb68efc`..`cebaa79`). **Complete and browser-verified, but not merged — no PR opened yet.** |
+| Merged to `master` | Plans 1–6 only |
 | Working tree | Clean |
-| Suite | 485 passing, 1 skipped (expected), **zero warnings** |
-| Last plan finished | Plan 6, the lesson quiz loop — ten tasks, **three independent browser passes**, a whole-branch review and two fix waves |
+| Suite | 505 passing, 1 skipped (expected), **zero warnings** |
+| Last plan finished | Plan 7, the moves table — six tasks plus a browser pass. See [[Roadmap]] and [[Current State]] |
 | CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
+
+Re-checked immediately before writing this note (per [[Lessons]] §10):
+`gh pr list --state all` shows no PR for `feat/moves-table`; `git log
+origin/master..HEAD` shows exactly the 8 commits above. Nothing else is in
+flight on this branch.
 
 **Three Claude sessions have now worked this branch concurrently**, and the third
 time it cost something: PR #7 was merged on 2026-08-13 at 21:38 UTC by one
@@ -108,16 +113,36 @@ whole-branch review deferred to a human at a real viewport. Correct placement
 put it back over the four central squares, which is exactly where the hints ask
 the player to look, so the two changes belong together.
 
+## Plan 7, the moves table, is done and browser-verified — not yet merged
+
+Six tasks on `feat/moves-table`, finished 2026-08-15: the autoplay-owed-reply
+fix reconciled with a navigation-reached tip (`bd37bb7`), the pure derivation
+`buildMovesTable`, the `MovesTable` component and its four controls, mounting
+it in place of `Breadcrumb.tsx` (now deleted), and focus-scoped arrow keys.
+[[Current State]] and [[Architecture]] have the detail.
+
+A browser pass on 2026-08-15 ran all five checks the plan called for:
+stepping back keeps the continuation listed (the whole reason this replaced
+the breadcrumb); playing a different move from a branch point makes the table
+follow the new line; a Black-to-move segment (`development-and-tempo` part 2)
+numbers its first row `2.` with an elided White cell; stepping back
+mid-lesson never drags the player forward again; and — the one that mattered
+most — answering a checkpoint correctly, clicking an earlier moves-table row,
+then clicking `last`, still produces the opponent's reply rather than a blank
+panel. All five held. Full session notes, including an unexplained (and
+almost certainly harmless) rendering glitch during the pass, are in
+`.superpowers/sdd/2026-08-14-moves-table/task-6-report.md`.
+
+**This branch is not merged and no PR exists for it.** `gh pr list --state
+all` was checked immediately before writing this note (not at session start —
+see [[Lessons]] §10) and shows nothing for `feat/moves-table`.
+
 ## Do this next
 
-**Plan 6 is done and merged. Start Plan 7.** Nothing is in flight, nothing is
-half-finished, and `master` is the state to build on.
-
-**1. Plan 7 is the moves table.** Already specified, in
-`docs/superpowers/specs/2026-08-11-lesson-loop-and-moves-table-design.md` §4 —
-a lichess-style numbered move list that replaces the breadcrumb, clickable to
-jump, with arrows to step. It is deliberately *app furniture*, present in the
-explorer as well as in lessons. `Breadcrumb.tsx` survives until it lands.
+**Open a PR for `feat/moves-table` and merge it**, following [[Workflow]].
+Nothing else is in flight. Once merged, the next roadmap item is the compare
+drawer's contrast vocabulary — see [[Roadmap]] "Next" — which is a design
+decision before it is code, not a task to start writing against directly.
 
 ## Three things this branch learned, worth reading before the next plan
 

@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-14
+updated: 2026-08-15
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -114,27 +114,27 @@ board — 210.5px low, on the second rank. Both were found by driving the board'
 *keyboard* layer, which is automatable even though drag-and-drop is not. See
 [[Decisions/Arrival By Move Versus Navigation]] and [[Lessons]] §10.
 
+**Plan 7 — The moves table.** Six tasks plus a browser pass, complete
+2026-08-15 on `feat/moves-table` (**not yet merged, no PR opened**). A
+lichess-style numbered move list — move number, White's move, Black's move —
+**replaces `Breadcrumb.tsx`**: click any move to jump to that position, arrows
+to step through when the table has focus, first/previous/next/last controls
+below it. Linear, never rendering a branch; where a node has several children
+it follows the most recently visited (`TreeNode.lastSelectedAt`). Derivation is
+pure and unit-tested without rendering (`src/tree/movesTable.ts`); the
+component (`src/ui/MovesTable.tsx`) stores nothing. Along the way: the
+tip-of-line autoplay guard now fires on reaching a lesson's tip by navigation,
+not only by replaying a move (`bd37bb7`), and a pre-existing layout defect
+(`.app-main` missing `min-height: 0`, silently clipping long rail content) was
+found and fixed. Plan: `docs/superpowers/plans/2026-08-14-moves-table.md`.
+
+**Browser-verified 2026-08-15.** All five checks in the plan's browser pass
+held, including the one only a browser can show: the autoplay-owed-reply fix
+survives clicking back to an earlier row mid-lesson and then `last`. See
+[[Current State]] for detail and [[Start Here]] for the session note. Suite
+482 → 505.
+
 ## Next
-
-### Plan 7 — The moves table
-
-**Already specified**, in §4 of the Plan 6 spec, and deliberately deferred out
-of it. A lichess-style numbered move list — move number, White's move, Black's
-move — that **replaces `Breadcrumb.tsx`**: click any move to jump to that
-position, arrows to step through. Linear, never rendering a branch; where a
-node has several children it follows the most recently visited, which
-`TreeNode.lastSelectedAt` already supports.
-
-It is **app furniture, not a lesson feature** — present in the explorer as much
-as in a lesson. That was the user's explicit framing and it is why it replaces
-the breadcrumb rather than sitting alongside it.
-
-One interaction already settled in the spec: arrow keys are resolved by focus,
-because Left/Right already move the board cursor and cannot be taken globally.
-
-
-
-### After Plan 7
 
 **The compare drawer's contrast vocabulary** — see "Still undecided" below. It
 is the one item on this roadmap that changes whether the app *teaches* rather
