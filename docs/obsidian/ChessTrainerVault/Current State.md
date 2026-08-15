@@ -103,6 +103,15 @@ cannot catch it.
 Theme lessons are deliberately untouched: occasional checkpoints, visible
 candidates, and "Play the next move".
 
+**A Black-side opening lesson opens with the opponent's move already played.**
+`black-vs-e4` (`side: 'black'`, one segment, no `startFen` override) starts with
+White to move at the root — the opponent's turn, not the player's — so autoplay
+fires 700ms after the lesson starts and plays White's `e4` with no action from
+the player. Every other opening lesson is White-side, so this is the only place
+in the corpus where the tip-of-line guard fires on its own, with no
+side-to-move check blocking it first. Correct per spec §2; guarded by a test in
+`src/ui/useLessonAutoplay.test.tsx`, added and mutation-checked 2026-08-15.
+
 ## The board can finally be driven without a mouse
 
 This is the headline change. Until Plan 5, `react-chessboard` only handled
@@ -154,8 +163,9 @@ Run `npm run dev`, open the local URL, and you can:
 | Want a clean slate | "Clear progress" in the header wipes durable storage behind a two-click "Really clear?" confirmation — no blocking modal. |
 
 The branching loop is the thing to exercise: play `e4 e5 Nf3`, click back to the
-position after `e4`, play `c5` instead — two lines now exist and the breadcrumb
-walks either.
+position after `e4`, play `c5` instead — two lines now exist, and the moves
+table follows whichever one was most recently selected (it cannot walk both at
+once; see [[Known Issues]]).
 
 **Verified 2026-08-04:** dev server starts in ~300 ms and serves `/`,
 `/engine/stockfish.js`, `/engine/stockfish.wasm`, and the Nunito font correctly.

@@ -61,7 +61,7 @@ answer — `SavedLines.open()` and `AppControls.newGame()` both do.
 ## Data flow
 
 ```
-user action (drag a piece / click a candidate / click a breadcrumb)
+user action (drag a piece / click a candidate / click a moves-table row)
   → tree.select(nodeId)  or  tree.insertMove(san)
   → engine.analyze(fen, multiPV: 3)      [tagged with the requesting nodeId]
   → tree caches EvalResult on the node
@@ -168,8 +168,9 @@ React 19 rather than the spec's React 18 — see
 
 ## The app shell (Plan 5, 2026-08-09)
 
-`src/App.tsx` is a CSS grid exactly one viewport tall: header, breadcrumb, then
-a three-column main region. **The board column never moves.** Only the two side
+`src/App.tsx` is a CSS grid exactly one viewport tall: header, then a
+three-column main region (`.app-shell`'s `grid-template-rows` is `auto 1fr`).
+**The board column never moves.** Only the two side
 rails change contents by mode — picker plus saved lines when idle, the lesson
 rail during a lesson, and the candidate rail handing its whole column to
 `CheckpointPanel` while a checkpoint is being asked.

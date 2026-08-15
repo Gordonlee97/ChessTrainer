@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-04
+updated: 2026-08-15
 status: current
 tags: [chesstrainer, reference]
 ---
@@ -79,7 +79,7 @@ it. Both are planned `ReasonTag` values for the explainer.
 optional cached evaluation, and an origin of `authored` or `explored`.
 
 **Line** — a path through the tree from the start position to some node. What the
-player explores and what the breadcrumb displays.
+player explores and what the moves table displays.
 
 **Candidate** — one of the three moves the engine proposes for the current
 position, rendered as a row in the candidate rail.

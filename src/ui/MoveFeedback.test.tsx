@@ -115,8 +115,8 @@ describe('MoveFeedback', () => {
     });
     rerender(<MoveFeedback />);
 
-    // Step backward to the root, exactly what clicking an early breadcrumb
-    // chip does — no answer was given here, just now or ever.
+    // Step backward to the root, exactly what clicking an early moves-table
+    // row does — no answer was given here, just now or ever.
     act(() => useTreeStore.getState().selectNode(rootId));
     rerender(<MoveFeedback />);
     expect(container.querySelector('.move-feedback-mark--correct')).toBeNull(); // afterStepBack: false

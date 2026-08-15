@@ -42,7 +42,7 @@ interface LessonStore {
    * a position (unlike `lastRejection`, which `CheckpointPanel` reads as
    * "still unresolved here"), so matching `atNodeId` alone would resurrect
    * the mark every time the player revisits the node later — e.g. via the
-   * breadcrumb — with no new answer given. A stale, cross-lesson version of
+   * moves table — with no new answer given. A stale, cross-lesson version of
    * the same problem (two different lessons can produce the same
    * deterministic node id) is why this is still reset in `startLesson`,
    * `stopLesson`, and `nextSegment`, the same as `lastRejection`.

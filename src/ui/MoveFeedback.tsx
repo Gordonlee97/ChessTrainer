@@ -48,7 +48,7 @@ interface CorrectMark {
  *   call counts as fresh — *and* the check is actively hidden as soon as the
  *   current node stops being the one it landed on, rather than lingering
  *   until some future event happens to replace it. Without both halves,
- *   stepping away and back (e.g. via the breadcrumb) resurrects a check mark
+ *   stepping away and back (e.g. via the moves table) resurrects a check mark
  *   for an answer that was not just given.
  *
  * The check also retires itself on a timer. Leaving it to the node change

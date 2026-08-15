@@ -183,6 +183,30 @@ describe('useLessonAutoplay', () => {
   });
 
   /**
+   * `black-vs-e4` is `side: 'black'` with a single segment and no `startFen`
+   * override, so the root itself is White to move — the opponent's move, not
+   * the player's. Every other opening lesson in the corpus is White-side, so
+   * the root is always the player's turn there and guard 3 (side-to-move)
+   * blocks before guard 4 (childless tip) is ever reached. Here the root is a
+   * childless tip *and* the opponent's turn from the moment the lesson
+   * starts, so autoplay fires immediately — the player never plays White's
+   * first move themselves. This is correct per spec §2 (the opponent's moves
+   * are the ones with no checkpoint, played automatically), but it is a case
+   * the tip-of-line guard has to cover on its own, with no side-to-move check
+   * to fall back on. Mutation-checked: removing the `childlessTip` half of
+   * the guard in `useLessonAutoplay.ts` makes this test fail.
+   */
+  it('auto-plays the opening move in a Black-side opening lesson, with no player move first', () => {
+    render(<Harness />);
+    act(() => useLessonStore.getState().startLesson('black-vs-e4'));
+    expect(path()).toEqual([]); // nothing played yet
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+    expect(path()).toEqual(['e4']); // White's opening move, played for the player
+  });
+
+  /**
    * Theme lessons pace themselves with "Play the next move" so the player
    * reads each note before advancing. Autoplay would take that away, and the
    * spec says twice that theme lessons are unchanged.
