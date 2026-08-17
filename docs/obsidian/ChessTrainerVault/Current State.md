@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-15
+updated: 2026-08-16
 status: current
 tags: [chesstrainer, state]
 ---
@@ -13,7 +13,7 @@ browser pass - **not yet merged, no PR opened yet**.
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **505 passing, 1 skipped**, 52 test files, **zero warnings**.
+Suite: **506 passing, 1 skipped**, 52 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 

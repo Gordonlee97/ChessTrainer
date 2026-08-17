@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-15
+updated: 2026-08-16
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -14,17 +14,30 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| Branch | `feat/moves-table`, 8 commits ahead of `origin/master` (`bb68efc`..`cebaa79`). **Complete and browser-verified, but not merged — no PR opened yet.** |
+| Branch | `feat/moves-table`, 11 commits ahead of `origin/master` (`bb68efc`..`a4e2abf`). **Complete, browser-verified and whole-branch reviewed, but not merged — no PR opened yet.** |
 | Merged to `master` | Plans 1–6 only |
 | Working tree | Clean |
-| Suite | 505 passing, 1 skipped (expected), **zero warnings** |
+| Suite | 506 passing, 1 skipped (expected), **zero warnings**; `tsc --noEmit` and `npm run build` both clean |
 | Last plan finished | Plan 7, the moves table — six tasks plus a browser pass. See [[Roadmap]] and [[Current State]] |
 | CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
 
 Re-checked immediately before writing this note (per [[Lessons]] §10):
 `gh pr list --state all` shows no PR for `feat/moves-table`; `git log
-origin/master..HEAD` shows exactly the 8 commits above. Nothing else is in
+origin/master..HEAD` shows exactly the 11 commits above. Nothing else is in
 flight on this branch.
+
+**The whole-branch review ran on 2026-08-15 and returned "ship with named
+fixes".** The three it named are fixed (`410faef`, `a4e2abf`): a test now pins
+the Black lesson's auto-played opening move, two vault notes that had begun
+contradicting themselves were corrected, and the `Known Issues` entry that
+`movesTable.ts` cites now exists. Seven further findings were filed rather than
+fixed — they are in [[Known Issues]] under the 2026-08-15 heading.
+
+**One regression ships knowingly**: `black-vs-e4`'s intro paragraph is replaced
+700ms after the lesson opens, because autoplay advances the ply on a timer and
+the intro is gated on ply 0. It is filed, it breaks nothing, and the fix is a
+design choice rather than a patch — see [[Known Issues]]. Decide it before the
+next content pass.
 
 **Three Claude sessions have now worked this branch concurrently**, and the third
 time it cost something: PR #7 was merged on 2026-08-13 at 21:38 UTC by one

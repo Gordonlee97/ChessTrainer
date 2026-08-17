@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-15
+updated: 2026-08-16
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -272,6 +272,32 @@ grows endgame content.
 **Severity:** trivial. Vocabulary declared and never produced.
 
 ## Found in the 2026-08-15 whole-branch review of `feat/moves-table`
+
+### The Black lesson's intro paragraph is replaced before it can be read
+
+**Where:** `src/ui/useLessonAutoplay.ts` and `src/ui/LessonRail.tsx`
+**Severity:** medium, and **introduced by this branch** — the one regression it
+knowingly ships.
+
+`black-vs-e4` is the only opening lesson whose first authored move belongs to
+the *opponent*. Since the autoplay guard was widened on 2026-08-14, starting it
+leaves the root a childless tip where it is White to move, so the app plays
+`1.e4` itself 700ms later. That part is right, and matches the design spec.
+
+The cost is that `LessonRail` shows the segment's intro only while
+`state.ply === 0`. Autoplay advances the ply on a fixed timer with no player
+action, so the intro — a full paragraph framing what the lesson is about —
+disappears after 700ms and is replaced by `e4`'s move note. Every White-side
+lesson keeps its intro until the player moves, because nothing advances the ply
+for them. So the one lesson aimed at players learning to answer `1.e4` is the
+one whose framing they cannot read.
+
+Two defensible fixes, and choosing between them is a design decision rather
+than a patch: hold the intro until the first *player* move rather than until
+ply 1, or suppress autoplay's delay-advance at ply 0 so the opening move waits
+for the player to be ready. **Nothing here is broken** — the lesson plays
+correctly and every checkpoint works — which is why it was parked rather than
+fixed at the end of the branch.
 
 ### The moves table can only ever show one child of a branch point
 
