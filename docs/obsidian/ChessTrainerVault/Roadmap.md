@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-15
+updated: 2026-08-17
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -115,7 +115,7 @@ board — 210.5px low, on the second rank. Both were found by driving the board'
 [[Decisions/Arrival By Move Versus Navigation]] and [[Lessons]] §10.
 
 **Plan 7 — The moves table.** Six tasks plus a browser pass, complete
-2026-08-15 on `feat/moves-table` (**not yet merged, no PR opened**). A
+2026-08-15 on `feat/moves-table`, **merged 2026-08-17 as PR #10**. A
 lichess-style numbered move list — move number, White's move, Black's move —
 **replaces `Breadcrumb.tsx`**: click any move to jump to that position, arrows
 to step through when the table has focus, first/previous/next/last controls
