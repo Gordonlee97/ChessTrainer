@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-16
+updated: 2026-08-17
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -14,17 +14,17 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| Branch | `feat/moves-table`, 11 commits ahead of `origin/master` (`bb68efc`..`a4e2abf`). **Complete, browser-verified and whole-branch reviewed, but not merged — no PR opened yet.** |
-| Merged to `master` | Plans 1–6 only |
+| Branch | `master`. Nothing in flight; `feat/moves-table` is merged and can be deleted |
+| Merged to `master` | Plans 1–7, complete — Plan 7 as PR #10, merged 2026-08-17 06:14 UTC (`d5add28`) |
 | Working tree | Clean |
 | Suite | 506 passing, 1 skipped (expected), **zero warnings**; `tsc --noEmit` and `npm run build` both clean |
 | Last plan finished | Plan 7, the moves table — six tasks plus a browser pass. See [[Roadmap]] and [[Current State]] |
 | CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
 
 Re-checked immediately before writing this note (per [[Lessons]] §10):
-`gh pr list --state all` shows no PR for `feat/moves-table`; `git log
-origin/master..HEAD` shows exactly the 11 commits above. Nothing else is in
-flight on this branch.
+PR #10 is `MERGED` (merge commit `d5add28`), all 12 of its commits are ancestors
+of `origin/master`, and the suite was re-run on the merged result — 506 passing,
+1 expected skip, 0 warnings, `tsc --noEmit` clean. Nothing is in flight.
 
 **The whole-branch review ran on 2026-08-15 and returned "ship with named
 fixes".** The three it named are fixed (`410faef`, `a4e2abf`): a test now pins
@@ -146,16 +146,25 @@ panel. All five held. Full session notes, including an unexplained (and
 almost certainly harmless) rendering glitch during the pass, are in
 `.superpowers/sdd/2026-08-14-moves-table/task-6-report.md`.
 
-**This branch is not merged and no PR exists for it.** `gh pr list --state
-all` was checked immediately before writing this note (not at session start —
-see [[Lessons]] §10) and shows nothing for `feat/moves-table`.
+**Merged as PR #10 on 2026-08-17.** This is the first plan on this project
+where the branch-state claim in this note was re-verified against `gh` at both
+the finish *and* the merge, rather than once at the start — the discipline
+[[Lessons]] §10 exists to enforce.
 
 ## Do this next
 
-**Open a PR for `feat/moves-table` and merge it**, following [[Workflow]].
-Nothing else is in flight. Once merged, the next roadmap item is the compare
-drawer's contrast vocabulary — see [[Roadmap]] "Next" — which is a design
-decision before it is code, not a task to start writing against directly.
+**1. Decide the `black-vs-e4` intro flash.** It is the one regression Plan 7
+shipped knowingly, it is filed in [[Known Issues]] with both candidate fixes,
+and it wants a judgement rather than a patch: hold the segment intro until the
+first *player* move, or suppress autoplay's delay-advance at ply 0. The lesson
+aimed at players learning to answer `1.e4` is the one whose framing paragraph
+they currently cannot read. Nothing is broken, so this is not urgent — but it
+should be settled before the next content pass rather than rediscovered by it.
+
+**2. Then the compare drawer's contrast vocabulary** — see [[Roadmap]] "Next".
+That is a design decision before it is code; do not start writing against it
+directly. Two strong candidate moves usually score identically on every feature
+`summarise` has, so the fix is new vocabulary, not another ad-hoc feature.
 
 ## Three things this branch learned, worth reading before the next plan
 
