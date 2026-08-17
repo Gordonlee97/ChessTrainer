@@ -79,7 +79,7 @@ export function LessonRail() {
   }, [active, hintsShown, selectedId, noteAttempt, noteLessonComplete]);
 
   if (!active) return null;
-  const { lesson, segment, state, attemptedGrade, hasNextSegment } = active;
+  const { lesson, segment, state, attemptedGrade, hasNextSegment, playerHasMoved } = active;
 
   /** The note attached to the move the lesson has just walked past. */
   const lastNote = !state.offScript && state.ply > 0 ? segment.moves[state.ply - 1]?.note : undefined;
@@ -121,7 +121,11 @@ export function LessonRail() {
           Move {state.ply} of {segment.moves.length}
         </p>
 
-        {state.ply === 0 && segment.intro && (
+        {/* Gated on the player not having moved, not on ply 0: in a lesson
+            whose first move is the opponent's, autoplay advances the ply on a
+            timer and would retire the intro before it was read. See
+            `playerHasMoved` in `lesson/store.ts`. */}
+        {!playerHasMoved && segment.intro && (
           <p style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{segment.intro}</p>
         )}
 

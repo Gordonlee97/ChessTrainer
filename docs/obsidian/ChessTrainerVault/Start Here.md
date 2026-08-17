@@ -33,11 +33,11 @@ contradicting themselves were corrected, and the `Known Issues` entry that
 `movesTable.ts` cites now exists. Seven further findings were filed rather than
 fixed — they are in [[Known Issues]] under the 2026-08-15 heading.
 
-**One regression ships knowingly**: `black-vs-e4`'s intro paragraph is replaced
-700ms after the lesson opens, because autoplay advances the ply on a timer and
-the intro is gated on ply 0. It is filed, it breaks nothing, and the fix is a
-design choice rather than a patch — see [[Known Issues]]. Decide it before the
-next content pass.
+**Plan 7's one regression is fixed** (2026-08-17): `black-vs-e4`'s intro no
+longer vanishes when autoplay supplies White's opening move. The intro is gated
+on the player having moved rather than on ply 0 — `playerHasMoved` in
+`lesson/store.ts`, derived from the position rather than ply parity, since a
+segment may start with either side to move.
 
 **Three Claude sessions have now worked this branch concurrently**, and the third
 time it cost something: PR #7 was merged on 2026-08-13 at 21:38 UTC by one
@@ -153,18 +153,20 @@ the finish *and* the merge, rather than once at the start — the discipline
 
 ## Do this next
 
-**1. Decide the `black-vs-e4` intro flash.** It is the one regression Plan 7
-shipped knowingly, it is filed in [[Known Issues]] with both candidate fixes,
-and it wants a judgement rather than a patch: hold the segment intro until the
-first *player* move, or suppress autoplay's delay-advance at ply 0. The lesson
-aimed at players learning to answer `1.e4` is the one whose framing paragraph
-they currently cannot read. Nothing is broken, so this is not urgent — but it
-should be settled before the next content pass rather than rediscovered by it.
-
-**2. Then the compare drawer's contrast vocabulary** — see [[Roadmap]] "Next".
+**1. The compare drawer's contrast vocabulary** — see [[Roadmap]] "Next".
 That is a design decision before it is code; do not start writing against it
 directly. Two strong candidate moves usually score identically on every feature
-`summarise` has, so the fix is new vocabulary, not another ad-hoc feature.
+`summarise` has, so the fix is new vocabulary, not another ad-hoc feature. It is
+the one roadmap item that changes whether the app *teaches* rather than
+*describes*.
+
+**2. A design pass by eye**, which is the only item on the roadmap no
+automation can close. The layout has been measured exhaustively — regions
+aligned, board square, rails bounded — and never *judged*. The roadmap used to
+name the wrong-answer ✕ as the instance nobody could look at; that was wrong on
+both counts and is corrected there.
+
+
 
 ## Three things this branch learned, worth reading before the next plan
 

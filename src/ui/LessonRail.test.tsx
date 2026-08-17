@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useLessonStore } from '../lesson/store';
 import { useProgressStore } from '../progress/store';
@@ -81,6 +82,66 @@ describe('LessonRail', () => {
     useLessonStore.getState().startLesson('italian-game');
     render(<LessonRail />);
     expect(screen.getByRole('heading', { name: /italian game/i })).toBeInTheDocument();
+  });
+
+  /**
+   * The intro is gated on the player not having moved yet, not on ply 0.
+   *
+   * `black-vs-e4` is the only opening lesson whose first authored move belongs
+   * to the *opponent*, so autoplay plays `1.e4` itself 700ms after the lesson
+   * opens. Gated on `state.ply === 0`, that timer alone retired the intro —
+   * the one lesson aimed at players learning to answer `1.e4` lost its framing
+   * paragraph before it could be read, with no action from the player.
+   *
+   * Both halves matter. The first asserts the intro survives a move the player
+   * did not make; the second asserts it still goes away once they do move, so
+   * the fix cannot be "show the intro forever".
+   */
+  it('keeps the intro while only the opponent has moved, and drops it once the player moves', () => {
+    useLessonStore.getState().startLesson('black-vs-e4');
+    const intro = /You are Black, facing White's most common first move/i;
+
+    // queryByText, not getByText, for the "still there" assertions: getBy*
+    // *throws* when it finds nothing, and a mutation check whose failure is an
+    // exception is not evidence — a later try/catch would swallow it. queryBy
+    // returns null and lets the matcher report a clean mismatch.
+    //
+    // The moves go through act() because the component is already mounted and
+    // subscribed: a bare playMove here updates the store outside React's
+    // batching and prints an act() warning. The other tests in this file get
+    // away without it only because they mutate before rendering.
+    render(<LessonRail />);
+    expect(screen.queryByText(intro)).toBeInTheDocument();
+
+    // White's 1.e4 — the opponent's move, which autoplay would supply.
+    act(() => {
+      useTreeStore.getState().playMove('e4');
+    });
+    expect(screen.queryByText(intro)).toBeInTheDocument();
+
+    // Black's reply is the player's first move.
+    act(() => {
+      useTreeStore.getState().playMove('e5');
+    });
+    expect(screen.queryByText(intro)).not.toBeInTheDocument();
+  });
+
+  /**
+   * The White-side case, unchanged by the fix and asserted so it stays that
+   * way: with no opponent move to autoplay, the player's own first move is
+   * what retires the intro.
+   */
+  it('drops a White-side lesson intro on the player’s first move', () => {
+    useLessonStore.getState().startLesson('italian-game');
+    const intro = /You are White\./i;
+
+    render(<LessonRail />);
+    expect(screen.queryByText(intro)).toBeInTheDocument();
+
+    act(() => {
+      useTreeStore.getState().playMove('e4');
+    });
+    expect(screen.queryByText(intro)).not.toBeInTheDocument();
   });
 
   // "Play the next move" is a theme-lesson affordance only (see the

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { sideToMove } from '../chess/side';
 import { ALL_LESSONS, lessonById } from '../content/lessons/index';
 import type { Checkpoint, Lesson, Segment } from '../content/schema';
 import { useTreeStore } from '../tree/store';
@@ -138,6 +139,22 @@ export interface ActiveLesson {
    * it falls out of the tree the same way `state` does.
    */
   attemptedGrade: Grade | null;
+  /**
+   * True once the player has played at least one move in this segment.
+   *
+   * Not the same as `state.ply > 0`, and the difference is a bug this once
+   * shipped: `black-vs-e4` is the only opening lesson whose first authored
+   * move belongs to the *opponent*, so autoplay plays it 700ms after the
+   * lesson opens. Anything gated on "has any move been played" therefore
+   * fires on a timer, with no action from the player — which retired the
+   * segment intro before it could be read. `LessonRail` gates the intro on
+   * this instead.
+   *
+   * Derived from the position, never from ply parity: a segment may start
+   * with either side to move (see `sideToMove`'s own doc), so the mover of
+   * each node is read from the FEN of the node before it.
+   */
+  playerHasMoved: boolean;
 }
 
 /** Null when no lesson is running. Recomputed from the tree on every render. */
@@ -154,9 +171,17 @@ export function useActiveLesson(): ActiveLesson | null {
   if (!segment) return null;
 
   // `pathTo` returns root-first and includes the root, which carries no move.
-  const pathSan = pathTo(tree, tree.selectedId)
+  const path = pathTo(tree, tree.selectedId);
+  const pathSan = path.slice(1).map((node) => node.move!.san);
+
+  // Whose move each node was, read from the position it was played from —
+  // `path[index]` is the parent of `path[index + 1]`. The tree is reseeded at
+  // the start of every segment (see `seedSegment`), so this path never reaches
+  // back past the current segment.
+  const playerSide = segment.side ?? lesson.side;
+  const playerHasMoved = path
     .slice(1)
-    .map((node) => node.move!.san);
+    .some((_node, index) => sideToMove(path[index].fen) === playerSide);
 
   const state = deriveLessonState(segment, pathSan);
 
@@ -171,6 +196,7 @@ export function useActiveLesson(): ActiveLesson | null {
     state,
     attemptedCheckpoint,
     attemptedGrade,
+    playerHasMoved,
   };
 }
 

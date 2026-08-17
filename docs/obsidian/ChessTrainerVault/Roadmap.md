@@ -145,9 +145,16 @@ roadmap that no amount of automation will close:
 
 - **A design pass by eye.** The layout has been *measured* — regions aligned,
   board square, no overflow — but never *judged*. Nobody has looked at it and
-  said whether it feels right. The wrong-answer ✕ is the concrete instance: it
-  has never been seen at a real viewport, because the automation tab renders at
-  zero size. See [[Known Issues]].
+  said whether it feels right — whether the type sits well, whether the rails
+  balance, whether the board is the right size in the space it has.
+
+  The wrong-answer ✕ used to be listed here as the concrete instance, on the
+  belief that the automation tab rendered at zero size. **Both halves of that
+  were wrong**: the tab renders at the full viewport, and looking at it on
+  2026-08-13 is exactly how the mark was found sitting 210.5px below the
+  board's centre, on the second rank. It was fixed and made translucent in
+  PR #8. The general point stands — measured is not judged — but it no longer
+  has that example, and no automation limit prevents the next look.
 
 Segment-level board orientation after "Next part" was listed here as never
 observed from Plan 4 until 2026-08-13, when the second browser pass finally
