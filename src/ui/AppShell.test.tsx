@@ -27,4 +27,16 @@ describe('app shell', () => {
     expect(screen.queryByRole('region', { name: /my lines/i })).toBeNull();
     expect(screen.getByRole('region', { name: /lesson/i })).toBeInTheDocument();
   });
+
+  it('mounts the moves table in place of the old breadcrumb', () => {
+    render(<App />);
+    expect(screen.getByRole('region', { name: 'Moves' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: /move history/i })).toBeNull();
+  });
+
+  it('keeps the moves table mounted during a lesson, alongside the checkpoint gate', () => {
+    render(<App />);
+    act(() => useLessonStore.getState().startLesson('italian-game'));
+    expect(screen.getByRole('region', { name: 'Moves' })).toBeInTheDocument();
+  });
 });

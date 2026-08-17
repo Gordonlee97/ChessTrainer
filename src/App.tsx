@@ -1,11 +1,11 @@
 import { useLessonStore } from './lesson/store';
 import { AppControls } from './ui/AppControls';
 import { Board } from './ui/Board';
-import { Breadcrumb } from './ui/Breadcrumb';
 import { CandidateRail } from './ui/CandidateRail';
 import { LessonMenu } from './ui/LessonMenu';
 import { LessonRail } from './ui/LessonRail';
 import { MoveFeedback } from './ui/MoveFeedback';
+import { MovesTable } from './ui/MovesTable';
 import { ProgressNotice } from './ui/ProgressNotice';
 import { SavedLines } from './ui/SavedLines';
 import { useLessonAutoplay } from './ui/useLessonAutoplay';
@@ -25,10 +25,6 @@ export function App() {
         <AppControls />
       </header>
 
-      <div className="app-crumb">
-        <Breadcrumb />
-      </div>
-
       <div className="app-main">
         <div className="app-rail app-rail-left">
           {inLesson ? <LessonRail /> : <SavedLines />}
@@ -43,6 +39,7 @@ export function App() {
 
         <div className="app-rail app-rail-right">
           <CandidateRail />
+          <MovesTable />
         </div>
 
         <div className="compare-portal" id="compare-portal" />

@@ -89,6 +89,50 @@ describe('useLessonAutoplay', () => {
   });
 
   /**
+   * The case this plan's `next`/`last` controls create. Navigating *forward*
+   * to a tip that never received its reply is not reviewing — the reply is
+   * still owed — but the arrival was a `selectNode`, so `lastPlayedId` is
+   * null and the arrival-by-move rule alone declines.
+   *
+   * The tree is left in exactly that state here: the player answers, and the
+   * pending reply is cancelled by navigating away before the 700ms elapses.
+   */
+  it('plays a reply still owed at a childless tip, even when reached by navigating', () => {
+    render(<Harness />);
+    act(() => useLessonStore.getState().startLesson('italian-game'));
+    act(() => {
+      useTreeStore.getState().playMove('e4');
+    });
+
+    const afterE4 = useTreeStore.getState().tree.selectedId;
+    const root = pathTo(useTreeStore.getState().tree, afterE4)[0].id;
+
+    // Navigate away before the reply lands: the effect's cleanup clears the
+    // armed timer, so the tip keeps no child.
+    act(() => {
+      useTreeStore.getState().selectNode(root);
+    });
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    // `path()` reads the *current* selection, and that's root now — it can't
+    // speak to whether the tip picked up a child. Check the tip directly: no
+    // child means the pending reply really was cancelled, not just delayed.
+    expect(useTreeStore.getState().tree.nodes[afterE4].childIds).toEqual([]);
+
+    // Now walk forward to the tip the way `last` will.
+    act(() => {
+      useTreeStore.getState().selectNode(afterE4);
+    });
+    expect(useTreeStore.getState().lastPlayedId).toBeNull(); // arrived by navigation
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+
+    expect(path()).toEqual(['e4', 'e5']);
+  });
+
+  /**
    * The counterpart to the guard above, and the defect it originally caused.
    *
    * Stepping back and *replaying* a move is not the same act as stepping back
@@ -136,6 +180,30 @@ describe('useLessonAutoplay', () => {
       vi.advanceTimersByTime(2000);
     });
     expect(path()).toEqual(['e4']);
+  });
+
+  /**
+   * `black-vs-e4` is `side: 'black'` with a single segment and no `startFen`
+   * override, so the root itself is White to move — the opponent's move, not
+   * the player's. Every other opening lesson in the corpus is White-side, so
+   * the root is always the player's turn there and guard 3 (side-to-move)
+   * blocks before guard 4 (childless tip) is ever reached. Here the root is a
+   * childless tip *and* the opponent's turn from the moment the lesson
+   * starts, so autoplay fires immediately — the player never plays White's
+   * first move themselves. This is correct per spec §2 (the opponent's moves
+   * are the ones with no checkpoint, played automatically), but it is a case
+   * the tip-of-line guard has to cover on its own, with no side-to-move check
+   * to fall back on. Mutation-checked: removing the `childlessTip` half of
+   * the guard in `useLessonAutoplay.ts` makes this test fail.
+   */
+  it('auto-plays the opening move in a Black-side opening lesson, with no player move first', () => {
+    render(<Harness />);
+    act(() => useLessonStore.getState().startLesson('black-vs-e4'));
+    expect(path()).toEqual([]); // nothing played yet
+    act(() => {
+      vi.advanceTimersByTime(700);
+    });
+    expect(path()).toEqual(['e4']); // White's opening move, played for the player
   });
 
   /**

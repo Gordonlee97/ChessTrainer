@@ -12,3 +12,11 @@ import { Chess } from 'chess.js';
 export function sideToMove(fen: string): 'white' | 'black' {
   return new Chess(fen).turn() === 'w' ? 'white' : 'black';
 }
+
+/**
+ * The fullmove number from the FEN, which increments after Black moves.
+ * Numbering and colour come from the position, never from index parity.
+ */
+export function moveNumber(fen: string): number {
+  return new Chess(fen).moveNumber();
+}
