@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-16
+updated: 2026-08-17
 status: current
 tags: [chesstrainer, state]
 ---
@@ -13,7 +13,7 @@ browser pass - **not yet merged, no PR opened yet**.
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **506 passing, 1 skipped**, 52 test files, **zero warnings**.
+Suite: **508 passing, 1 skipped**, 52 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 
@@ -203,7 +203,7 @@ the segment index, and hint counts.
 | Action | Behaviour |
 |---|---|
 | Open the app with no lesson running | The picker lists every lesson under OPENINGS and IDEAS, each with its `summary` |
-| Start a lesson | The tree is re-seeded from the segment's `startFen`; the board orients to `segment.side` when the segment overrides it, otherwise `lesson.side`; the rail shows the segment intro |
+| Start a lesson | The tree is re-seeded from the segment's `startFen`; the board orients to `segment.side` when the segment overrides it, otherwise `lesson.side`; the rail shows the segment intro, and keeps it until the **player** moves — not until the ply advances, so a lesson whose first move is the opponent's does not lose its intro to autoplay's timer |
 | Follow the line | "Play the next move" advances it, with the move sound; the note for the move just played stays on screen |
 | Reach a checkpoint | The rail asks instead of telling, and the candidate rail hides its rows, scores and ordering so the engine cannot leak the answer |
 | Ask for a hint | One tier at a time, up to three, counted **per checkpoint id** |
