@@ -256,13 +256,26 @@ segment may start Black-to-move or override its lesson's side.
 
 ## The moves table (Plan 7, 2026-08-15)
 
-**It sits at the top of the right rail, above the candidates** — the reverse of
-the design spec's §3 table, and deliberately so. The candidate rail's height
-changes continuously while a search runs (the depth ticks, explanation text
-rewraps, the Compare button appears and disappears), so anything below it slides
-up and down on every one of those. Reported from the running app on 2026-08-17
-as the list "erratically moving up and down"; anchoring it to the top of the
-rail is what holds it still, and `AppShell.test.tsx` pins the ordering.
+**The move list owns the right column; where the candidate rail goes depends on
+the mode.** Both placements were driven by the same complaint, reported from the
+running app on 2026-08-17: whichever of the two sat lower kept being pushed
+around by the one above it growing.
+
+| | Left rail | Right rail |
+|---|---|---|
+| Explorer | "My lines", then candidate moves | The move list, alone |
+| Lesson | The lesson explanation | The move list, then the checkpoint panel |
+
+`CandidateRail` is one component doing two jobs — engine candidates in the
+explorer, the quiz panel during a lesson — so it moves parents rather than
+duplicating, and exactly one instance is ever mounted. That is safe because the
+engine behind it is a module-level singleton (`sharedEngine.ts`): remounting
+re-subscribes instead of spawning a second worker.
+
+The move list is **first in the right rail in both modes**, so nothing above it
+can change height and shift it; `AppShell.test.tsx` pins that ordering. Putting
+the candidates on the left in the explorer is a departure from the design spec's
+§3 table, which had both in the right column.
 
 `Breadcrumb.tsx` is deleted. `src/tree/movesTable.ts`'s `buildMovesTable` is
 the only place that turns the tree into a displayed line, and it is called

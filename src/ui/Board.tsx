@@ -27,6 +27,17 @@ export function Board() {
   }, [node.move]);
 
   const [cursor, setCursor] = useState('e2');
+  /**
+   * Whether the board holds focus. The cursor ring is a *keyboard* affordance,
+   * so it is drawn only while the keyboard can actually drive it.
+   *
+   * Without this it was painted from the very first render — a purple ring
+   * sitting on e2 that no interaction ever removed, because `setCursor` only
+   * ever moves it. A mouse-only player saw a mark on a square they had never
+   * touched, still there after the pawn had left it, meaning nothing. Reported
+   * from the running app on 2026-08-17.
+   */
+  const [focused, setFocused] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
@@ -37,12 +48,18 @@ export function Board() {
   }, [node.id]);
 
   const cursorStyles = useMemo(() => {
+    // Nothing at all when the board is not focused: the ring and the held
+    // piece are both keyboard state, and showing either while the keyboard is
+    // pointed somewhere else is a mark the player cannot explain or dismiss.
+    // The state itself is kept, so returning focus restores exactly what was
+    // there — a piece picked up before a click elsewhere is still held.
+    if (!focused) return {};
     const styles: Record<string, CSSProperties> = {
       [cursor]: { boxShadow: 'inset 0 0 0 4px var(--secondary)' },
     };
     if (picked) styles[picked] = { boxShadow: 'inset 0 0 0 4px var(--primary)' };
     return styles;
-  }, [cursor, picked]);
+  }, [cursor, picked, focused]);
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const key = event.key;
@@ -155,6 +172,10 @@ export function Board() {
       aria-label="Chess board. Use arrow keys to move the cursor, Enter to pick up and place a piece."
       tabIndex={0}
       onKeyDown={onKeyDown}
+      // onFocus/onBlur bubble in React, so focus landing on anything inside
+      // the board counts too.
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
       style={{ outlineOffset: 3 }}
     >
       <Chessboard

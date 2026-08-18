@@ -26,28 +26,47 @@ export function App() {
       </header>
 
       <div className="app-main">
+        {/* Where the candidate rail sits depends on the mode, because the
+            component is two different things. In the explorer it is the engine's
+            candidate moves, and it belongs in the LEFT column under "My lines":
+            in the right column it sat beneath the move list, which pushed it
+            further down the page with every move played, and the left column
+            had unused space that does not grow.
+
+            During a lesson the same component hands its column to the
+            checkpoint panel — the quiz. That belongs opposite the explanation,
+            not stacked underneath it, which is what the design spec's §3 layout
+            table asks for and what leaving it on the left produced: every word
+            of the lesson crammed into one narrow column with the other empty.
+
+            Exactly one instance is mounted either way. It moves parents rather
+            than duplicating, and the engine behind it is a module-level
+            singleton (`sharedEngine.ts`), so remounting re-subscribes rather
+            than spawning a second worker. */}
         <div className="app-rail app-rail-left">
-          {inLesson ? <LessonRail /> : <SavedLines />}
+          {inLesson ? (
+            <LessonRail />
+          ) : (
+            <>
+              <SavedLines />
+              <CandidateRail />
+            </>
+          )}
         </div>
 
         <div className="app-centre">
           <div className="board-wrap">
             <Board />
+            <MoveFeedback />
           </div>
-          <MoveFeedback />
         </div>
 
-        {/* The moves table sits ABOVE the candidates, which is the reverse of
-            the design spec's §3 table. The candidate rail's height changes
-            constantly while a search runs — depth ticks, explanation text
-            rewraps, the Compare button appears — and anything below it slides
-            up and down with every one of those. Anchoring the move list to the
-            top of the rail is what makes it hold still while a move is played,
-            which is how every board site behaves and what the spec was really
-            after. */}
+        {/* The move list stays first, so nothing above it can change height and
+            shift it — the checkpoint panel below it grows as hints are
+            revealed. */}
         <div className="app-rail app-rail-right">
           <MovesTable />
-          <CandidateRail />
+          {inLesson && <CandidateRail />}
         </div>
 
         <div className="compare-portal" id="compare-portal" />

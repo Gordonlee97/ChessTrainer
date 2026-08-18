@@ -91,6 +91,40 @@ describe('Board keyboard navigation', () => {
     expect(screen.getByRole('status')).toHaveTextContent('put down');
   });
 
+  /**
+   * The cursor ring is a keyboard affordance, so it must not be painted on a
+   * board nobody has focused. It used to be: `cursor` initialises to 'e2' and
+   * the ring was drawn unconditionally, so a purple mark sat on e2 from the
+   * first paint, stayed after the pawn moved away, and could not be dismissed
+   * by any interaction. Reported from the running app on 2026-08-17.
+   *
+   * Asserting on `squareStyles` rather than on the DOM because the ring is
+   * drawn by react-chessboard from the options Board hands it, and the board
+   * itself is stubbed here.
+   */
+  it('draws no cursor ring until the board is focused, and drops it again on blur', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Board />
+        <button type="button">elsewhere</button>
+      </>,
+    );
+
+    const before = chessboardOptions.current?.squareStyles as Record<string, unknown>;
+    expect(before).toEqual({}); // nothing at all, not merely no ring on e2
+
+    await user.click(boardRegion());
+    const whileFocused = chessboardOptions.current?.squareStyles as
+      | Record<string, { boxShadow?: string }>
+      | undefined;
+    expect(whileFocused?.e2?.boxShadow).toContain('var(--secondary)');
+
+    await user.click(screen.getByRole('button', { name: 'elsewhere' }));
+    const afterBlur = chessboardOptions.current?.squareStyles as Record<string, unknown>;
+    expect(afterBlur).toEqual({});
+  });
+
   it('merges the last-move highlight with cursor feedback in squareStyles', async () => {
     const user = userEvent.setup();
     render(<Board />);

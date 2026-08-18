@@ -99,11 +99,15 @@ third.
 **Where:** `src/progress/progress.ts` — `addSavedLine`
 **Severity:** low.
 
-Every "Save this line" click adds a new entry, even one identical in `pgn` and
-`startFen` to an existing one, and nothing caps the list length or the
-localStorage quota it eventually hits (at which point `saveFailed` is now
-surfaced — see the fix wave in `Current State.md` — but the list still grows
-unbounded up to that point).
+Every save adds a new entry, even one identical in `pgn` and `startFen` to an
+existing one, and nothing caps the list length or the localStorage quota it
+eventually hits (at which point `saveFailed` is now surfaced — see the fix wave
+in `Current State.md` — but the list still grows unbounded up to that point).
+
+The *visible* half of this was fixed on 2026-08-17: the list moved into a
+disclosure panel, so an unbounded list no longer grows the rail. Named saves
+also make duplicates distinguishable rather than identical-looking. The
+underlying growth is unchanged.
 
 ### The rail still says "stepped off the line" for a correct alternate answer
 
@@ -468,22 +472,15 @@ verification until the selector was corrected.
 ### The keyboard cursor does not reset on "New game"
 
 **Where:** `src/ui/Board.tsx`
-**Severity:** low.
+**Severity:** low, and quieter than it was.
 
 Pressing "New game" resets the tree but leaves the cursor wherever it was.
 Defensible — it is a selection cursor, not board state — but it should be a
 deliberate decision rather than an accident.
 
-## Test coverage gaps
-
-- No test covers queenside castled squares (c1/c8) in `extractFeatures`.
-- No test covers the `mobility === null` path.
-- `hanging` counts a **pinned defender as a valid defender**. This is standard
-  `chess.attackers()` control semantics and is correct per the global
-  constraint — but it is undocumented, unlike the `castled` approximation, which
-  has a comment explaining itself.
-
-## Environment
+Less visible since 2026-08-17: the cursor ring is only drawn while the board
+holds focus, so a stale position is no longer a mark sitting on the board of a
+player who never touched the keyboard. The state is still stale underneath.
 
 ### `npm audit` reports 5 vulnerabilities, 1 critical
 

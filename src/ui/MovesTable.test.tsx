@@ -178,7 +178,7 @@ describe('MovesTable', () => {
     const before = useTreeStore.getState().tree.selectedId;
     expect(before).toBe('root/e4');
     const board = screen.getByRole('application');
-    board.focus();
+    act(() => board.focus());
     expect(board).toHaveFocus();
 
     await user.keyboard('{ArrowRight}');
