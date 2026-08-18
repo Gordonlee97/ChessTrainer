@@ -37,9 +37,17 @@ export function App() {
           <MoveFeedback />
         </div>
 
+        {/* The moves table sits ABOVE the candidates, which is the reverse of
+            the design spec's §3 table. The candidate rail's height changes
+            constantly while a search runs — depth ticks, explanation text
+            rewraps, the Compare button appears — and anything below it slides
+            up and down with every one of those. Anchoring the move list to the
+            top of the rail is what makes it hold still while a move is played,
+            which is how every board site behaves and what the spec was really
+            after. */}
         <div className="app-rail app-rail-right">
-          <CandidateRail />
           <MovesTable />
+          <CandidateRail />
         </div>
 
         <div className="compare-portal" id="compare-portal" />

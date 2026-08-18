@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-15
+updated: 2026-08-17
 status: current
 tags: [chesstrainer, architecture]
 ---
@@ -255,6 +255,14 @@ turn it is taken **from the position**, never from index parity, because a
 segment may start Black-to-move or override its lesson's side.
 
 ## The moves table (Plan 7, 2026-08-15)
+
+**It sits at the top of the right rail, above the candidates** — the reverse of
+the design spec's §3 table, and deliberately so. The candidate rail's height
+changes continuously while a search runs (the depth ticks, explanation text
+rewraps, the Compare button appears and disappears), so anything below it slides
+up and down on every one of those. Reported from the running app on 2026-08-17
+as the list "erratically moving up and down"; anchoring it to the top of the
+rail is what holds it still, and `AppShell.test.tsx` pins the ordering.
 
 `Breadcrumb.tsx` is deleted. `src/tree/movesTable.ts`'s `buildMovesTable` is
 the only place that turns the tree into a displayed line, and it is called

@@ -318,20 +318,6 @@ is blank. The only escape is playing `e5` by hand. The correct rule would be
 "a reply is owed when no child of the selected node matches the lesson's next
 move," not "the node has no children at all."
 
-### The trailing White-only row spans both columns
-
-**Where:** `src/ui/MovesTable.tsx` / `theme.css` — `.moves-table-move { flex: 1
-1 0 }`
-**Severity:** low, cosmetic. Found in the 2026-08-15 whole-branch review.
-
-When a row's last move is White's with no Black reply yet, there is no Black
-sibling to share the row with, so the White button's `flex: 1 1 0` lets it fill
-the whole row — including the empty Black column — and `aria-current`'s fill
-spans both, which is usually true of the selected row. Asymmetric with the
-leading-Black case (a segment starting Black-to-move), which does render an
-elision placeholder for the missing White cell. Fix would be an elision span
-in the `row.black === null` branch, or `flex: 0 0 50%` on `.moves-table-move`.
-
 ### Nothing carries `aria-current` when the root is selected
 
 **Where:** `src/ui/MovesTable.tsx`

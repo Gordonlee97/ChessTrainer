@@ -204,17 +204,25 @@ body {
   margin: 0 0 12px;
 }
 
+/* A flex column with a gap, so the heading, the "Save this line" button and
+   the list (or the empty-state paragraph) are always separated. They used to
+   rely on the heading's own bottom margin alone, which left the button and
+   the paragraph below it touching. */
 .saved-lines {
   border: 2px solid var(--border);
   border-radius: var(--radius);
   padding: 12px;
   margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 .saved-lines-heading {
   font-size: 12px;
   letter-spacing: 0.08em;
   color: var(--ink-soft);
-  margin: 0 0 8px;
+  margin: 0;
 }
 .saved-lines-empty {
   font-size: 12px;
@@ -271,14 +279,20 @@ body {
   gap: 2px;
 }
 
+/* A grid, not a flex row. Each move column is half the row whether or not
+   both are filled: as flex children with `flex: 1 1 0`, a row holding only a
+   White move stretched it across both halves — and that row is usually the
+   move just played, so the selected-move fill spanned the empty Black column
+   too. The number column grows past its floor rather than clipping at move
+   100+. */
 .moves-table-rows li {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(28px, auto) 1fr 1fr;
   align-items: center;
   gap: 6px;
 }
 
 .moves-table-number {
-  flex: 0 0 28px;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
   font-weight: 700;
@@ -286,7 +300,7 @@ body {
 }
 
 .moves-table-move {
-  flex: 1 1 0;
+  min-width: 0;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 13px;
   font-weight: 700;
