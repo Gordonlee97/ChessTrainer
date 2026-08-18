@@ -13,7 +13,7 @@ browser pass - **not yet merged, no PR opened yet**.
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **513 passing, 1 skipped**, 52 test files, **zero warnings**.
+Suite: **533 passing, 1 skipped**, 54 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 
@@ -141,6 +141,7 @@ Run `npm run dev`, open the local URL, and you can:
 
 | Action | Behaviour |
 |---|---|
+| Click a piece | Its legal destinations are marked — a dot on an empty square, a tinted ring around a piece that can be taken. Clicking one plays the move; clicking the piece again puts it down; clicking another of your own movable pieces switches to it |
 | Drag a piece | Legal moves land, illegal ones snap back. From/to squares stay highlighted. |
 | Read the right-hand rail | Top 3 engine moves at depth 20, each with score, eval bar, a quality badge (Best/Good/Inaccuracy/Mistake/Blunder relative to the top line), the **top two** explainer sentences, and the first 6 plies of its line |
 | Watch the rail mid-search | Scores and eval bars stream; **badges and ideas are withheld until the search settles**, because comparing two lines only means something at equal depth |

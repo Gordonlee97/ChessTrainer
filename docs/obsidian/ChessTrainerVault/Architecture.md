@@ -212,6 +212,19 @@ second aborting the first, against **one search, three lines**. The
 engine-unavailable notice and its retry live in
 `src/ui/EngineUnavailableNotice.tsx` so both renderers share one copy.
 
+**All three ways of moving a piece go through one function.** `Board.tsx`'s
+`attemptMove(from, to)` owns legality, lesson grading, sound and the tree write,
+in that order; dragging, the keyboard's place step and clicking a destination
+differ only in how they report the result. Dragging and the keyboard each
+carried their own copy of that sequence until 2026-08-17, and adding clicking
+would have made three places that must agree about when a lesson answer counts
+— the shape recorded in [[Lessons]] §5. A click can no more skip a checkpoint
+than a drag can, and `Board.click.test.tsx` asserts exactly that.
+
+Legal destinations come from `src/chess/legalMoves.ts`, which asks chess.js
+rather than re-deriving piece geometry: pins, checks and en passant are the
+cases a hand-rolled version gets wrong.
+
 Keyboard board navigation is documented in
 [[Decisions/Keyboard Board Navigation Model]].
 

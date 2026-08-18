@@ -159,12 +159,15 @@ describe('Board keyboard navigation', () => {
     await user.keyboard('{Enter}{ArrowUp}{ArrowUp}{Enter}{ArrowDown}');
 
     const squareStyles = chessboardOptions.current?.squareStyles as
-      | Record<string, { background?: string; boxShadow?: string }>
+      | Record<string, { backgroundColor?: string; boxShadow?: string }>
       | undefined;
 
     // Last-move highlight: both endpoints of the move that was just played.
-    expect(squareStyles?.e2?.background).toContain('var(--board-highlight)');
-    expect(squareStyles?.e4?.background).toContain('var(--board-highlight)');
+    // `backgroundColor` rather than the `background` shorthand, deliberately —
+    // the destination dots set `backgroundImage` on the same square, and the
+    // shorthand would erase it depending on assignment order.
+    expect(squareStyles?.e2?.backgroundColor).toContain('var(--board-highlight)');
+    expect(squareStyles?.e4?.backgroundColor).toContain('var(--board-highlight)');
     // Cursor feedback: the square the cursor now sits on, distinct from the
     // last-move squares, proving neither style source replaced the other.
     expect(squareStyles?.e3?.boxShadow).toContain('var(--secondary)');
