@@ -478,9 +478,11 @@ Pressing "New game" resets the tree but leaves the cursor wherever it was.
 Defensible — it is a selection cursor, not board state — but it should be a
 deliberate decision rather than an accident.
 
-Less visible since 2026-08-17: the cursor ring is only drawn while the board
-holds focus, so a stale position is no longer a mark sitting on the board of a
-player who never touched the keyboard. The state is still stale underneath.
+Less visible since 2026-08-17: the ring is drawn only once the player presses a
+key the board handles, and retires on the next pointer press or on blur —
+`:focus-visible` semantics rather than plain focus. A stale position is
+therefore no longer a mark sitting on the board of someone using the mouse. The
+state underneath is still stale.
 
 ### `npm audit` reports 5 vulnerabilities, 1 critical
 

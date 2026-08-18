@@ -28,16 +28,21 @@ export function Board() {
 
   const [cursor, setCursor] = useState('e2');
   /**
-   * Whether the board holds focus. The cursor ring is a *keyboard* affordance,
-   * so it is drawn only while the keyboard can actually drive it.
+   * Whether the cursor ring should be drawn: true only once the player has
+   * actually pressed a key the board handles, and false again the moment they
+   * touch it with a pointer or focus leaves.
    *
-   * Without this it was painted from the very first render — a purple ring
-   * sitting on e2 that no interaction ever removed, because `setCursor` only
-   * ever moves it. A mouse-only player saw a mark on a square they had never
-   * touched, still there after the pawn had left it, meaning nothing. Reported
-   * from the running app on 2026-08-17.
+   * This is `:focus-visible` semantics, and plain focus is not good enough —
+   * that was the first attempt and it did not fix the reported bug. `cursor`
+   * initialises to 'e2' and the ring was originally drawn unconditionally, so
+   * it was painted from the first render and no interaction removed it, since
+   * `setCursor` only ever moves it. Gating on focus left it appearing the
+   * instant a piece was *dragged*, because pressing the pointer down on the
+   * board focuses this wrapper — so a mouse-only player still got a purple
+   * ring parked on a square they had never touched, still there several moves
+   * later. Reported twice from the running app on 2026-08-17.
    */
-  const [focused, setFocused] = useState(false);
+  const [keyboardCursor, setKeyboardCursor] = useState(false);
   const [picked, setPicked] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState('');
 
@@ -48,21 +53,29 @@ export function Board() {
   }, [node.id]);
 
   const cursorStyles = useMemo(() => {
-    // Nothing at all when the board is not focused: the ring and the held
-    // piece are both keyboard state, and showing either while the keyboard is
-    // pointed somewhere else is a mark the player cannot explain or dismiss.
-    // The state itself is kept, so returning focus restores exactly what was
-    // there — a piece picked up before a click elsewhere is still held.
-    if (!focused) return {};
+    // Nothing at all until the keyboard is in use: the ring and the held piece
+    // are both keyboard state, and showing either to a player driving the
+    // board with a mouse is a mark they can neither explain nor dismiss. The
+    // state itself is kept, so a piece picked up before a click elsewhere is
+    // still held when the keyboard comes back.
+    if (!keyboardCursor) return {};
     const styles: Record<string, CSSProperties> = {
       [cursor]: { boxShadow: 'inset 0 0 0 4px var(--secondary)' },
     };
     if (picked) styles[picked] = { boxShadow: 'inset 0 0 0 4px var(--primary)' };
     return styles;
-  }, [cursor, picked, focused]);
+  }, [cursor, picked, keyboardCursor]);
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     const key = event.key;
+
+    // Only the keys this handler acts on turn the ring on. Tab in particular
+    // must not: arriving here by tabbing past the board is not navigating it,
+    // and lighting up a square the player is moving away from is noise.
+    if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight' ||
+        key === 'Enter' || key === ' ' || key === 'Escape') {
+      setKeyboardCursor(true);
+    }
 
     if (key === 'ArrowUp' || key === 'ArrowDown' || key === 'ArrowLeft' || key === 'ArrowRight') {
       event.preventDefault(); // otherwise the page scrolls under the board
@@ -172,10 +185,11 @@ export function Board() {
       aria-label="Chess board. Use arrow keys to move the cursor, Enter to pick up and place a piece."
       tabIndex={0}
       onKeyDown={onKeyDown}
-      // onFocus/onBlur bubble in React, so focus landing on anything inside
-      // the board counts too.
-      onFocus={() => setFocused(true)}
-      onBlur={() => setFocused(false)}
+      // Pointer use retires the ring; onBlur covers leaving the board
+      // entirely. Both bubble, so they fire for anything inside the board —
+      // including react-chessboard's own squares and pieces.
+      onPointerDown={() => setKeyboardCursor(false)}
+      onBlur={() => setKeyboardCursor(false)}
       style={{ outlineOffset: 3 }}
     >
       <Chessboard

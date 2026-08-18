@@ -360,9 +360,28 @@ body {
   gap: 10px;
 }
 
+/* Four icon buttons in a narrow rail, so they are compact — but they are real
+   `Button`s with a variant, not bare `.btn`. Bare `.btn` sets `color: #fff`
+   and takes its background from `[data-variant]`, so a raw `<button
+   className="btn">` rendered white glyphs on nothing: they read as disabled
+   even when they were not, which is exactly how they were reported. */
 .moves-table-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+}
+.moves-table-controls .btn {
+  flex: 1 1 0;
+  padding: 7px 0;
+  font-size: 14px;
+  line-height: 1;
+}
+/* The generic .btn:disabled is opacity 0.5, which on a ghost button leaves the
+   glyph and its border almost as strong as the enabled state — the two ends of
+   the line then look alike. Fade the disabled pair further and drop their lip
+   shadow, so "there is nowhere further to go" reads at a glance. */
+.moves-table-controls .btn:disabled {
+  opacity: 0.32;
+  box-shadow: none;
 }
 
 .moves-table-rows {
