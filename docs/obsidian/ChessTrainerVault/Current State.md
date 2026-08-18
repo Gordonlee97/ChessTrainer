@@ -13,7 +13,7 @@ browser pass - **not yet merged, no PR opened yet**.
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **533 passing, 1 skipped**, 54 test files, **zero warnings**.
+Suite: **543 passing, 1 skipped**, 55 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 
@@ -141,6 +141,7 @@ Run `npm run dev`, open the local URL, and you can:
 
 | Action | Behaviour |
 |---|---|
+| Open the Glossary | A scrollable header disclosure, 30 chess terms grouped simplest-first: the board and the rules, ideas and tactics, then deeper water — including the engine words the app itself displays (evaluation, line, ply). Content in `src/content/glossary.ts`; distinct from the vault's own `Glossary.md`, which is internal vocabulary for people reading the code |
 | Click a piece | Its legal destinations are marked — a dot on an empty square, a tinted ring around a piece that can be taken. Clicking one plays the move; clicking the piece again puts it down; clicking another of your own movable pieces switches to it |
 | Drag a piece | Legal moves land, illegal ones snap back. From/to squares stay highlighted. |
 | Read the right-hand rail | Top 3 engine moves at depth 20, each with score, eval bar, a quality badge (Best/Good/Inaccuracy/Mistake/Blunder relative to the top line), the **top two** explainer sentences, and the first 6 plies of its line |

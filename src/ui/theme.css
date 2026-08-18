@@ -344,6 +344,66 @@ body {
   gap: 8px;
 }
 
+/* ---- Glossary ----------------------------------------------------------
+   Same disclosure shape as .lesson-menu, wider and taller because it is read
+   rather than picked from: this is the one panel a player scrolls. */
+
+.glossary-menu {
+  position: relative;
+}
+
+.glossary-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: min(440px, 92vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.glossary-heading {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin: 0 0 2px;
+}
+.glossary-blurb {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin: 0 0 10px;
+}
+.glossary-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.glossary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.glossary-term {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.glossary-definition {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 0;
+}
+
 /* ---- Moves table -------------------------------------------------------
    An ordinary flex child of .app-rail — no scroll region of its own. The
    rail is already `overflow-y: auto` with `min-height: 0` (see .app-rail

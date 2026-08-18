@@ -2,6 +2,7 @@ import { useLessonStore } from './lesson/store';
 import { AppControls } from './ui/AppControls';
 import { Board } from './ui/Board';
 import { CandidateRail } from './ui/CandidateRail';
+import { GlossaryMenu } from './ui/GlossaryMenu';
 import { LessonMenu } from './ui/LessonMenu';
 import { LessonRail } from './ui/LessonRail';
 import { MoveFeedback } from './ui/MoveFeedback';
@@ -20,6 +21,7 @@ export function App() {
       <header className="app-header">
         <h1 className="app-wordmark">ChessTrainer</h1>
         <LessonMenu />
+        <GlossaryMenu />
         <ProgressNotice />
         <span className="app-header-spacer" />
         <AppControls />
