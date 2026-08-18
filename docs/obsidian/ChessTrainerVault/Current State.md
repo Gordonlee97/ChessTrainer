@@ -13,7 +13,7 @@ browser pass - **not yet merged, no PR opened yet**.
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **508 passing, 1 skipped**, 52 test files, **zero warnings**.
+Suite: **547 passing, 1 skipped**, 55 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 
@@ -141,6 +141,8 @@ Run `npm run dev`, open the local URL, and you can:
 
 | Action | Behaviour |
 |---|---|
+| Open the Glossary | A scrollable header disclosure, 30 chess terms grouped simplest-first: the board and the rules, ideas and tactics, then deeper water — including the engine words the app itself displays (evaluation, line, ply). Content in `src/content/glossary.ts`; distinct from the vault's own `Glossary.md`, which is internal vocabulary for people reading the code |
+| Click a piece | Its legal destinations are marked — a dot on an empty square, a tinted ring around a piece that can be taken. Clicking one plays the move; clicking the piece again puts it down; clicking another of your own movable pieces switches to it |
 | Drag a piece | Legal moves land, illegal ones snap back. From/to squares stay highlighted. |
 | Read the right-hand rail | Top 3 engine moves at depth 20, each with score, eval bar, a quality badge (Best/Good/Inaccuracy/Mistake/Blunder relative to the top line), the **top two** explainer sentences, and the first 6 plies of its line |
 | Watch the rail mid-search | Scores and eval bars stream; **badges and ideas are withheld until the search settles**, because comparing two lines only means something at equal depth |
@@ -245,7 +247,7 @@ failed write (quota or otherwise) reports `saveFailed` rather than throwing.
 | Finish a lesson | Stamped with the completion time on first finish only |
 | Open the picker | Shows "N of M checkpoints" per lesson once any are solved, or "Done" once complete |
 | Reload the page | Progress, saved lines, and the mute setting all survive it — read once at each store's construction |
-| Play a line, click "Save this line" | Stored as its starting FEN plus PGN movetext (`src/chess/pgn.ts`); listed newest-first under "MY LINES" with Open and Delete |
+| Play a line, click "Save" | Names it first — the player types the name, defaulting to "Line N". Stored as its starting FEN plus PGN movetext (`src/chess/pgn.ts`). The list itself lives behind "Open", a disclosure panel, so the section's resting size does not grow with the number of saves; each row carries a × that deletes that line |
 | Open a saved line | Stops any running lesson first, then reseeds the tree and replays the PGN — matches what "New game" does, and for the same reason: a live lesson would otherwise misgrade the replayed moves against its own script |
 | Click "New game" | Stops any running lesson, then resets the tree to the true start |
 | Toggle sound | `aria-pressed` and button text ("Sound on"/"Sound off") carry the state — never colour alone; persists across reload via its own `chesstrainer.muted` key |

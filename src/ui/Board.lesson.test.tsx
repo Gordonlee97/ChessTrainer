@@ -43,7 +43,7 @@ describe('Board during a lesson', () => {
     const before = nodeCount();
     render(<Board />);
     const board = screen.getByRole('application', { name: /chess board/i });
-    board.focus();
+    act(() => board.focus());
     // Cursor starts on e2. Pick up, go up one, place: e3 — legal, but not the answer.
     // Each key gets its own `act` call: batching all three dispatches inside
     // one `act` callback fires them against the same pre-update `cursor`/
@@ -62,7 +62,7 @@ describe('Board during a lesson', () => {
   it('accepts the right answer and plays it', async () => {
     render(<Board />);
     const board = screen.getByRole('application', { name: /chess board/i });
-    board.focus();
+    act(() => board.focus());
     for (const key of ['Enter', 'ArrowUp', 'ArrowUp', 'Enter']) {
       await act(async () => {
         board.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));
@@ -82,7 +82,7 @@ describe('Board during a lesson', () => {
   it('records the accepted answer at the node the move landed on', async () => {
     render(<Board />);
     const board = screen.getByRole('application', { name: /chess board/i });
-    board.focus();
+    act(() => board.focus());
     for (const key of ['Enter', 'ArrowUp', 'ArrowUp', 'Enter']) {
       await act(async () => {
         board.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true }));

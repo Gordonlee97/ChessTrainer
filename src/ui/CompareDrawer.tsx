@@ -8,6 +8,8 @@ import { EvalBar } from './EvalBar';
 import { MiniBoard } from './MiniBoard';
 
 function LinePanel({ summary, line }: { summary: LineSummary; line: PvLine }) {
+  const movesLater = Math.ceil(summary.plies / 2);
+
   return (
     <section
       style={{
@@ -34,8 +36,24 @@ function LinePanel({ summary, line }: { summary: LineSummary; line: PvLine }) {
       <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '6px 0 2px' }}>
         Engine score for the whole line: {formatScore(line)}
       </p>
+      {/*
+        Counted in moves rather than plies. "Ply" is exactly right and exactly
+        the wrong word here: this panel exists to explain a choice to a
+        beginner, and it is the one place the term appeared with nothing to
+        explain it. The Glossary defines it for anyone who meets it elsewhere.
+
+        Rounded up, because the walk can stop on an odd ply — a short principal
+        variation or an illegal continuation — and "2½ moves" is worse than
+        half a move of imprecision in a caption under a picture.
+      */}
       <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '0 0 10px' }}>
-        Board shown after {summary.plies} {summary.plies === 1 ? 'ply' : 'plies'}
+        {movesLater === 0
+          ? // The walk played nothing — an empty principal variation, or a first
+            // move that would not apply — so `endFen` is the position the player
+            // is already looking at. "0 moves later" states a distance that is
+            // not one and invites the reader to hunt for a difference.
+            'Board shown at the current position'
+          : `Board shown ${movesLater} ${movesLater === 1 ? 'move' : 'moves'} later`}
       </p>
       {summary.pros.length > 0 && (
         <>

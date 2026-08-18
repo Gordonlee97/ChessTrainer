@@ -43,10 +43,14 @@ describe('CompareDrawer', () => {
     expect(screen.getByTestId('verdict')).toHaveTextContent(/practically equal/i);
   });
 
-  it('captions the mini-board with the plies actually walked, not the length of the PV', () => {
+  it('captions the mini-board with the moves actually walked, not the length of the PV', () => {
     // The comparison walks at most 8 plies. Captioning the board with
     // line.pv.length ("after 26 plies", as observed in the browser) asserts
     // something false about the picture next to it.
+    //
+    // Counted in moves in the UI — this panel is aimed at a beginner, and it
+    // was the only place "ply" appeared with nothing to explain it. 8 plies
+    // walked reads as 4 moves; the 12-ply PV must not leak through as 6.
     const long: PvLine = {
       san: 'e4',
       cp: 31,
@@ -56,8 +60,20 @@ describe('CompareDrawer', () => {
     render(<CompareDrawer a={long} b={b} baseFen={START} onClose={vi.fn()} />);
     const dialog = screen.getByRole('region');
 
-    expect(dialog).toHaveTextContent(/after 8 plies/i);
-    expect(dialog).not.toHaveTextContent(/12 plies/i);
+    expect(dialog).toHaveTextContent(/4 moves later/i);
+    expect(dialog).not.toHaveTextContent(/6 moves/i);
+    expect(dialog).not.toHaveTextContent(/pl(y|ies)/i); // the jargon is gone
+  });
+
+  it('does not caption an unwalked line as "0 moves later"', () => {
+    // An empty PV means the walk played nothing, so the mini-board *is* the
+    // current position. Claiming a distance of zero reads as a distance.
+    const unwalked: PvLine = { san: 'e4', cp: 31, mate: null, pv: [] };
+    render(<CompareDrawer a={unwalked} b={b} baseFen={START} onClose={vi.fn()} />);
+
+    const dialog = screen.getByRole('region');
+    expect(dialog).toHaveTextContent(/at the current position/i);
+    expect(dialog).not.toHaveTextContent(/0 moves/i);
   });
 
   it('does not claim the engine score belongs to the position on the mini-board', () => {

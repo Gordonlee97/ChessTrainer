@@ -204,41 +204,204 @@ body {
   margin: 0 0 12px;
 }
 
+/* A flex column with a gap, so the heading, the "Save this line" button and
+   the list (or the empty-state paragraph) are always separated. They used to
+   rely on the heading's own bottom margin alone, which left the button and
+   the paragraph below it touching. */
 .saved-lines {
   border: 2px solid var(--border);
   border-radius: var(--radius);
   padding: 12px;
   margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 .saved-lines-heading {
   font-size: 12px;
   letter-spacing: 0.08em;
   color: var(--ink-soft);
-  margin: 0 0 8px;
+  margin: 0;
 }
 .saved-lines-empty {
   font-size: 12px;
   color: var(--ink-soft);
   margin: 0;
 }
+.saved-lines-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* The panel is positioned against the whole "My lines" section, not against
+   the Open button, and stretched between its two edges rather than given a
+   width. Anchored to the button with `width: min(320px, 80vw)` it started
+   ~94px into a 343px rail and ran 71px past its right edge — and because
+   `.app-rail` is a scroll container (`overflow-y: auto` makes the other axis
+   scrollable too), the delete buttons were clipped out of sight entirely and
+   the rail grew a horizontal scrollbar. Tying it to the section means it
+   cannot outgrow the column whatever the rail's width. */
+.saved-lines {
+  position: relative;
+}
+
+.saved-lines-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 12px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
 .saved-lines-list {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 .saved-lines-list li {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 4px;
 }
-.saved-lines-name {
-  font-family: ui-monospace, Consolas, monospace;
-  font-size: 12px;
+
+/* The name is the control that opens the line: the whole row would be a
+   larger target, but a row that is itself a button cannot contain the delete
+   button without nesting interactive elements. */
+.saved-lines-open {
   flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.saved-lines-open:hover { background: var(--bg); }
+.saved-lines-open:focus-visible { outline: 3px solid var(--secondary); outline-offset: 1px; }
+/* box-shadow only — never a box-model property on :active. */
+.saved-lines-open:active { box-shadow: inset 0 0 0 2px var(--border); }
+
+.saved-lines-delete {
+  flex: 0 0 auto;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.saved-lines-delete:hover { color: var(--bad); background: var(--bg); }
+.saved-lines-delete:focus-visible { outline: 3px solid var(--secondary); outline-offset: 1px; }
+.saved-lines-delete:active { box-shadow: inset 0 0 0 2px var(--border); }
+
+.saved-lines-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+.saved-lines-label {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ink-soft);
+}
+.saved-lines-input {
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 8px;
+  width: 100%;
+}
+.saved-lines-input:focus-visible { outline: 3px solid var(--secondary); outline-offset: 1px; }
+.saved-lines-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ---- Glossary ----------------------------------------------------------
+   Same disclosure shape as .lesson-menu, wider and taller because it is read
+   rather than picked from: this is the one panel a player scrolls. */
+
+.glossary-menu {
+  position: relative;
+}
+
+.glossary-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: min(440px, 92vw);
+  max-height: 70vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--ink) 18%, transparent);
+}
+
+.glossary-heading {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink-soft);
+  margin: 0 0 2px;
+}
+.glossary-blurb {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin: 0 0 10px;
+}
+.glossary-list {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.glossary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.glossary-term {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+}
+.glossary-definition {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 0;
 }
 
 /* ---- Moves table -------------------------------------------------------
@@ -257,9 +420,28 @@ body {
   gap: 10px;
 }
 
+/* Four icon buttons in a narrow rail, so they are compact — but they are real
+   `Button`s with a variant, not bare `.btn`. Bare `.btn` sets `color: #fff`
+   and takes its background from `[data-variant]`, so a raw `<button
+   className="btn">` rendered white glyphs on nothing: they read as disabled
+   even when they were not, which is exactly how they were reported. */
 .moves-table-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+}
+.moves-table-controls .btn {
+  flex: 1 1 0;
+  padding: 7px 0;
+  font-size: 14px;
+  line-height: 1;
+}
+/* The generic .btn:disabled is opacity 0.5, which on a ghost button leaves the
+   glyph and its border almost as strong as the enabled state — the two ends of
+   the line then look alike. Fade the disabled pair further and drop their lip
+   shadow, so "there is nowhere further to go" reads at a glance. */
+.moves-table-controls .btn:disabled {
+  opacity: 0.32;
+  box-shadow: none;
 }
 
 .moves-table-rows {
@@ -271,14 +453,20 @@ body {
   gap: 2px;
 }
 
+/* A grid, not a flex row. Each move column is half the row whether or not
+   both are filled: as flex children with `flex: 1 1 0`, a row holding only a
+   White move stretched it across both halves — and that row is usually the
+   move just played, so the selected-move fill spanned the empty Black column
+   too. The number column grows past its floor rather than clipping at move
+   100+. */
 .moves-table-rows li {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(28px, auto) 1fr 1fr;
   align-items: center;
   gap: 6px;
 }
 
 .moves-table-number {
-  flex: 0 0 28px;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 12px;
   font-weight: 700;
@@ -286,7 +474,7 @@ body {
 }
 
 .moves-table-move {
-  flex: 1 1 0;
+  min-width: 0;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 13px;
   font-weight: 700;

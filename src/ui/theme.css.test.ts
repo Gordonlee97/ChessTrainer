@@ -80,3 +80,33 @@ describe('theme.css feedback overlay placement', () => {
     expect(margin!.split(/\s+/)[0]).not.toBe('auto');
   });
 });
+
+describe('theme.css moves-table row columns', () => {
+  /**
+   * Guards the defect reported from the running app on 2026-08-17: a row
+   * holding only a White move stretched that move across the whole row, so the
+   * selected-move fill spanned the empty Black column. It happened because the
+   * row was a flex line and the moves were `flex: 1 1 0` — one child takes
+   * everything when it is the only one.
+   *
+   * Same weak, text-level shape as the tests above, and the same honest
+   * caveat: jsdom performs no layout, so this cannot prove the columns render
+   * as halves. It can only catch a return to the flex arrangement that caused
+   * the spanning.
+   */
+  it('lays the row out as a grid with two equal move columns', () => {
+    const css = readFileSync(THEME_CSS_PATH, 'utf8');
+
+    const ruleMatch = css.match(/\n\.moves-table-rows li \{([^}]*)\}/);
+    expect(ruleMatch).not.toBeNull();
+    const declarations = ruleMatch![1];
+
+    expect(declarations).toMatch(/display:\s*grid/);
+
+    const columns = declarations.match(/grid-template-columns:\s*([^;]+)/)?.[1].trim();
+    expect(columns).toBeDefined();
+    // The two move columns must be equal and flexible; the number column ahead
+    // of them may size however it likes.
+    expect(columns!.endsWith('1fr 1fr')).toBe(true);
+  });
+});

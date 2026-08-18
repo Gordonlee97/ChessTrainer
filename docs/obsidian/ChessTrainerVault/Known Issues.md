@@ -99,11 +99,15 @@ third.
 **Where:** `src/progress/progress.ts` — `addSavedLine`
 **Severity:** low.
 
-Every "Save this line" click adds a new entry, even one identical in `pgn` and
-`startFen` to an existing one, and nothing caps the list length or the
-localStorage quota it eventually hits (at which point `saveFailed` is now
-surfaced — see the fix wave in `Current State.md` — but the list still grows
-unbounded up to that point).
+Every save adds a new entry, even one identical in `pgn` and `startFen` to an
+existing one, and nothing caps the list length or the localStorage quota it
+eventually hits (at which point `saveFailed` is now surfaced — see the fix wave
+in `Current State.md` — but the list still grows unbounded up to that point).
+
+The *visible* half of this was fixed on 2026-08-17: the list moved into a
+disclosure panel, so an unbounded list no longer grows the rail. Named saves
+also make duplicates distinguishable rather than identical-looking. The
+underlying growth is unchanged.
 
 ### The rail still says "stepped off the line" for a correct alternate answer
 
@@ -318,20 +322,6 @@ is blank. The only escape is playing `e5` by hand. The correct rule would be
 "a reply is owed when no child of the selected node matches the lesson's next
 move," not "the node has no children at all."
 
-### The trailing White-only row spans both columns
-
-**Where:** `src/ui/MovesTable.tsx` / `theme.css` — `.moves-table-move { flex: 1
-1 0 }`
-**Severity:** low, cosmetic. Found in the 2026-08-15 whole-branch review.
-
-When a row's last move is White's with no Black reply yet, there is no Black
-sibling to share the row with, so the White button's `flex: 1 1 0` lets it fill
-the whole row — including the empty Black column — and `aria-current`'s fill
-spans both, which is usually true of the selected row. Asymmetric with the
-leading-Black case (a segment starting Black-to-move), which does render an
-elision placeholder for the missing White cell. Fix would be an elision span
-in the `row.black === null` branch, or `flex: 0 0 50%` on `.moves-table-move`.
-
 ### Nothing carries `aria-current` when the root is selected
 
 **Where:** `src/ui/MovesTable.tsx`
@@ -482,11 +472,17 @@ verification until the selector was corrected.
 ### The keyboard cursor does not reset on "New game"
 
 **Where:** `src/ui/Board.tsx`
-**Severity:** low.
+**Severity:** low, and quieter than it was.
 
 Pressing "New game" resets the tree but leaves the cursor wherever it was.
 Defensible — it is a selection cursor, not board state — but it should be a
 deliberate decision rather than an accident.
+
+Less visible since 2026-08-17: the ring is drawn only once the player presses a
+key the board handles, and retires on the next pointer press or on blur —
+`:focus-visible` semantics rather than plain focus. A stale position is
+therefore no longer a mark sitting on the board of someone using the mouse. The
+state underneath is still stale.
 
 ## Test coverage gaps
 

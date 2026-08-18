@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { buildMovesTable } from '../tree/movesTable';
+import { Button } from './Button';
 import { useTreeStore } from '../tree/store';
 
 /**
@@ -40,37 +41,42 @@ export function MovesTable() {
   return (
     <section className="moves-table" aria-label="Moves" tabIndex={0} onKeyDown={onKeyDown}>
       <div className="moves-table-controls">
-        <button type="button" className="btn" onClick={() => go(0)} disabled={atStart}>
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={() => go(0)}
+          disabled={atStart}
+        >
           <span aria-hidden="true">⏮</span>
           <span className="visually-hidden">First move</span>
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn"
+          variant="ghost"
           onClick={() => go(selectedIndex - 1)}
           disabled={atStart}
         >
           <span aria-hidden="true">◀</span>
           <span className="visually-hidden">Previous move</span>
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn"
+          variant="ghost"
           onClick={() => go(selectedIndex + 1)}
           disabled={atEnd}
         >
           <span aria-hidden="true">▶</span>
           <span className="visually-hidden">Next move</span>
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn"
+          variant="ghost"
           onClick={() => go(lineIds.length - 1)}
           disabled={atEnd}
         >
           <span aria-hidden="true">⏭</span>
           <span className="visually-hidden">Last move</span>
-        </button>
+        </Button>
       </div>
 
       <ol className="moves-table-rows">

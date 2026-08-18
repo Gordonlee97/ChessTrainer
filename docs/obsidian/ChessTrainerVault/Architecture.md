@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-15
+updated: 2026-08-17
 status: current
 tags: [chesstrainer, architecture]
 ---
@@ -212,6 +212,19 @@ second aborting the first, against **one search, three lines**. The
 engine-unavailable notice and its retry live in
 `src/ui/EngineUnavailableNotice.tsx` so both renderers share one copy.
 
+**All three ways of moving a piece go through one function.** `Board.tsx`'s
+`attemptMove(from, to)` owns legality, lesson grading, sound and the tree write,
+in that order; dragging, the keyboard's place step and clicking a destination
+differ only in how they report the result. Dragging and the keyboard each
+carried their own copy of that sequence until 2026-08-17, and adding clicking
+would have made three places that must agree about when a lesson answer counts
+— the shape recorded in [[Lessons]] §5. A click can no more skip a checkpoint
+than a drag can, and `Board.click.test.tsx` asserts exactly that.
+
+Legal destinations come from `src/chess/legalMoves.ts`, which asks chess.js
+rather than re-deriving piece geometry: pins, checks and en passant are the
+cases a hand-rolled version gets wrong.
+
 Keyboard board navigation is documented in
 [[Decisions/Keyboard Board Navigation Model]].
 
@@ -255,6 +268,27 @@ turn it is taken **from the position**, never from index parity, because a
 segment may start Black-to-move or override its lesson's side.
 
 ## The moves table (Plan 7, 2026-08-15)
+
+**The move list owns the right column; where the candidate rail goes depends on
+the mode.** Both placements were driven by the same complaint, reported from the
+running app on 2026-08-17: whichever of the two sat lower kept being pushed
+around by the one above it growing.
+
+| | Left rail | Right rail |
+|---|---|---|
+| Explorer | "My lines", then candidate moves | The move list, alone |
+| Lesson | The lesson explanation | The move list, then the checkpoint panel |
+
+`CandidateRail` is one component doing two jobs — engine candidates in the
+explorer, the quiz panel during a lesson — so it moves parents rather than
+duplicating, and exactly one instance is ever mounted. That is safe because the
+engine behind it is a module-level singleton (`sharedEngine.ts`): remounting
+re-subscribes instead of spawning a second worker.
+
+The move list is **first in the right rail in both modes**, so nothing above it
+can change height and shift it; `AppShell.test.tsx` pins that ordering. Putting
+the candidates on the left in the explorer is a departure from the design spec's
+§3 table, which had both in the right column.
 
 `Breadcrumb.tsx` is deleted. `src/tree/movesTable.ts`'s `buildMovesTable` is
 the only place that turns the tree into a displayed line, and it is called
