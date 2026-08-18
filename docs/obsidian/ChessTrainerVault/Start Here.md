@@ -10,21 +10,20 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-15
+## Repo state as of 2026-08-17
 
 | | |
 |---|---|
-| Branch | `master`. Nothing in flight; `feat/moves-table` is merged and can be deleted |
-| Merged to `master` | Plans 1–7, complete — Plan 7 as PR #10, merged 2026-08-17 06:14 UTC (`d5add28`) |
+| Branch | `master`. Nothing in flight; no open PRs, no stale branches |
+| Merged to `master` | Plans 1–7, plus a wave of UI work driven by playing the app (PR #13) |
 | Working tree | Clean |
-| Suite | 506 passing, 1 skipped (expected), **zero warnings**; `tsc --noEmit` and `npm run build` both clean |
-| Last plan finished | Plan 7, the moves table — six tasks plus a browser pass. See [[Roadmap]] and [[Current State]] |
+| Suite | **547 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
+| Last work finished | PR #13 — board interaction and rail layout, merged 2026-08-17 (`fb3d4ff`) |
 | CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10):
-PR #10 is `MERGED` (merge commit `d5add28`), all 12 of its commits are ancestors
-of `origin/master`, and the suite was re-run on the merged result — 506 passing,
-1 expected skip, 0 warnings, `tsc --noEmit` clean. Nothing is in flight.
+Re-checked immediately before writing this note (per [[Lessons]] §10): PR #13 is
+`MERGED` (`fb3d4ff`), `gh pr list --state open` is empty, and the suite was
+re-run on the merged result. Nothing is in flight.
 
 **The whole-branch review ran on 2026-08-15 and returned "ship with named
 fixes".** The three it named are fixed (`410faef`, `a4e2abf`): a test now pins
@@ -126,30 +125,40 @@ whole-branch review deferred to a human at a real viewport. Correct placement
 put it back over the four central squares, which is exactly where the hints ask
 the player to look, so the two changes belong together.
 
-## Plan 7, the moves table, is done and browser-verified — not yet merged
+## PR #13: what a session of playing the app produced
 
-Six tasks on `feat/moves-table`, finished 2026-08-15: the autoplay-owed-reply
-fix reconciled with a navigation-reached tip (`bd37bb7`), the pure derivation
-`buildMovesTable`, the `MovesTable` component and its four controls, mounting
-it in place of `Breadcrumb.tsx` (now deleted), and focus-scoped arrow keys.
-[[Current State]] and [[Architecture]] have the detail.
+Not a plan. Six commits, each one something noticed while clicking around, fixed
+and browser-verified before the next was started. Worth reading because the
+shape of the work is different from every other branch here — no spec, no task
+list, and the review at the end earned its keep.
 
-A browser pass on 2026-08-15 ran all five checks the plan called for:
-stepping back keeps the continuation listed (the whole reason this replaced
-the breadcrumb); playing a different move from a branch point makes the table
-follow the new line; a Black-to-move segment (`development-and-tempo` part 2)
-numbers its first row `2.` with an elided White cell; stepping back
-mid-lesson never drags the player forward again; and — the one that mattered
-most — answering a checkpoint correctly, clicking an earlier moves-table row,
-then clicking `last`, still produces the opponent's reply rather than a blank
-panel. All five held. Full session notes, including an unexplained (and
-almost certainly harmless) rendering glitch during the pass, are in
-`.superpowers/sdd/2026-08-14-moves-table/task-6-report.md`.
+- **The board answers a click.** Clicking a piece marks where it can legally go
+  — a dot on an empty square, a tinted ring around a capture — and clicking a
+  mark plays the move. `src/chess/legalMoves.ts` asks chess.js rather than
+  re-deriving geometry.
+- **One grading path.** Dragging and the keyboard each carried their own copy of
+  legality → grade → sound → write. Clicking would have been a third, so the
+  sequence is now `attemptMove` in `Board.tsx` and the three inputs differ only
+  in how they report the result. See [[Architecture]].
+- **The rails settled.** Candidates sit in the left column in the explorer and
+  on the right during a lesson, where the same component *is* the quiz panel;
+  the move list owns the right column and no longer slides around.
+- **"My lines" is Save and Open**, with named saves and a disclosure list.
+- **A player's glossary** in the header, 30 terms simplest-first, including the
+  engine words the app displays. Distinct from this vault's own `Glossary.md`.
+- **The compare drawer speaks in moves**, not plies.
 
-**Merged as PR #10 on 2026-08-17.** This is the first plan on this project
-where the branch-state claim in this note was re-verified against `gh` at both
-the finish *and* the merge, rather than once at the start — the discipline
-[[Lessons]] §10 exists to enforce.
+**The review found ten things and two were worth the whole exercise.** A
+keyboard-held piece kept its destination dots after the board lost focus; fixing
+that immediately broke click-to-move, because `focusout` bubbles and
+react-chessboard's squares are focusable, so the click that should have played a
+move cleared the selection first. Neither was visible to jsdom — the click tests
+call `onSquareClick` directly and never dispatch focus. Both are pinned now, and
+the guard is mutation-checked.
+
+It also caught that a python index-slice had silently deleted two whole
+`Known Issues` sections. Restored from `master`; the three coverage gaps in them
+are still open.
 
 ## Do this next
 
@@ -165,8 +174,6 @@ automation can close. The layout has been measured exhaustively — regions
 aligned, board square, rails bounded — and never *judged*. The roadmap used to
 name the wrong-answer ✕ as the instance nobody could look at; that was wrong on
 both counts and is corrected there.
-
-
 
 ## Three things this branch learned, worth reading before the next plan
 
