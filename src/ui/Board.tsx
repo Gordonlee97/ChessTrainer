@@ -233,7 +233,14 @@ export function Board() {
     if (picked === null) {
       // No destinations means nothing worth selecting: an empty square, the
       // opponent's piece, or a piece with nowhere to go.
-      if (legalDestinations(node.fen, square).length > 0) setPicked(square);
+      if (legalDestinations(node.fen, square).length > 0) {
+        setPicked(square);
+        // The same sound dragging makes for the same act. The branch's own
+        // argument for one grading path is that inputs must not disagree;
+        // selecting silently while a drag announced itself was that disagreement
+        // surviving in the half `attemptMove` does not cover.
+        sounds.play('pickup');
+      }
       return;
     }
 
@@ -246,7 +253,9 @@ export function Board() {
     if (!canReach) {
       // Re-select if they clicked another piece of their own that can move,
       // otherwise treat it as putting the held piece down.
-      setPicked(legalDestinations(node.fen, square).length > 0 ? square : null);
+      const reselect = legalDestinations(node.fen, square).length > 0;
+      if (reselect) sounds.play('pickup');
+      setPicked(reselect ? square : null);
       return;
     }
 
@@ -284,7 +293,27 @@ export function Board() {
       // entirely. Both bubble, so they fire for anything inside the board —
       // including react-chessboard's own squares and pieces.
       onPointerDown={() => setKeyboardCursor(false)}
-      onBlur={() => setKeyboardCursor(false)}
+      // Blur drops the selection as well as the ring. Keeping `picked` across
+      // a blur was deliberate once — "returning focus restores what was
+      // there" — and wrong twice over: the destination dots are drawn from
+      // `picked`, not from `keyboardCursor`, so they stayed painted on a board
+      // with no cursor on it; and an invisible held piece silently changed
+      // what the player's next click meant.
+      //
+      // The containment check is load-bearing, not defensive. React's onBlur
+      // is `focusout`, which bubbles, and react-chessboard renders each square
+      // as a focusable element — so this fires on every click *inside* the
+      // board as well. Measured: clicking a square reports `relatedTarget` as
+      // another element within the board every time. Without the guard, the
+      // click that should have played a move cleared the selection first, and
+      // the handler then read it as a fresh click on an empty square. The
+      // jsdom tests call `onSquareClick` directly and never dispatch focus, so
+      // they cannot see this — the browser is the only place it shows.
+      onBlur={(event) => {
+        if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+        setKeyboardCursor(false);
+        setPicked(null);
+      }}
       style={{ outlineOffset: 3 }}
     >
       <Chessboard

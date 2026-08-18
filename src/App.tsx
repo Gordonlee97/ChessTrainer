@@ -57,10 +57,17 @@ export function App() {
         </div>
 
         <div className="app-centre">
+          {/* MoveFeedback is a SIBLING of .board-wrap, not a child — the
+              placement its CSS comment describes and the reason Board itself
+              stays free of it. It drifted inside during an unrelated rewrite of
+              this block; the mark still landed correctly only because
+              .board-wrap is unpositioned, so adding `position` or `overflow` to
+              it later would have moved or clipped the mark for no visible
+              reason. */}
           <div className="board-wrap">
             <Board />
-            <MoveFeedback />
           </div>
+          <MoveFeedback />
         </div>
 
         {/* The move list stays first, so nothing above it can change height and

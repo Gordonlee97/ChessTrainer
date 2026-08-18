@@ -484,6 +484,17 @@ key the board handles, and retires on the next pointer press or on blur —
 therefore no longer a mark sitting on the board of someone using the mouse. The
 state underneath is still stale.
 
+## Test coverage gaps
+
+- No test covers queenside castled squares (c1/c8) in `extractFeatures`.
+- No test covers the `mobility === null` path.
+- `hanging` counts a **pinned defender as a valid defender**. This is standard
+  `chess.attackers()` control semantics and is correct per the global
+  constraint — but it is undocumented, unlike the `castled` approximation, which
+  has a comment explaining itself.
+
+## Environment
+
 ### `npm audit` reports 5 vulnerabilities, 1 critical
 
 All in the dev toolchain (the Vitest UI dependency tree). **None reach the

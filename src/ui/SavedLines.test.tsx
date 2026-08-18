@@ -113,6 +113,29 @@ describe('SavedLines', () => {
     expect(useProgressStore.getState().progress.savedLines).toHaveLength(0);
   });
 
+  /**
+   * Found in the 2026-08-17 whole-branch review. A count-based default collides
+   * after a delete — save three, remove the second, and the next save offers
+   * "Line 3" again. Names exist to tell two saves apart.
+   */
+  it('does not offer a default name that is already taken', async () => {
+    const user = userEvent.setup();
+    act(() => useTreeStore.getState().playMove('e4'));
+    render(<SavedLines />);
+
+    await saveAs(user, 'Line 1');
+    await saveAs(user, 'Line 2');
+    await saveAs(user, 'Line 3');
+
+    const second = useProgressStore
+      .getState()
+      .progress.savedLines.find((line) => line.name === 'Line 2')!;
+    act(() => useProgressStore.getState().dropLine(second.id));
+
+    await user.click(screen.getByRole('button', { name: /^save$/i }));
+    expect(screen.getByLabelText(/name this line/i)).toHaveValue('Line 4');
+  });
+
   it('stops a running lesson when a saved line is opened', async () => {
     const user = userEvent.setup();
     // Save "e4" from the starting position before any lesson runs.

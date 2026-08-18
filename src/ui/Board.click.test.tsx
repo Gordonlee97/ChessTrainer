@@ -113,6 +113,59 @@ describe('Board click-to-move', () => {
   });
 
   /**
+   * Found in the 2026-08-17 whole-branch review. The dots are drawn from
+   * `picked`, but the cursor ring is drawn from `keyboardCursor` — so a piece
+   * picked up with the keyboard and then abandoned by clicking away left its
+   * destinations painted on a board with no cursor on it. Worse, the surviving
+   * `picked` made the player's next click a move-or-reselect rather than a
+   * fresh selection.
+   */
+  it('drops the selection and its dots when focus leaves the board', () => {
+    render(<Board />);
+    const board = document.querySelector('[role="application"]') as HTMLElement;
+
+    clickSquare('e2');
+    expect(dotted()).not.toEqual([]);
+
+    // relatedTarget outside the board — focus genuinely left.
+    act(() => {
+      board.dispatchEvent(
+        new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }),
+      );
+    });
+    expect(dotted()).toEqual([]);
+  });
+
+  /**
+   * The regression the fix above first caused, and the reason its containment
+   * check exists. `focusout` bubbles, and react-chessboard renders squares as
+   * focusable elements, so clicking a square fires it on the wrapper too — with
+   * `relatedTarget` still inside the board. An unguarded handler cleared the
+   * selection before the click that should have used it, and the move silently
+   * did not happen.
+   *
+   * jsdom cannot reproduce that on its own, because these tests call
+   * `onSquareClick` directly and never dispatch real focus. So the focusout is
+   * dispatched explicitly here, shaped the way the browser was measured to
+   * shape it.
+   */
+  it('keeps the selection when focus moves within the board', () => {
+    render(<Board />);
+    const board = document.querySelector('[role="application"]') as HTMLElement;
+
+    clickSquare('e2');
+    act(() => {
+      board.dispatchEvent(
+        new FocusEvent('focusout', { bubbles: true, relatedTarget: board }),
+      );
+    });
+
+    expect(dotted()).not.toEqual([]); // still held
+    clickSquare('e4');
+    expect(useTreeStore.getState().tree.selectedId).toContain('e4');
+  });
+
+  /**
    * The reason clicking goes through `attemptMove` rather than playing the
    * move itself. A click must be graded exactly as a drag or a keyboard place
    * is — otherwise clicking would be a way to walk through a lesson without

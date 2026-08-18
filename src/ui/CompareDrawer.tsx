@@ -47,7 +47,13 @@ function LinePanel({ summary, line }: { summary: LineSummary; line: PvLine }) {
         half a move of imprecision in a caption under a picture.
       */}
       <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '0 0 10px' }}>
-        Board shown {movesLater} {movesLater === 1 ? 'move' : 'moves'} later
+        {movesLater === 0
+          ? // The walk played nothing — an empty principal variation, or a first
+            // move that would not apply — so `endFen` is the position the player
+            // is already looking at. "0 moves later" states a distance that is
+            // not one and invites the reader to hunt for a difference.
+            'Board shown at the current position'
+          : `Board shown ${movesLater} ${movesLater === 1 ? 'move' : 'moves'} later`}
       </p>
       {summary.pros.length > 0 && (
         <>

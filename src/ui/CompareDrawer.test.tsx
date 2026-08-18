@@ -65,6 +65,17 @@ describe('CompareDrawer', () => {
     expect(dialog).not.toHaveTextContent(/pl(y|ies)/i); // the jargon is gone
   });
 
+  it('does not caption an unwalked line as "0 moves later"', () => {
+    // An empty PV means the walk played nothing, so the mini-board *is* the
+    // current position. Claiming a distance of zero reads as a distance.
+    const unwalked: PvLine = { san: 'e4', cp: 31, mate: null, pv: [] };
+    render(<CompareDrawer a={unwalked} b={b} baseFen={START} onClose={vi.fn()} />);
+
+    const dialog = screen.getByRole('region');
+    expect(dialog).toHaveTextContent(/at the current position/i);
+    expect(dialog).not.toHaveTextContent(/0 moves/i);
+  });
+
   it('does not claim the engine score belongs to the position on the mini-board', () => {
     // The score is for the whole principal variation; the board is a
     // truncated snapshot of it. "+0.31 after 8 plies" reads as one claim

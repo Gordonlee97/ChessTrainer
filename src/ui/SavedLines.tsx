@@ -4,6 +4,7 @@ import { useLessonStore } from '../lesson/store';
 import { useProgressStore } from '../progress/store';
 import { useTreeStore } from '../tree/store';
 import { pathTo } from '../tree/tree';
+import { sounds } from '../sound';
 import { Button } from './Button';
 
 /**
@@ -25,6 +26,21 @@ import { Button } from './Button';
  * click closes without moving focus, and there is no `aria-modal` because Tab
  * is not trapped.
  */
+/**
+ * "Line 4" when three exist — but derived from the highest number already used
+ * rather than from the count, which collides after a delete: save three, delete
+ * the second, and a count-based default offers "Line 3" again. Names exist to
+ * tell two saves apart, so handing out a duplicate by default defeats the
+ * feature. The player can still type whatever they like, duplicates included.
+ */
+function nextDefaultName(saved: { name: string }[]): string {
+  const highest = saved.reduce((best, line) => {
+    const match = /^Line (\d+)$/.exec(line.name.trim());
+    return match ? Math.max(best, Number(match[1])) : best;
+  }, 0);
+  return `Line ${Math.max(highest, saved.length) + 1}`;
+}
+
 export function SavedLines() {
   const tree = useTreeStore((store) => store.tree);
   const reset = useTreeStore((store) => store.reset);
@@ -101,7 +117,7 @@ export function SavedLines() {
       <div className="saved-lines-actions">
         <Button
           variant="ghost"
-          onClick={() => setDraftName(`Line ${savedLines.length + 1}`)}
+          onClick={() => setDraftName(nextDefaultName(savedLines))}
           disabled={sans.length === 0 || draftName !== null}
         >
           Save
@@ -131,7 +147,15 @@ export function SavedLines() {
                       <button
                         type="button"
                         className="saved-lines-open"
-                        onClick={() => open(line)}
+                        onClick={() => {
+                          // Raw <button>s for layout, so the shared press sound
+                          // the Button component plays has to be played here —
+                          // opening and deleting are the two most consequential
+                          // actions in this panel and were the only silent
+                          // controls in the app.
+                          sounds.play('buttonPress');
+                          open(line);
+                        }}
                       >
                         {line.name}
                       </button>
@@ -142,7 +166,10 @@ export function SavedLines() {
                         type="button"
                         className="saved-lines-delete"
                         aria-label={`Delete ${line.name}`}
-                        onClick={() => dropLine(line.id)}
+                        onClick={() => {
+                          sounds.play('buttonPress');
+                          dropLine(line.id);
+                        }}
                       >
                         <span aria-hidden="true">×</span>
                       </button>
@@ -173,10 +200,15 @@ export function SavedLines() {
             autoFocus
             onChange={(event) => setDraftName(event.target.value)}
             onKeyDown={(event) => {
-              // Escape cancels here rather than in the disclosure effect above:
-              // this form is not the panel, and the two must not close each
-              // other.
-              if (event.key === 'Escape') setDraftName(null);
+              // Escape cancels here rather than in the disclosure effect
+              // above, and must stop there: without stopPropagation the
+              // document-level listener that closes the Open panel also fired,
+              // so one Escape in this input closed the form, closed the list,
+              // and moved focus to the Open button.
+              if (event.key === 'Escape') {
+                event.stopPropagation();
+                setDraftName(null);
+              }
             }}
           />
           <div className="saved-lines-form-actions">

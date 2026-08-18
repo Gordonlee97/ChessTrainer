@@ -42,6 +42,7 @@ export function MovesTable() {
     <section className="moves-table" aria-label="Moves" tabIndex={0} onKeyDown={onKeyDown}>
       <div className="moves-table-controls">
         <Button
+          type="button"
           variant="ghost"
           onClick={() => go(0)}
           disabled={atStart}
@@ -50,6 +51,7 @@ export function MovesTable() {
           <span className="visually-hidden">First move</span>
         </Button>
         <Button
+          type="button"
           variant="ghost"
           onClick={() => go(selectedIndex - 1)}
           disabled={atStart}
@@ -58,6 +60,7 @@ export function MovesTable() {
           <span className="visually-hidden">Previous move</span>
         </Button>
         <Button
+          type="button"
           variant="ghost"
           onClick={() => go(selectedIndex + 1)}
           disabled={atEnd}
@@ -66,6 +69,7 @@ export function MovesTable() {
           <span className="visually-hidden">Next move</span>
         </Button>
         <Button
+          type="button"
           variant="ghost"
           onClick={() => go(lineIds.length - 1)}
           disabled={atEnd}
