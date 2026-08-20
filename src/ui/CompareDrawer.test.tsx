@@ -88,7 +88,23 @@ describe('CompareDrawer', () => {
   });
 
   it('lists pros and cons for each line', () => {
-    render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
+    // Pros/cons are authored-only since the compare-contrast-vocabulary
+    // change (src/explain/compare.ts) — the five-row grid Task 4 adds is
+    // what always renders now; a comparison with nothing authored renders
+    // no pros/cons list at all. Supplying authored content for both lines
+    // keeps this test exercising the render path it was written for.
+    render(
+      <CompareDrawer
+        a={a}
+        b={b}
+        baseFen={START}
+        onClose={vi.fn()}
+        authored={{
+          a: { pros: ['A pro'], cons: ['A con'] },
+          b: { pros: ['B pro'], cons: ['B con'] },
+        }}
+      />,
+    );
     expect(screen.getAllByRole('list').length).toBeGreaterThanOrEqual(2);
   });
 
