@@ -79,7 +79,10 @@ candidates, and because "this line opens the position, that one keeps it closed"
 is the real difference between the games that follow.
 
 It is rendered as a concept, never as a raw count — a player must never read
-"16 pawns". The mapping from pawns traded (32 minus pawns remaining) is:
+"16 pawns". A chessboard holds **16 pawns**, so pawns traded is
+`16 - pawnsRemaining`. (An earlier draft of this spec said 32, which is the
+piece count; under that formula the start position computes as 16 traded and
+every comparison would have banded as "open".) The mapping is:
 
 | Pawns traded | Renders as |
 |---|---|
@@ -88,18 +91,18 @@ It is rendered as a concept, never as a raw count — a player must never read
 | 3+ | "open — several pawns traded" |
 
 Two lines differ on this row when their bands differ, not when their counts do:
-15 pawns and 16 pawns are the same band and must read as equal.
+14 and 15 pawns remaining are 2 and 1 traded, both band 1, and must read as
+equal.
 
 ### 3.2 Row rendering
 
 Every row shows both values and whether they differ, plus one short gloss.
 
-A row's *value* is the measurement in the table above; its *rendering* may name
-the concrete thing rather than the number when that reads better — "pawn on e4"
-rather than "1", "castled" rather than "true". Two renderings that describe the
-same value must still be marked equal: `e4` and `d4` both count 1 central pawn,
-so that row reads as a match even though the words differ. **Equality is decided
-on the value, never on the rendered string.**
+A row's *value* is the measurement in the table above; its *rendering* turns
+that value into plain words — "one central pawn", "castled", "a move ahead".
+Rows are built from values alone and cannot name squares: the row builder is
+given the two measurements, not the two positions. **Equality is decided on the
+value, never on the rendered string.**
 
 ```
 Development    3 pieces   ►►   2 pieces
@@ -109,8 +112,8 @@ Development    3 pieces   ►►   2 pieces
 Matching rows are still rendered, marked as equal, and glossed:
 
 ```
-Centre         pawn on e4  ══  pawn on d4
-               both claim a central square
+Centre         one central pawn  ══  one central pawn
+               both claim a square in the middle
 ```
 
 ### 3.3 The footer replaces the verdict

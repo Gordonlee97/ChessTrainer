@@ -203,8 +203,22 @@ describe('measureLine', () => {
   });
 
   it('bands character by pawns traded, not by raw count', () => {
-    expect(measureLine(fenAfter(...ITALIAN), 'w').character).toBe(0); // nothing traded
-    expect(measureLine(fenAfter(...SCOTCH), 'w').character).toBe(1); // one pair off
+    expect(measureLine(fenAfter(...ITALIAN), 'w').character).toBe(0); // 16 pawns, none traded
+    expect(measureLine(fenAfter(...SCOTCH), 'w').character).toBe(1); // 14 pawns, two traded
+  });
+
+  /**
+   * The band is what the row compares, so two different pawn counts inside one
+   * band must measure identically. 15 and 14 pawns are 1 and 2 traded — both
+   * band 1. Tested here rather than on `buildContrastRows`, which only ever
+   * sees a band and so cannot exercise the collapse at all.
+   */
+  it('collapses different pawn counts within one band to the same value', () => {
+    const oneTraded = fenAfter('e4', 'd5', 'exd5');       // 15 pawns
+    const twoTraded = fenAfter('e4', 'd5', 'exd5', 'Qxd5'); // 15 pawns, a piece taken
+    expect(measureLine(oneTraded, 'w').character).toBe(1);
+    expect(measureLine(twoTraded, 'w').character).toBe(1);
+    expect(measureLine(fenAfter(...SCOTCH), 'w').character).toBe(1); // 14 pawns
   });
 });
 
@@ -238,14 +252,6 @@ describe('buildContrastRows', () => {
     const [centre] = buildContrastRows(quiet, quiet);
     expect(centre.equal).toBe(true);
     expect(centre.gloss.length).toBeGreaterThan(0);
-  });
-
-  it('treats the same character band as equal even at different counts', () => {
-    // Both "opening up"; only the band is compared.
-    const a: LineValues = { ...quiet, character: 1 };
-    const b: LineValues = { ...quiet, character: 1 };
-    const row = buildContrastRows(a, b).find((r) => r.id === 'character')!;
-    expect(row.equal).toBe(true);
   });
 
   it('never puts a raw pawn count in anything a player reads', () => {
@@ -282,7 +288,7 @@ Expected: FAIL — the module does not exist.
 Write the module to satisfy those tests. Requirements the tests do not fully pin, which are binding anyway:
 
 - `measureLine` takes the **end** position of a walked line. Both candidates share a base position, so absolute-at-end and delta-from-base rank identically; measuring the end is simpler and is what the tests assume.
-- `character` bands from pawns traded (`32 - pawnsRemaining(fen)`): `0` traded → `0`, `1-2` → `1`, `3+` → `2`.
+- `character` bands from pawns traded. **A chessboard holds 16 pawns, so traded is `16 - pawnsRemaining(fen)`** — an earlier draft said 32, which is the piece count and would have banded every position as "open". `0` traded → `0`, `1-2` → `1`, `3+` → `2`.
 - Row labels, exactly: `Centre`, `Development`, `King safety`, `Tempo`, `Open or closed`.
 - The king-safety gloss must **teach when castling happens**, not merely report that it has not: it is expected to read the same in nearly every comparison, so an empty gloss makes the row noise. Something of the shape "neither king is safe yet — castling usually comes around move five".
 - The tempo gloss must not use the word *tempo* as its only explanation; say what it means in ordinary words ("a move ahead of Black in development"). The term is in the glossary, but this panel is aimed at beginners and plainness wins ties.
@@ -299,7 +305,7 @@ This is the named defect this repo has recorded ten times: a grid that renders f
 
 1. Make `buildContrastRows` set `equal: true` unconditionally. Expected: "marks only the row that differs" FAILS with a clean assertion mismatch showing `[]` where `['development']` was expected.
 2. Restore. Make it set `equal: false` unconditionally. Expected: "marks every row equal…" FAILS.
-3. Restore. Make the character row compare raw pawn counts instead of bands. Expected: "treats the same character band as equal…" still passes — so **also** confirm the band logic by checking that two lines with 15 and 16 pawns remaining land in the same band before trusting it.
+3. Restore. In `measureLine`, band from `32 - pawnsRemaining` instead of `16 -`. Expected: "bands character by pawns traded…" FAILS, because the Italian's untouched 16 pawns compute as 16 traded and band as `2` rather than `0`. This is the defect the pre-flight scan caught in the plan itself; the fixture exists to keep it caught.
 4. Restore and confirm green. Report each observed failure message.
 
 - [ ] **Step 9: Commit**
