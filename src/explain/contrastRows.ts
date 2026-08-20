@@ -127,9 +127,16 @@ function developmentGloss(a: number, b: number): string {
 /**
  * This row reads "Not castled" in nearly every early comparison, so an
  * uninformative gloss would make it noise on every row it renders. It always
- * teaches when castling normally happens rather than only restating the row.
+ * teaches when castling normally happens rather than only restating the row —
+ * including the two less common cases where one or both lines have already
+ * castled, so the "usually comes around move five" claim never contradicts
+ * what the row itself just showed.
  */
-function kingSafetyGloss(): string {
+function kingSafetyGloss(a: boolean, b: boolean): string {
+  if (a && b) return 'Both kings have already reached safety by castling.';
+  if (a || b) {
+    return 'One king has already castled to safety; the other has not — castling usually comes around move five.';
+  }
   return 'Neither king is safe yet — castling usually comes around move five.';
 }
 
@@ -182,7 +189,7 @@ export function buildContrastRows(a: LineValues, b: LineValues): ContrastRow[] {
       a.kingSafety,
       b.kingSafety,
       kingSafetyText,
-      kingSafetyGloss(),
+      kingSafetyGloss(a.kingSafety, b.kingSafety),
     ),
     row('tempo', 'Tempo', a.tempo, b.tempo, tempoText, tempoGloss()),
     row(

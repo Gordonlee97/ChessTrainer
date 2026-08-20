@@ -59,6 +59,14 @@ describe('measureLine', () => {
     expect(measureLine(twoTraded, 'w').character).toBe(1);
     expect(measureLine(fenAfter(...SCOTCH), 'w').character).toBe(1); // 14 pawns
   });
+
+  it('bands character as open once three or more pawns have been traded', () => {
+    // e4 e6 d4 d5 exd5 exd5 c4 dxc4: an Exchange French followed by a second
+    // central trade. Verified via chess.js: 13 pawns remain (16 - 3 traded),
+    // which is above the "opening up" band's ceiling of two.
+    const openLine = fenAfter('e4', 'e6', 'd4', 'd5', 'exd5', 'exd5', 'c4', 'dxc4');
+    expect(measureLine(openLine, 'w').character).toBe(2);
+  });
 });
 
 describe('buildContrastRows', () => {
@@ -80,6 +88,22 @@ describe('buildContrastRows', () => {
     const rows = buildContrastRows(quiet, faster);
 
     expect(rows.filter((row) => !row.equal).map((row) => row.id)).toEqual(['development']);
+  });
+
+  /**
+   * Every fixture elsewhere in this file sets `kingSafety: false` on both
+   * sides, so the "Castled" text branch and a differing king-safety row
+   * never actually run without this. Task 1's measurements show this is a
+   * live path — one candidate castled by ply 8 where the other did not, in
+   * 1 of 6 real comparisons.
+   */
+  it('marks kingSafety as differing when one line has castled and the other has not', () => {
+    const castled: LineValues = { ...quiet, kingSafety: true };
+    const row = buildContrastRows(quiet, castled).find((r) => r.id === 'kingSafety')!;
+
+    expect(row.equal).toBe(false);
+    expect(row.aText.length).toBeGreaterThan(0);
+    expect(row.bText.length).toBeGreaterThan(0);
   });
 
   /**
