@@ -1,13 +1,51 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { moveNumber, sideToMove } from '../chess/side';
 import type { PvLine } from '../engine/types';
 import { compareLines, type AuthoredContrastPair, type LineSummary } from '../explain/compare';
+import type { ContrastRow } from '../explain/contrastRows';
 import { formatScore } from './useAnalysis';
 import { Button } from './Button';
 import { EvalBar } from './EvalBar';
 import { MiniBoard } from './MiniBoard';
 
-function LinePanel({ summary, line }: { summary: LineSummary; line: PvLine }) {
+/**
+ * "1.e4 e5 2.Nf3 Nc6" — numbered the way a scoresheet is, starting from
+ * whatever `baseFen` actually holds (a line can begin mid-game, and with
+ * Black to move), never from array-index parity. Reuses the same
+ * FEN-derived `sideToMove`/`moveNumber` `movesTable.ts` numbers the tree
+ * with, so a comparison started from a Black-to-move position numbers its
+ * first move `N...` instead of misreading it as White's.
+ */
+function formatMoveList(baseFen: string, moves: string[]): string {
+  let side = sideToMove(baseFen);
+  let number = moveNumber(baseFen);
+  const parts: string[] = [];
+
+  moves.forEach((san, index) => {
+    if (side === 'white') {
+      parts.push(`${number}.${san}`);
+    } else if (index === 0) {
+      parts.push(`${number}...${san}`);
+    } else {
+      parts.push(san);
+    }
+    if (side === 'black') number += 1;
+    side = side === 'white' ? 'black' : 'white';
+  });
+
+  return parts.join(' ');
+}
+
+function LinePanel({
+  summary,
+  line,
+  baseFen,
+}: {
+  summary: LineSummary;
+  line: PvLine;
+  baseFen: string;
+}) {
   const movesLater = Math.ceil(summary.plies / 2);
 
   return (
@@ -21,6 +59,18 @@ function LinePanel({ summary, line }: { summary: LineSummary; line: PvLine }) {
       }}
     >
       <h3 style={{ margin: '0 0 8px', fontSize: 15 }}>{summary.san}</h3>
+      {summary.moves.length > 0 && (
+        <p
+          style={{
+            fontSize: 12,
+            fontFamily: 'monospace',
+            color: 'var(--ink-soft)',
+            margin: '0 0 8px',
+          }}
+        >
+          {formatMoveList(baseFen, summary.moves)}
+        </p>
+      )}
       <MiniBoard fen={summary.endFen} label={`Position after the ${summary.san} line`} />
       <div style={{ marginTop: 8 }}>
         <EvalBar cp={line.cp} mate={line.mate} />
@@ -76,6 +126,65 @@ function LinePanel({ summary, line }: { summary: LineSummary; line: PvLine }) {
         </>
       )}
     </section>
+  );
+}
+
+/**
+ * The five fixed rows, shared between the two lines rather than repeated
+ * inside each panel — a row already holds both sides' text (see
+ * `ContrastRow`), so rendering it per-panel would say the same thing twice.
+ *
+ * A differing row is never marked by colour alone: `data-differs` carries it
+ * as an attribute for tests and assistive tech that ignore colour, the "≠"
+ * glyph carries it as visible text, and `.contrast-row--differs` carries it
+ * as weight — three independent channels, matching the project rule that
+ * colour can be one signal but never the only one.
+ */
+function ContrastRows({ rows }: { rows: ContrastRow[] }) {
+  return (
+    // A plain <div>, not a <section> — a <section> with an accessible name
+    // picks up an implicit ARIA role of "region", which would collide with
+    // the drawer's own single `role="region"` and break `getByRole('region')`
+    // for anything that queries it (including this component's own tests).
+    // The <h4> below gives it context without claiming a landmark.
+    <div style={{ marginTop: 14 }}>
+      <h4
+        style={{
+          fontSize: 11,
+          margin: '0 0 6px',
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          color: 'var(--ink-soft)',
+        }}
+      >
+        How these lines compare
+      </h4>
+      <div className="contrast-rows">
+        {rows.map((row) => (
+          <div
+            key={row.id}
+            className={row.equal ? 'contrast-row' : 'contrast-row contrast-row--differs'}
+            data-differs={row.equal ? 'false' : 'true'}
+          >
+            <span className="contrast-row-label">
+              {row.label}
+              {!row.equal && (
+                <span className="contrast-row-mark" aria-hidden="true">
+                  {' '}
+                  ≠
+                </span>
+              )}
+            </span>
+            <span className="contrast-row-value">{row.aText}</span>
+            <span className="contrast-row-value">{row.bText}</span>
+            {!row.equal && (
+              <span className="visually-hidden"> — differs between the two lines</span>
+            )}
+            <p className="contrast-row-gloss">{row.gloss}</p>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -143,9 +252,11 @@ export function CompareDrawer({
       </div>
 
       <div style={{ display: 'flex', gap: 14, marginTop: 12, flexWrap: 'wrap' }}>
-        <LinePanel summary={comparison.a} line={a} />
-        <LinePanel summary={comparison.b} line={b} />
+        <LinePanel summary={comparison.a} line={a} baseFen={baseFen} />
+        <LinePanel summary={comparison.b} line={b} baseFen={baseFen} />
       </div>
+
+      <ContrastRows rows={comparison.rows} />
 
       <p
         data-testid="verdict"

@@ -19,6 +19,17 @@ const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const a: PvLine = { san: 'e4', cp: 31, mate: null, pv: ['e4', 'e5', 'Nf3'] };
 const b: PvLine = { san: 'd4', cp: 28, mate: null, pv: ['d4', 'd5', 'Nf3'] };
 
+// One line develops a single minor over its walk, the other two — the same
+// discriminating fixture `compare.test.ts` uses for "development is the one
+// row that differs". Verified there against `measureLine` directly.
+const oneMinor: PvLine = { san: 'Nf3', cp: 20, mate: null, pv: ['Nf3', 'd5', 'd4', 'Nf6'] };
+const twoMinors: PvLine = {
+  san: 'e4',
+  cp: 31,
+  mate: null,
+  pv: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5'],
+};
+
 describe('CompareDrawer', () => {
   it('names both lines being compared', () => {
     render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
@@ -106,6 +117,60 @@ describe('CompareDrawer', () => {
       />,
     );
     expect(screen.getAllByRole('list').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('renders all five contrast row labels, in order', () => {
+    render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
+    const dialog = screen.getByRole('region');
+    const labels = ['Centre', 'Development', 'King safety', 'Tempo', 'Open or closed'];
+    const found = labels.map((label) => within(dialog).getByText(label));
+
+    for (let i = 1; i < found.length; i += 1) {
+      // DOCUMENT_POSITION_FOLLOWING means found[i] comes after found[i - 1].
+      const position = found[i - 1].compareDocumentPosition(found[i]);
+      expect(position & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+  });
+
+  it('marks a differing row by more than colour', () => {
+    render(<CompareDrawer a={oneMinor} b={twoMinors} baseFen={START} onClose={vi.fn()} />);
+    const dialog = screen.getByRole('region');
+
+    const differingRow = within(dialog).getByText('Development').closest('[data-differs]');
+    expect(differingRow).toHaveAttribute('data-differs', 'true');
+    expect(differingRow).toHaveTextContent('≠');
+
+    const equalRow = within(dialog).getByText('Centre').closest('[data-differs]');
+    expect(equalRow).toHaveAttribute('data-differs', 'false');
+    expect(equalRow).not.toHaveTextContent('≠');
+  });
+
+  it('shows the walked moves, starting with the candidate\'s own SAN', () => {
+    render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
+    const dialog = screen.getByRole('region');
+    expect(dialog).toHaveTextContent('1.e4 e5 2.Nf3');
+    expect(dialog).toHaveTextContent('1.d4 d5 2.Nf3');
+  });
+
+  it('renders authored prose alongside the rows, not instead of them', () => {
+    render(
+      <CompareDrawer
+        a={a}
+        b={b}
+        baseFen={START}
+        onClose={vi.fn()}
+        authored={{ a: { pros: ['Opens lines at once'], cons: [] } }}
+      />,
+    );
+    const dialog = screen.getByRole('region');
+    expect(within(dialog).getByText('Opens lines at once')).toBeInTheDocument();
+    expect(within(dialog).getByText('Centre')).toBeInTheDocument();
+    expect(within(dialog).getByText('Development')).toBeInTheDocument();
+  });
+
+  it('names the differing row in the footer when exactly one differs', () => {
+    render(<CompareDrawer a={oneMinor} b={twoMinors} baseFen={START} onClose={vi.fn()} />);
+    expect(screen.getByTestId('verdict')).toHaveTextContent('One real difference: development.');
   });
 
   it('closes when the close button is pressed', async () => {
