@@ -18,7 +18,7 @@ can be reconstructed from the code, and this cannot.
 | Merged to `master` | Plans 1–7, plus a wave of UI work driven by playing the app (PR #13). `master` is at `404fc63` |
 | Working tree | Clean once this session's vault commit lands; before that, only `docs/` and three `src/ui/` files touched (see below) |
 | Suite | **575 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
-| Last work finished | Task 5 of the compare-contrast-vocabulary plan — browser pass, a regression test, two stale docstrings, a spec correction, and this vault update |
+| Last work finished | The compare-contrast-vocabulary plan, through Task 5 and its review — browser pass, a regression test, two stale docstrings, a spec correction, and the vault updates including the corrections to this note |
 | CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
 
 Re-checked immediately before writing this note (per [[Lessons]] §10):
@@ -46,8 +46,11 @@ mini-board so the pictured position is followable. Full detail in
 measurements), `d326127`+`277a023` (the vocabulary module), `9ca51c0`
 (rewiring `compare.ts`), `8de7c6f` (rendering), plus this session's two
 commits, `4f10aba` (regression test and docstring fixes) and `cd162a7`
-(this vault update). Two earlier commits, `bdc5204` (spec) and `87a78f9`
-(plan), plus `95af741` (a pre-execution correction), complete the branch.
+(this vault update), with `bdc5204` (spec), `87a78f9` (plan) and `95af741`
+(a pre-execution correction) beneath them. **That list is as of `cd162a7` and
+is not maintained** — later commits are not in it, including the ones that
+corrected this note. It is here to say what the work *was*, not to enumerate
+the branch.
 
 **This session's browser pass (Task 5) held up.** All five rows render with
 both values and a gloss; they render exactly once for the pair, measured via
