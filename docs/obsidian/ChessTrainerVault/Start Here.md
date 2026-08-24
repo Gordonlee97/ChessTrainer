@@ -24,10 +24,15 @@ can be reconstructed from the code, and this cannot.
 Re-checked immediately before writing this note (per [[Lessons]] §10):
 `gh pr list --state all` shows PRs #1–14, all `MERGED`, and none for
 `feat/compare-contrast-vocabulary` — the branch has never had a PR opened.
-`git log --oneline origin/master..HEAD` shows this branch's ten commits
-sitting on top of `master`, unmerged — spec, plan, a pre-execution
-correction, and seven implementation/test/vault commits (2026-08-24
-recount; an earlier draft of this note miscounted it as eight).
+`git log --oneline origin/master..HEAD` shows the branch sitting on top of
+`master`, unmerged: the spec, the plan, a pre-execution correction, and the
+implementation, test and vault commits.
+
+**Deliberately not stated as a number.** Two drafts of this sentence gave a
+count and both were wrong — the second was accurate when written and stale by
+the time it was committed, because the commit that corrected it became one
+more. A count of a branch, written into a note *inside* that branch, invalidates
+itself on write. Run the command.
 
 ## The compare drawer's contrast vocabulary is done, on an unmerged branch
 
@@ -42,8 +47,7 @@ measurements), `d326127`+`277a023` (the vocabulary module), `9ca51c0`
 (rewiring `compare.ts`), `8de7c6f` (rendering), plus this session's two
 commits, `4f10aba` (regression test and docstring fixes) and `cd162a7`
 (this vault update). Two earlier commits, `bdc5204` (spec) and `87a78f9`
-(plan), plus `95af741` (a pre-execution correction), round the branch out
-to ten.
+(plan), plus `95af741` (a pre-execution correction), complete the branch.
 
 **This session's browser pass (Task 5) held up.** All five rows render with
 both values and a gloss; they render exactly once for the pair, measured via
