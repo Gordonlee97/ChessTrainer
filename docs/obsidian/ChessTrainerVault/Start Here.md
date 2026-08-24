@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-17
+updated: 2026-08-21
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,20 +10,63 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-17
+## Repo state as of 2026-08-21
 
 | | |
 |---|---|
-| Branch | `master`. Nothing in flight; no open PRs, no stale branches |
-| Merged to `master` | Plans 1–7, plus a wave of UI work driven by playing the app (PR #13) |
-| Working tree | Clean |
-| Suite | **547 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
-| Last work finished | PR #13 — board interaction and rail layout, merged 2026-08-17 (`fb3d4ff`) |
+| Branch | `feat/compare-contrast-vocabulary`, checked out. **Not merged, no PR opened.** |
+| Merged to `master` | Plans 1–7, plus a wave of UI work driven by playing the app (PR #13). `master` is at `404fc63` |
+| Working tree | Clean once this session's vault commit lands; before that, only `docs/` and three `src/ui/` files touched (see below) |
+| Suite | **575 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
+| Last work finished | Task 5 of the compare-contrast-vocabulary plan — browser pass, a regression test, two stale docstrings, a spec correction, and this vault update |
 | CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10): PR #13 is
-`MERGED` (`fb3d4ff`), `gh pr list --state open` is empty, and the suite was
-re-run on the merged result. Nothing is in flight.
+Re-checked immediately before writing this note (per [[Lessons]] §10):
+`gh pr list --state all` shows PRs #1–14, all `MERGED`, and none for
+`feat/compare-contrast-vocabulary` — the branch has never had a PR opened.
+`git log --oneline origin/master..HEAD` shows this branch's eight commits
+sitting on top of `master`, unmerged.
+
+## The compare drawer's contrast vocabulary is done, on an unmerged branch
+
+Five tasks, complete 2026-08-21 on `feat/compare-contrast-vocabulary`. The
+compare drawer used to describe each candidate line independently, which
+meant two strong moves usually produced identical prose. It now contrasts the
+pair directly on five fixed rows — Centre, Development, King safety, Tempo,
+Open or closed — plus the moves each line actually walked, shown above the
+mini-board so the pictured position is followable. Full detail in
+[[Current State]] and [[Architecture]]; commits `7c3de3f` (engine
+measurements), `d326127`+`277a023` (the vocabulary module), `9ca51c0`
+(rewiring `compare.ts`), `8de7c6f` (rendering), plus this session's vault and
+cleanup commit.
+
+**This session's browser pass (Task 5) held up.** All five rows render with
+both values and a gloss; they render exactly once for the pair, measured via
+DOM query rather than eyeballed. The walked moves do make the mini-board
+followable — §3.4's whole justification. A Scotch-reached pawn trade moved
+the Centre and Open-or-closed rows, confirming they respond to the real
+board. The Italian's `Bc4` checkpoint still carries authored prose alongside
+all five rows, though it renders *above* the grid rather than beneath it —
+a spec deviation found this session, filed in [[Known Issues]] rather than
+fixed, since it was outside this task's scope.
+
+**The density judgement went partly against the standing "simple wins ties"
+instruction.** The plain case is compact and clear; a comparison carrying
+authored pros/cons is a genuine wall, needing three scroll ticks to reach the
+verdict. The five-row grid itself is not the problem — full reasoning,
+including the King-safety and move-list-duplication questions the task asked
+directly, is in [[Known Issues]]. Nothing was cut; that was deliberately left
+for the author to decide.
+
+**Three small things were also fixed this session, unrelated to the browser
+pass:** a regression test for `formatMoveList`'s previously-untested
+Black-to-move branch (mutation-checked — breaking the branch failed the test
+for the right reason, restoring it passed), two stale docstrings in
+`CandidateRail.tsx` and `CheckpointPanel.tsx` that still described a
+heuristic-summary fallback removed on this branch, and the design spec's
+§3.3 footer wording corrected to match what actually shipped (the code and
+three test files were right; the spec's copy-paste had dropped the
+"Practically equal — " lead-in).
 
 **The whole-branch review ran on 2026-08-15 and returned "ship with named
 fixes".** The three it named are fixed (`410faef`, `a4e2abf`): a test now pins
@@ -162,14 +205,22 @@ are still open.
 
 ## Do this next
 
-**1. The compare drawer's contrast vocabulary** — see [[Roadmap]] "Next".
-That is a design decision before it is code; do not start writing against it
-directly. Two strong candidate moves usually score identically on every feature
-`summarise` has, so the fix is new vocabulary, not another ad-hoc feature. It is
-the one roadmap item that changes whether the app *teaches* rather than
-*describes*.
+**1. Get `feat/compare-contrast-vocabulary` reviewed and merged.** It is
+complete — five tasks, browser-verified, suite green — sitting on `master` at
+`404fc63` with no PR opened. This session deliberately did not open one; that
+is a decision for whoever picks this up next, per the task boundary it was
+given.
 
-**2. A design pass by eye**, which is the only item on the roadmap no
+**2. Decide whether to act on what this session's browser pass found and left
+open**, both in [[Known Issues]] under "Found on the compare-contrast-vocabulary
+browser pass": authored prose renders above the five-row grid rather than
+beneath it (a small, mechanical fix — move the pros/cons block out of
+`LinePanel` and render it after `ContrastRows`), and the density judgement
+that the authored-prose case is a wall while the plain case is not. Neither
+was fixed this session on purpose — they were found during a task scoped to
+observing and reporting, not redesigning.
+
+**3. A design pass by eye**, which is the only item on the roadmap no
 automation can close. The layout has been measured exhaustively — regions
 aligned, board square, rails bounded — and never *judged*. The roadmap used to
 name the wrong-answer ✕ as the instance nobody could look at; that was wrong on

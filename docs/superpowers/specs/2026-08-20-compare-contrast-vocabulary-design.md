@@ -119,8 +119,11 @@ Centre         one central pawn  ══  one central pawn
 ### 3.3 The footer replaces the verdict
 
 `buildVerdict`'s sentence is replaced by a footer naming the rows that differ:
-"One real difference: development." When no row differs: "These do the same five
-things, equally well — pick the one you would rather play."
+"One real difference: development." When no row differs: "Practically equal —
+these do the same five things, equally well. Pick the one you would rather
+play." (Reconciled 2026-08-21 against the shipped code and the three test
+files that assert it — the "Practically equal — " lead-in was added during
+implementation and is not a deviation to fix.)
 
 `practicallyEqual` changes meaning. It currently means "the engine scores are
 within `PRACTICALLY_EQUAL_CP`"; it becomes **"no row differs"**. The engine score

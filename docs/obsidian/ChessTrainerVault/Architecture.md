@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-17
+updated: 2026-08-21
 status: current
 tags: [chesstrainer, architecture]
 ---
@@ -31,7 +31,7 @@ with no rendering involved.
 |---|---|
 | `src/chess/` | Helpers over chess.js: position feature extraction (`features.ts`), pawn structure (`pawnStructure.ts`), fork/pin detection (`tactics.ts`), drop resolution (`resolveDrop.ts`), and PGN round-tripping for saved lines (`pgn.ts`) |
 | `src/engine/` | UCI protocol parsing, the Stockfish Worker transport, the `Engine` class that serializes searches, and a position-keyed eval cache (`evalCache.ts`) shared across transposed positions. Its key is the first four FEN fields — placement, side to move, castling, en passant — deliberately excluding the move clocks, which are how a position was reached rather than what it is |
-| `src/explain/` | Pure functions over `PvLine`s and position features, no React: move-quality banding (`quality.ts`), the rule-based explainer with a FEN fixture table (`rules.ts`, `explain.ts`), and line comparison with a calibrated verdict (`compare.ts`) |
+| `src/explain/` | Pure functions over `PvLine`s and position features, no React: move-quality banding (`quality.ts`), the rule-based explainer with a FEN fixture table (`rules.ts`, `explain.ts`), and line comparison (`compare.ts`, `contrastRows.ts`) |
 | `src/tree/` | The immutable game tree (`tree.ts`), its Zustand store (`store.ts`), and the pure derivation of a numbered moves table from it (`movesTable.ts`) |
 | `src/sound/` | Howler wrapper: preload, pooling, mute, graceful degradation |
 | `src/content/` | The authored corpus: the Zod schema (`schema.ts`), the parsing and chess-validating loader (`load.ts`), and seven lessons under `lessons/`. Validation replays every authored move, every accepted checkpoint answer, every `nearMiss` key and every `alternative` through chess.js — legality only; it cannot tell a legal move from a good one |
@@ -322,3 +322,57 @@ shell" above) — so `.app-shell`'s `1fr` row grew to fit content instead of the
 viewport, and `overflow: hidden` silently clipped the excess. Long rail
 content, including a long moves table, vanished off the bottom unscrollable.
 Full measurement in the CSS comment above `.app-main` in `src/ui/theme.css`.
+
+## The compare drawer's contrast vocabulary (Plan 8, 2026-08-21)
+
+The old `compare.ts` derived a per-line pros/cons list from whichever
+features happened to differ from the base position — five loosely-related
+signals (minors developed, centre control, castled, doubled pawn, passed
+pawn) that two strong candidates routinely scored alike on, collapsing the
+comparison to "practically equal" more often than it taught anything. This
+plan replaces that with a **fixed vocabulary**: five rows, always rendered,
+always in the same order, that contrast the pair directly rather than
+describing each line on its own.
+
+- **`src/explain/contrastRows.ts` is the new module and where the vocabulary
+  lives.** `measureLine(endFen, mover)` reads a walked line's end position
+  into a `LineValues` — centre pawns on d4/e4/d5/e5, developed minors,
+  castled, a development differential (`tempo`), and a coarse open/closed
+  band from pawns traded (`pawnsRemaining` in `src/chess/pawnStructure.ts`).
+  `buildContrastRows(a, b)` turns a pair of `LineValues` into the five
+  `ContrastRow`s the drawer renders — id, label, each side's formatted text,
+  an `equal` flag, and a gloss sentence.
+- **`compare.ts` no longer derives prose.** `summarise` returns a
+  `LineSummary` carrying `values: LineValues` and `moves: string[]` (the
+  walked SANs) instead of a pros/cons list. `buildVerdict` reads
+  `ContrastRow.equal` across the five rows and names which ones differ —
+  "One real difference: development." or "Practically equal — these do the
+  same five things, equally well" when none do — rather than comparing
+  centipawn gaps. A mate for either side outranks this entirely
+  (`mateVerdict` runs first and short-circuits the row-based footer).
+- **Authored pros/cons append, they no longer replace.** `applyAuthored` used
+  to overwrite the derived list; now the five rows always render and authored
+  content, where a lesson supplies it, is appended to each `LineSummary`
+  independently of them. `compareLines`'s heuristic pros/cons are gone
+  entirely — there is nothing left to fall back to.
+- **The walked moves are shown, not just implied.** `src/ui/CompareDrawer.tsx`'s
+  `formatMoveList` numbers `LineSummary.moves` like a scoresheet, reading
+  whose move is first and what the starting fullmove number is from the base
+  FEN via `src/chess/side.ts` (`sideToMove`, `moveNumber`) rather than array
+  index parity — so a comparison opened from a Black-to-move position numbers
+  correctly (`"5...Nc6"`), not just the White-to-move case every other
+  comparison in the corpus happens to start from.
+- **A layout deviation from the spec, found in the 2026-08-21 browser pass:**
+  §3.6 of the design spec says authored prose "stacks beneath the grid," but
+  `LinePanel` renders each line's pros/cons *inside itself*, and `LinePanel`s
+  render before the shared `ContrastRows` in `CompareDrawer`'s JSX — so
+  authored prose sits above the grid, not below it, in both DOM order and on
+  screen. See [[Known Issues]].
+
+`ReasonTag` (`src/explain/types.ts`, used by `rules.ts`'s per-move explainer)
+is deliberately not reused for `ContrastRowId` — per-move explanation and
+line comparison are different jobs, and sharing the union would couple them.
+One consequence, left open on purpose: `tempo` means "gives check" in
+`rules.ts` and "development differential" in `contrastRows.ts` — two senses
+of one word in an app that teaches vocabulary. Out of scope for this plan;
+flagged as the next one to write.
