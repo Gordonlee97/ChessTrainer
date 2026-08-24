@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-21
+updated: 2026-08-24
 status: current
 tags: [chesstrainer, state]
 ---
@@ -40,7 +40,7 @@ and carries a one-sentence gloss.
   (`formatMoveList` in `src/ui/CompareDrawer.tsx`), directly above each
   mini-board — fixing a comprehension gap the old drawer had: a board shown
   eight plies deep with no path to it. Handles a Black-to-move base position
-  (`"5...Nc6"`) as well as White-to-move, regression-tested 2026-08-21.
+  (`"2...Nc6"`) as well as White-to-move, regression-tested 2026-08-21.
 - **Authored pros/cons now append to the five rows instead of replacing
   derived ones** — `compareLines`'s heuristic pros/cons are gone entirely;
   authored content, where a lesson supplies it, is the *only* source of

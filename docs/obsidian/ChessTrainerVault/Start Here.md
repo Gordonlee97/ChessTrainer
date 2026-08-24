@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-21
+updated: 2026-08-24
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -24,8 +24,10 @@ can be reconstructed from the code, and this cannot.
 Re-checked immediately before writing this note (per [[Lessons]] §10):
 `gh pr list --state all` shows PRs #1–14, all `MERGED`, and none for
 `feat/compare-contrast-vocabulary` — the branch has never had a PR opened.
-`git log --oneline origin/master..HEAD` shows this branch's eight commits
-sitting on top of `master`, unmerged.
+`git log --oneline origin/master..HEAD` shows this branch's ten commits
+sitting on top of `master`, unmerged — spec, plan, a pre-execution
+correction, and seven implementation/test/vault commits (2026-08-24
+recount; an earlier draft of this note miscounted it as eight).
 
 ## The compare drawer's contrast vocabulary is done, on an unmerged branch
 
@@ -37,8 +39,11 @@ Open or closed — plus the moves each line actually walked, shown above the
 mini-board so the pictured position is followable. Full detail in
 [[Current State]] and [[Architecture]]; commits `7c3de3f` (engine
 measurements), `d326127`+`277a023` (the vocabulary module), `9ca51c0`
-(rewiring `compare.ts`), `8de7c6f` (rendering), plus this session's vault and
-cleanup commit.
+(rewiring `compare.ts`), `8de7c6f` (rendering), plus this session's two
+commits, `4f10aba` (regression test and docstring fixes) and `cd162a7`
+(this vault update). Two earlier commits, `bdc5204` (spec) and `87a78f9`
+(plan), plus `95af741` (a pre-execution correction), round the branch out
+to ten.
 
 **This session's browser pass (Task 5) held up.** All five rows render with
 both values and a gloss; they render exactly once for the pair, measured via

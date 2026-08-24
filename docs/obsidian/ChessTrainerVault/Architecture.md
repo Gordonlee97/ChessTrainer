@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-21
+updated: 2026-08-24
 status: current
 tags: [chesstrainer, architecture]
 ---
@@ -360,7 +360,7 @@ describing each line on its own.
   whose move is first and what the starting fullmove number is from the base
   FEN via `src/chess/side.ts` (`sideToMove`, `moveNumber`) rather than array
   index parity — so a comparison opened from a Black-to-move position numbers
-  correctly (`"5...Nc6"`), not just the White-to-move case every other
+  correctly (`"2...Nc6"`), not just the White-to-move case every other
   comparison in the corpus happens to start from.
 - **A layout deviation from the spec, found in the 2026-08-21 browser pass:**
   §3.6 of the design spec says authored prose "stacks beneath the grid," but

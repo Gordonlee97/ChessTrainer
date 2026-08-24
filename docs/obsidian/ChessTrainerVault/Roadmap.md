@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-21
+updated: 2026-08-24
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -146,8 +146,11 @@ followable. `src/explain/contrastRows.ts` is the new module; `compare.ts`'s
 `docs/superpowers/plans/2026-08-20-compare-contrast-vocabulary.md`; spec:
 `docs/superpowers/specs/2026-08-20-compare-contrast-vocabulary-design.md`.
 
-**Browser-verified 2026-08-21.** All four checks in the plan's browser pass
-held, including the two the plan called out as needing a human judgement: the
+**Browser-verified 2026-08-21.** Three of the plan's four browser-pass checks
+held outright; the fourth did not — the Italian's authored prose was required
+to appear *beneath* the five contrast rows (§3.6) but instead renders *above*
+them, a layout deviation filed in [[Known Issues]] and not fixed on this
+task. The two checks that needed a human judgement both held: the
 walked-move list does make the mini-board's position followable (§3.4's whole
 justification), and the King-safety row's near-permanent sameness is a real
 but not disqualifying cost. The density judgement found the *plain* case
