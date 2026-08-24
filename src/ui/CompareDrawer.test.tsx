@@ -19,6 +19,15 @@ const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 const a: PvLine = { san: 'e4', cp: 31, mate: null, pv: ['e4', 'e5', 'Nf3'] };
 const b: PvLine = { san: 'd4', cp: 28, mate: null, pv: ['d4', 'd5', 'Nf3'] };
 
+// 1.e4 e5 2.Nf3, Black to move — reached by replaying through chess.js
+// (`new Chess().move('e4').move('e5').move('Nf3').fen()`) rather than
+// hand-written, per CLAUDE.md. Exercises formatMoveList's Black-to-move
+// branch, which every other fixture in this file skips by starting at the
+// initial position.
+const BLACK_TO_MOVE = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2';
+const blackNc6: PvLine = { san: 'Nc6', cp: 20, mate: null, pv: ['Nc6', 'Bc4', 'Nf6'] };
+const blackD5: PvLine = { san: 'd5', cp: 15, mate: null, pv: ['d5'] };
+
 // One line develops a single minor over its walk, the other two — the same
 // discriminating fixture `compare.test.ts` uses for "development is the one
 // row that differs". Verified there against `measureLine` directly.
@@ -150,6 +159,20 @@ describe('CompareDrawer', () => {
     const dialog = screen.getByRole('region');
     expect(dialog).toHaveTextContent('1.e4 e5 2.Nf3');
     expect(dialog).toHaveTextContent('1.d4 d5 2.Nf3');
+  });
+
+  it('numbers the walked moves from a Black-to-move base position with "N...", not "N."', () => {
+    // A comparison opened from a Black-to-move position — common whenever a
+    // checkpoint or candidate rail sits after White's move — hits
+    // formatMoveList's other branch: the first SAN is Black's, so it must
+    // render "2...Nc6", never "2.Nc6" (which would misread as White's move).
+    render(
+      <CompareDrawer a={blackNc6} b={blackD5} baseFen={BLACK_TO_MOVE} onClose={vi.fn()} />,
+    );
+    const dialog = screen.getByRole('region');
+    expect(dialog).toHaveTextContent('2...Nc6 3.Bc4 Nf6');
+    expect(dialog).toHaveTextContent('2...d5');
+    expect(dialog).not.toHaveTextContent('2.Nc6');
   });
 
   it('renders authored prose alongside the rows, not instead of them', () => {
