@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-21
+updated: 2026-08-25
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -354,69 +354,6 @@ A line containing the same SAN twice — e.g. `Nf3 … Ng1 … Nf3` — yields t
 buttons with identical accessible names and no positional context, so a screen
 reader user cannot tell them apart by name alone. An `aria-label` such as
 "Move 12, White: Nf3" (fullmove number, side, SAN) would disambiguate them.
-
-## Found on the compare-contrast-vocabulary browser pass (2026-08-21)
-
-### Authored prose renders above the shared grid, not beneath it
-
-**Where:** `src/ui/CompareDrawer.tsx` — `LinePanel` and `ContrastRows`
-**Severity:** low. Cosmetic/ordering, not a functional loss — everything the
-spec asked for is present and readable, just not in the order specified.
-
-§3.6 of the design spec says authored prose "stacks beneath the grid." What
-shipped puts each line's Pros/Cons inside its own `LinePanel` (rendered
-before `ContrastRows` in the JSX), so a lesson's authored text sits *above*
-the shared five-row grid in both DOM order and on screen — confirmed with a
-`compareDocumentPosition` check in the browser, not assumed. The five rows
-still render exactly once for the pair either way. Worth fixing the next time
-this file is touched: move the pros/cons block out of `LinePanel` and render
-it after `ContrastRows`, matching the spec and reading as a genuine "stack
-beneath" rather than "prose first, then a shared summary."
-
-### The density judgement: the grid is fine, authored prose is the wall
-
-**Where:** `src/ui/CompareDrawer.tsx`
-**Severity:** low; a judgement call, recorded per the standing "simple and
-beginner-friendly wins ties" instruction rather than a defect.
-
-Browser-measured 2026-08-21: a comparison with no authored content (heading,
-per-line moves/board/score/caption, five one-line rows, one verdict line) fits
-inside a single 784px viewport with no scrolling and reads cleanly. A
-comparison carrying authored pros/cons (the Italian's `Bc4` checkpoint, `Bb5`
-vs `d4`) needed three scroll ticks to reach the verdict — the bulleted
-pros/cons roughly double each line panel's height. **If this reads as a wall,
-the authored prose is doing it, not the five-row grid or its glosses.**
-
-Two specific questions the task asked:
-
-- *Does King safety, reading the same in nearly every comparison, teach or
-  train the reader to skip the grid?* Both, likely, at different points in a
-  player's experience — the gloss text changes even when the values do not
-  ("Neither king is safe yet — castling usually comes around move five" versus
-  the "one has, one hasn't" and "both have" variants), so first encounters
-  learn a real fact about *when* castling happens. Repeated encounters risk
-  habituating the eye to skip that row, and by extension the block around it.
-  Not fixed here — the task's instructions were to report, not to cut.
-- *Does the walked move list duplicate what the candidate rail already
-  showed?* Partially. The rail's row already shows a bare 6-ply SAN slice
-  (`e4 e5 Nf3 Nc6 Bc4 Bc5`); the drawer repeats the same moves, numbered like
-  a scoresheet and walked up to 8 plies. But it earns a different job here —
-  it is the only thing that makes the mini-board's position followable, which
-  is §3.4's entire justification and was previously missing outright. The
-  duplication is real but is not the source of the wall feeling; the authored
-  pros/cons are.
-
-The Task 4 implementer suggested trimming the per-row gloss sentences first if
-density is a problem. Disagree, based on what was actually measured: the
-glosses are five one-line sentences total and were not what pushed any
-comparison past one viewport — the authored pros/cons were. The glosses are
-also the one piece of prose that is *always* present and *always* short,
-which is exactly the beginner-friendly property the standing instruction
-asks for. If trimming is wanted, the authored pros/cons — which in the one
-observed case largely restate what the row values already say ("Applies
-long-term pressure to Black's centre" restates the Centre row; "Trades off
-your strong e-pawn" restates Open or closed) — are the more defensible cut,
-not the glosses. Not cut here; this is a report, per the task's instruction.
 
 ## Dead code and cleanup
 
