@@ -96,7 +96,7 @@ function LinePanel({
         variation or an illegal continuation — and "2½ moves" is worse than
         half a move of imprecision in a caption under a picture.
       */}
-      <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: '0 0 10px' }}>
+      <p style={{ fontSize: 12, color: 'var(--ink-soft)', margin: 0 }}>
         {movesLater === 0
           ? // The walk played nothing — an empty principal variation, or a first
             // move that would not apply — so `endFen` is the position the player
@@ -105,9 +105,28 @@ function LinePanel({
             'Board shown at the current position'
           : `Board shown ${movesLater} ${movesLater === 1 ? 'move' : 'moves'} later`}
       </p>
+    </section>
+  );
+}
+
+/**
+ * One line's authored pros/cons, attributed to its own SAN heading — the
+ * same attribution problem `ContrastRows`' header solves for the grid.
+ * Rendered after the verdict (spec §3.6, plan Task 4 Step 3: rows, then the
+ * footer, then authored prose) rather than inside `LinePanel`, so a reader
+ * reaches the derived comparison before a human's opinion of it. Guarded on
+ * both lists being empty — pros/cons are usually empty, and a heading over
+ * nothing is a defect.
+ */
+function AuthoredProse({ summary }: { summary: LineSummary }) {
+  if (summary.pros.length === 0 && summary.cons.length === 0) return null;
+
+  return (
+    <div style={{ marginTop: 10 }}>
+      <h4 style={{ fontSize: 13, margin: '0 0 4px' }}>{summary.san}</h4>
       {summary.pros.length > 0 && (
         <>
-          <h4 style={{ fontSize: 12, margin: '0 0 4px' }}>Pros</h4>
+          <h5 style={{ fontSize: 12, margin: '0 0 4px' }}>Pros</h5>
           <ul style={{ fontSize: 12, margin: '0 0 8px', paddingLeft: 18 }}>
             {summary.pros.map((pro) => (
               <li key={pro}>{pro}</li>
@@ -117,7 +136,7 @@ function LinePanel({
       )}
       {summary.cons.length > 0 && (
         <>
-          <h4 style={{ fontSize: 12, margin: '0 0 4px' }}>Cons</h4>
+          <h5 style={{ fontSize: 12, margin: '0 0 4px' }}>Cons</h5>
           <ul style={{ fontSize: 12, margin: 0, paddingLeft: 18 }}>
             {summary.cons.map((con) => (
               <li key={con}>{con}</li>
@@ -125,7 +144,7 @@ function LinePanel({
           </ul>
         </>
       )}
-    </section>
+    </div>
   );
 }
 
@@ -140,7 +159,7 @@ function LinePanel({
  * as weight — three independent channels, matching the project rule that
  * colour can be one signal but never the only one.
  */
-function ContrastRows({ rows }: { rows: ContrastRow[] }) {
+function ContrastRows({ rows, sanA, sanB }: { rows: ContrastRow[]; sanA: string; sanB: string }) {
   return (
     // A plain <div>, not a <section> — a <section> with an accessible name
     // picks up an implicit ARIA role of "region", which would collide with
@@ -160,6 +179,20 @@ function ContrastRows({ rows }: { rows: ContrastRow[] }) {
         How these lines compare
       </h4>
       <div className="contrast-rows">
+        {/*
+          Says which column is which move. Without it the grid is two
+          unattributed columns of text — the reader has to infer the
+          mapping from panel order, which does not even line up with these
+          columns at most widths (the panels are a wrapping flex row; this
+          is a fixed grid, and they collapse to a single stack below
+          ~508px). Same grid-template-columns as a row, so the SANs sit
+          directly above the values they head.
+        */}
+        <div className="contrast-row-header">
+          <span aria-hidden="true" />
+          <span className="contrast-row-header-value">{sanA}</span>
+          <span className="contrast-row-header-value">{sanB}</span>
+        </div>
         {rows.map((row) => (
           <div
             key={row.id}
@@ -256,7 +289,7 @@ export function CompareDrawer({
         <LinePanel summary={comparison.b} line={b} baseFen={baseFen} />
       </div>
 
-      <ContrastRows rows={comparison.rows} />
+      <ContrastRows rows={comparison.rows} sanA={comparison.a.san} sanB={comparison.b.san} />
 
       <p
         data-testid="verdict"
@@ -271,6 +304,9 @@ export function CompareDrawer({
       >
         <strong>Verdict:</strong> {comparison.verdict}
       </p>
+
+      <AuthoredProse summary={comparison.a} />
+      <AuthoredProse summary={comparison.b} />
     </div>,
     portalTarget,
   );

@@ -212,6 +212,22 @@ body {
   font-size: 12px;
 }
 
+/* Same column template as .contrast-row, so the two SANs sit directly above
+   the values they head. Not colour-dependent — the attribution is the text
+   itself, which is the whole point of this row. */
+.contrast-row-header {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) 1fr 1fr;
+  column-gap: 8px;
+  padding: 0 10px;
+}
+
+.contrast-row-header-value {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 12px;
+}
+
 .contrast-row-label {
   font-weight: 700;
   color: var(--ink-soft);

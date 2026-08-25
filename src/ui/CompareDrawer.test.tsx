@@ -141,6 +141,29 @@ describe('CompareDrawer', () => {
     }
   });
 
+  it('labels the two grid columns with the actual SANs, not just panel order', () => {
+    // Fix for the review finding: the grid rendered aText/bText with nothing
+    // on screen saying which move produced which column. `.contrast-row-header`
+    // shares its grid-template-columns with a `.contrast-row`, so the SANs sit
+    // directly above the values they head.
+    render(<CompareDrawer a={oneMinor} b={twoMinors} baseFen={START} onClose={vi.fn()} />);
+    const dialog = screen.getByRole('region');
+
+    const headerA = within(dialog).getByText('Nf3', { selector: '.contrast-row-header-value' });
+    const headerB = within(dialog).getByText('e4', { selector: '.contrast-row-header-value' });
+    const centreLabel = within(dialog).getByText('Centre');
+
+    // The header sits above the rows, not merely somewhere in the drawer.
+    const abovePosition = headerA.compareDocumentPosition(centreLabel);
+    expect(abovePosition & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // headerA is column 2 (line a), headerB is column 3 (line b) — the same
+    // order the value columns use below.
+    const header = headerA.closest('.contrast-row-header')!;
+    expect(header.children[1]).toBe(headerA);
+    expect(header.children[2]).toBe(headerB);
+  });
+
   it('marks a differing row by more than colour', () => {
     render(<CompareDrawer a={oneMinor} b={twoMinors} baseFen={START} onClose={vi.fn()} />);
     const dialog = screen.getByRole('region');
@@ -206,6 +229,34 @@ describe('CompareDrawer', () => {
   it('is announced as a region, findable by its accessible name', () => {
     render(<CompareDrawer a={a} b={b} baseFen={START} onClose={vi.fn()} />);
     expect(screen.getByRole('region')).toHaveAccessibleName(/compare/i);
+  });
+
+  it('renders authored prose after the verdict, attributed to its own line', () => {
+    // Fix for the review finding: pros/cons used to render inside each
+    // LinePanel, above the grid and the footer — the reverse of spec §3.6 /
+    // plan Task 4 Step 3 (rows, then the footer, then authored prose).
+    render(
+      <CompareDrawer
+        a={a}
+        b={b}
+        baseFen={START}
+        onClose={vi.fn()}
+        authored={{
+          a: { pros: ['A pro'], cons: [] },
+          b: { pros: ['B pro'], cons: [] },
+        }}
+      />,
+    );
+    const verdict = screen.getByTestId('verdict');
+    const aPro = screen.getByText('A pro');
+    const bPro = screen.getByText('B pro');
+
+    expect(verdict.compareDocumentPosition(aPro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(verdict.compareDocumentPosition(bPro) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // Each list is still attributed to its own move, not left ambiguous.
+    expect(aPro.closest('div')?.textContent).toContain('e4');
+    expect(bPro.closest('div')?.textContent).toContain('d4');
   });
 
   it('renders authored pros when the lesson supplies them', () => {
