@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-24
+updated: 2026-08-25
 status: current
 tags: [chesstrainer, state]
 ---
@@ -15,7 +15,7 @@ contrast vocabulary (below) is complete in code on
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **575 passing, 1 skipped**, 56 test files, **zero warnings**.
+Suite: **577 passing, 1 skipped**, 56 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 

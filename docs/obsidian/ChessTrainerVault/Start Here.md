@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-24
+updated: 2026-08-25
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -17,8 +17,8 @@ can be reconstructed from the code, and this cannot.
 | Branch | `feat/compare-contrast-vocabulary`, checked out. **Not merged, no PR opened.** |
 | Merged to `master` | Plans 1–7, plus a wave of UI work driven by playing the app (PR #13). `master` is at `404fc63` |
 | Working tree | Clean once this session's vault commit lands; before that, only `docs/` and three `src/ui/` files touched (see below) |
-| Suite | **575 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
-| Last work finished | The compare-contrast-vocabulary plan, through Task 5 and its review — browser pass, a regression test, two stale docstrings, a spec correction, and the vault updates including the corrections to this note |
+| Suite | **577 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
+| Last work finished | The compare-contrast-vocabulary plan, complete: five tasks, a whole-branch review, and its fix wave — the contrast grid now names which column is which move, and authored prose sits after the verdict |
 | CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
 
 Re-checked immediately before writing this note (per [[Lessons]] §10):
