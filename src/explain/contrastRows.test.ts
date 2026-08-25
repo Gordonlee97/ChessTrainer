@@ -54,7 +54,7 @@ describe('measureLine', () => {
    */
   it('collapses different pawn counts within one band to the same value', () => {
     const oneTraded = fenAfter('e4', 'd5', 'exd5');       // 15 pawns
-    const twoTraded = fenAfter('e4', 'd5', 'exd5', 'Qxd5'); // 15 pawns, a piece taken
+    const twoTraded = fenAfter('e4', 'd5', 'exd5', 'Qxd5'); // 14 pawns, two traded
     expect(measureLine(oneTraded, 'w').character).toBe(1);
     expect(measureLine(twoTraded, 'w').character).toBe(1);
     expect(measureLine(fenAfter(...SCOTCH), 'w').character).toBe(1); // 14 pawns

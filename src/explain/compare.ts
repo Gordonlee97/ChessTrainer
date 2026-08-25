@@ -35,7 +35,12 @@ export interface Comparison {
   a: LineSummary;
   b: LineSummary;
   rows: ContrastRow[];
-  /** True when no row differs. */
+  /**
+   * True when no row differs — or, on the mate path, when `mateVerdict`
+   * says so independently of the rows (e.g. both lines force mate in the
+   * same number of moves). The rows are not consulted at all once a mate
+   * verdict applies.
+   */
   practicallyEqual: boolean;
   /** The footer sentence. */
   verdict: string;
