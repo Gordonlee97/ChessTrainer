@@ -168,12 +168,8 @@ production.
 
 ## Commands
 
-| Command | Purpose |
-|---|---|
-| `npm run dev` | Vite dev server |
-| `npm run build` | Type-check project references, then production build |
-| `npm test` | Vitest, single run |
-| `npm run typecheck` | `tsc --noEmit` |
+The scripts are in `package.json`; they are the standard Vite and Vitest
+invocations and nothing here overrides them.
 
 Run `npm test` and `npm run typecheck` before reporting work complete. The suite
 has one expected skip — `src/engine/engine.smoke.test.ts` needs a real `Worker`,
@@ -214,6 +210,9 @@ evidence and the counts.
 - **Plans describe changes to existing files; they paste full code only for new
   ones.** Five snippets have been written against file shapes that had moved,
   one of which would have broken the rules of hooks if followed literally.
-- **Anything requiring a piece to move on the board cannot be automated today.**
-  `react-chessboard` only handles drops; synthetic drags and clicks do not reach
-  it. Verify those paths by hand, or say plainly that you could not.
+- **Drag-and-drop cannot be automated; the rest of the board can.**
+  `react-chessboard` only handles drops, and synthetic drags do not reach it —
+  so dragging a piece is verified by hand or not at all. Everything else is
+  drivable: the keyboard layer in `Board.tsx` (focus the `role="application"`
+  wrapper, arrow keys, Enter to pick up and place) plays real moves, and so does
+  clicking a piece and then a destination.
