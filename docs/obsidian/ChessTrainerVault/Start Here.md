@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-25
+updated: 2026-08-26
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,33 +10,24 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-21
+## Repo state as of 2026-08-26
 
 | | |
 |---|---|
-| Branch | `feat/compare-contrast-vocabulary`, checked out. **Not merged, no PR opened.** |
-| Merged to `master` | Plans 1–7, plus a wave of UI work driven by playing the app (PR #13). `master` is at `404fc63` |
-| Working tree | Clean once this session's vault commit lands; before that, only `docs/` and three `src/ui/` files touched (see below) |
+| Branch | `master`. Nothing in flight; no open PRs, no stale branches |
+| Merged to `master` | Plans 1–7, the UI wave from playing the app (PR #13), and the compare drawer's contrast vocabulary (PR #15, merged 2026-08-26 as `bca65c1`) |
+| Working tree | Clean |
 | Suite | **577 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
-| Last work finished | The compare-contrast-vocabulary plan, complete: five tasks, a whole-branch review, and its fix wave — the contrast grid now names which column is which move, and authored prose sits after the verdict |
+| Last work finished | The compare-contrast-vocabulary plan — five tasks, a whole-branch review and its fix wave, merged |
 | CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10):
-`gh pr list --state all` shows PRs #1–14, all `MERGED`, and none for
-`feat/compare-contrast-vocabulary` — the branch has never had a PR opened.
-`git log --oneline origin/master..HEAD` shows the branch sitting on top of
-`master`, unmerged: the spec, the plan, a pre-execution correction, and the
-implementation, test and vault commits.
+Re-checked immediately before writing this note (per [[Lessons]] §10): PR #15 is
+`MERGED`, its commits are ancestors of `origin/master`, `gh pr list --state open`
+is empty, and the suite was re-run on the merged result. Nothing is in flight.
 
-**Deliberately not stated as a number.** Two drafts of this sentence gave a
-count and both were wrong — the second was accurate when written and stale by
-the time it was committed, because the commit that corrected it became one
-more. A count of a branch, written into a note *inside* that branch, invalidates
-itself on write. Run the command.
+## The compare drawer's contrast vocabulary (PR #15)
 
-## The compare drawer's contrast vocabulary is done, on an unmerged branch
-
-Five tasks, complete 2026-08-21 on `feat/compare-contrast-vocabulary`. The
+Five tasks, complete 2026-08-21, merged 2026-08-26. The
 compare drawer used to describe each candidate line independently, which
 meant two strong moves usually produced identical prose. It now contrasts the
 pair directly on five fixed rows — Centre, Development, King safety, Tempo,
@@ -217,26 +208,34 @@ are still open.
 
 ## Do this next
 
-**1. Get `feat/compare-contrast-vocabulary` reviewed and merged.** It is
-complete — five tasks, browser-verified, suite green — sitting on `master` at
-`404fc63` with no PR opened. This session deliberately did not open one; that
-is a decision for whoever picks this up next, per the task boundary it was
-given.
+**1. A design pass by eye.** This is now the only item on the roadmap that no
+automation here can close, and it has been deferred through four plans. The
+layout has been measured exhaustively — regions aligned, board square, rails
+bounded, the contrast grid's columns attributed — and never *judged*. Nobody has
+looked at the app and said whether it feels right.
 
-**2. Decide whether to act on what this session's browser pass found and left
-open**, both in [[Known Issues]] under "Found on the compare-contrast-vocabulary
-browser pass": authored prose renders above the five-row grid rather than
-beneath it (a small, mechanical fix — move the pros/cons block out of
-`LinePanel` and render it after `ContrastRows`), and the density judgement
-that the authored-prose case is a wall while the plain case is not. Neither
-was fixed this session on purpose — they were found during a task scoped to
-observing and reporting, not redesigning.
+Two specific questions worth answering while looking, both raised by the
+compare-vocabulary work and neither settled:
 
-**3. A design pass by eye**, which is the only item on the roadmap no
-automation can close. The layout has been measured exhaustively — regions
-aligned, board square, rails bounded — and never *judged*. The roadmap used to
-name the wrong-answer ✕ as the instance nobody could look at; that was wrong on
-both counts and is corrected there.
+- **Does the King-safety row earn its place?** It reads the same in nearly every
+  comparison by design — castling lands around ply 9–11, past the 8-ply window —
+  so it exists to teach *when* castling happens. Measured differing in 1 of 6
+  real comparisons. Either that repetition teaches, or it trains the reader to
+  skip the grid. Only a human can say which.
+- **Is the drawer readable now?** The browser pass called the authored-prose
+  case a wall at three scroll ticks. Moving the prose after the verdict was
+  meant to fix that, and did in a browser check — but that check was run by the
+  person who made the change, looking for the thing they had just fixed.
+
+**2. The compare drawer's remaining minors**, six of them, in [[Known Issues]]
+under the 2026-08-25 heading. The one most likely to be seen by a player: the
+footer can count Development and Tempo as two differences when Tempo is derived
+from Development and the opponent's development happens to be equal. Filed
+rather than fixed because none of them is wrong on screen today.
+
+**3. Nothing else is queued.** [[Roadmap]]'s "Next" section is empty of planned
+work for the first time in this project's history — the contrast vocabulary was
+the last item on it. The next plan starts from a decision, not a backlog.
 
 ## Three things this branch learned, worth reading before the next plan
 
