@@ -388,9 +388,10 @@ describe('CandidateRail', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /compare bb5 and d4/i }));
       // Authored pros, not the heuristic ones compareLines would invent.
-      // (The verdict quotes one of them too, hence getAllByText.)
-      expect(screen.getAllByText(/applies long-term pressure/i).length).toBeGreaterThan(0);
-      expect(screen.getAllByText(/opens lines for your pieces straight away/i).length).toBeGreaterThan(0);
+      // The verdict never quotes them (compare.test.ts asserts that
+      // directly), so each renders exactly once.
+      expect(screen.getByText(/applies long-term pressure/i)).toBeInTheDocument();
+      expect(screen.getByText(/opens lines for your pieces straight away/i)).toBeInTheDocument();
     });
 
     it('still hides the candidate rows, the scores and the answer itself', () => {

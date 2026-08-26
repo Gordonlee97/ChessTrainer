@@ -12,8 +12,10 @@ import type { AnalysisStatus } from './useAnalysis';
 
 /**
  * The authored pros and cons for a pair of moves, or undefined when the
- * lesson has nothing to say about either — in which case `compareLines`
- * falls back to its own heuristic summary.
+ * lesson has nothing to say about either — in which case the drawer renders
+ * its five contrast rows with no authored prose alongside them. Pros/cons
+ * are authored-only since the compare-contrast-vocabulary change;
+ * `compareLines` no longer derives a heuristic fallback for them.
  */
 function authoredContrastFor(
   alternatives: Alternative[] | undefined,

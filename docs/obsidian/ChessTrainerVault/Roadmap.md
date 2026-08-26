@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-17
+updated: 2026-08-25
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -134,11 +134,33 @@ survives clicking back to an earlier row mid-lesson and then `last`. See
 [[Current State]] for detail and [[Start Here]] for the session note. Suite
 482 → 505.
 
-## Next
+**Plan 8 — The compare drawer's contrast vocabulary.** Five tasks plus a
+browser pass, complete 2026-08-21 on `feat/compare-contrast-vocabulary`,
+**not yet merged, no PR opened**. Replaces the old per-line pros/cons list
+(which routinely produced identical output for two strong candidates) with
+five fixed rows shared between the pair — Centre, Development, King safety,
+Tempo, Open or closed — each glossed and marked when it differs, plus the
+walked moves shown above each mini-board so the pictured position is
+followable. `src/explain/contrastRows.ts` is the new module; `compare.ts`'s
+`buildVerdict` now names the differing rows instead of a centipawn gap. Plan:
+`docs/superpowers/plans/2026-08-20-compare-contrast-vocabulary.md`; spec:
+`docs/superpowers/specs/2026-08-20-compare-contrast-vocabulary-design.md`.
 
-**The compare drawer's contrast vocabulary** — see "Still undecided" below. It
-is the one item on this roadmap that changes whether the app *teaches* rather
-than *describes*, and it is a design decision before it is code.
+**Browser-verified 2026-08-21, and again after the final review's fixes on
+2026-08-25.** Three of the plan's four browser-pass checks held outright. The
+fourth did not at the time: the Italian's authored prose rendered *above* the
+five contrast rows where §3.6 requires beneath. **That is now fixed** — the
+whole-branch review found it contradicted the plan as well as the spec, and
+that it was the mechanical cause of the separately-filed complaint that the
+verdict sat three scroll ticks down the panel. Prose now renders after the
+verdict, and both [[Known Issues]] entries were retired. The two checks that needed a human judgement both held: the
+walked-move list does make the mini-board's position followable (§3.4's whole
+justification), and the King-safety row's near-permanent sameness is a real
+but not disqualifying cost. The density judgement found the *plain* case
+compact and the *authored-prose* case a genuine wall — see [[Current State]]
+and [[Known Issues]] for the full reasoning. Suite 574 → 575.
+
+## Next
 
 One thing still wants a human at the keyboard, and it is the only item on this
 roadmap that no amount of automation will close:
@@ -177,13 +199,6 @@ in Plan 5. Nothing is queued.
 
 Nothing gating.
 
-- **The comparison's contrast vocabulary.** `summarise` can distinguish two
-  lines on five features, and two strong openings usually score identically on
-  all of them — so the honest verdict is "these are the same, choose on feel."
-  Widening that (pawn structure, open vs closed, which minor came out, space) is
-  what makes compare teach rather than describe. Decide the *shape* of the
-  vocabulary before adding another feature to `summarise`. Detail in
-  [[Known Issues]].
 - **Whether the compare drawer is really a modal.** Plan 5 gave it Escape,
   focus movement in, and focus restore on close, and it is now `role="region"`
   deliberately **without** `aria-modal` because Tab containment was not built —

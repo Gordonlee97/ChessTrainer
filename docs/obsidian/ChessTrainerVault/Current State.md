@@ -1,21 +1,91 @@
 ---
-updated: 2026-08-17
+updated: 2026-08-25
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-08-15.** Plans 1 through 6 are merged to `master`. Plan 7 (the
-moves table) is complete in code on `feat/moves-table` - six tasks and a
-browser pass - **not yet merged, no PR opened yet**.
+**As of 2026-08-21.** Plans 1 through 7 are merged to `master`, plus a wave of
+UI work driven by playing the app (PR #13, merged 2026-08-17) — see
+[[Start Here]] for the session-by-session detail. The compare drawer's
+contrast vocabulary (below) is complete in code on
+`feat/compare-contrast-vocabulary`, **not yet merged, no PR opened**.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **547 passing, 1 skipped**, 55 test files, **zero warnings**.
+Suite: **577 passing, 1 skipped**, 56 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
+
+## The compare drawer contrasts two lines on five fixed rows, not independent prose (2026-08-21)
+
+The drawer used to describe each candidate line on its own — `summarise`
+produced a pros/cons list per line from whichever features happened to differ
+from the base position — so two strong moves routinely produced the *same*
+list and the verdict fell back to "practically equal." `src/explain/contrastRows.ts`
+replaces that with five fixed rows, always rendered, always in the same order:
+Centre, Development, King safety, Tempo, Open or closed. Each row states both
+lines' values side by side, marks disagreement on three independent channels
+(a `data-differs` attribute, a visible "≠", and weight — never colour alone),
+and carries a one-sentence gloss.
+
+- **The footer now names *which* rows differ** — "One real difference:
+  development." or, when nothing differs, "Practically equal — these do the
+  same five things, equally well. Pick the one you would rather play." A mate
+  in either line outranks the row-based footer entirely (`mateVerdict` in
+  `src/explain/compare.ts` runs first).
+- **The walked moves are shown**, numbered like a scoresheet
+  (`formatMoveList` in `src/ui/CompareDrawer.tsx`), directly above each
+  mini-board — fixing a comprehension gap the old drawer had: a board shown
+  eight plies deep with no path to it. Handles a Black-to-move base position
+  (`"2...Nc6"`) as well as White-to-move, regression-tested 2026-08-21.
+- **Authored pros/cons now append to the five rows instead of replacing
+  derived ones** — `compareLines`'s heuristic pros/cons are gone entirely;
+  authored content, where a lesson supplies it, is the *only* source of
+  prose now. `CandidateRail.tsx` and `CheckpointPanel.tsx`'s
+  `authoredContrastFor` docstrings were corrected 2026-08-21 to stop
+  describing a fallback that no longer exists.
+- **Browser-verified 2026-08-21.** All five rows render once for the pair
+  (measured via DOM query, not eyeballed: `.contrast-row` count is 5,
+  `.contrast-rows` count is 1). A Scotch-reached trade (`1.e4 e5 2.Nf3 Nc6
+  3.d4`, comparing `exd4` against `Nxd4`) moved Centre from "One central
+  pawn"/"Closed" to "No central pawns"/"Opening up" on both sides, confirming
+  the rows respond to the actual board rather than being static text; the two
+  candidates measured identically on all five rows in that particular pair
+  (both are captures), which the footer correctly called "Practically equal."
+  The Italian's `Bc4` checkpoint still carries authored prose (`Bb5` vs `d4`,
+  the two non-answer alternatives) alongside all five rows — see the layout
+  note below.
+- **Authored prose renders above the grid, not beneath it — a spec
+  deviation.** §3.6 of the design spec says authored prose "stacks beneath
+  the grid." What shipped instead puts each line's Pros/Cons inside its own
+  `LinePanel`, which renders *before* the shared `ContrastRows` in the JSX —
+  so visually and in DOM order, a lesson's prose sits above the five-row grid,
+  not below it. Confirmed by DOM position query in the browser pass, not
+  assumed. Functionally nothing is lost — the content is all present — but a
+  reader hits two panels of authored text before reaching the shared grid the
+  whole redesign is built around. See [[Known Issues]].
+- **Density judgement (2026-08-21 browser pass).** The plain, no-authored-prose
+  case is compact — heading, one line each of moves/score/caption per panel,
+  five one-line rows, one verdict line, all inside a single 784px viewport
+  with no scrolling. The authored-prose case is a different story: pros/cons
+  bullets roughly double each panel's height, and reaching the verdict took
+  three scroll ticks in the Italian's `Bc4` checkpoint. If this reads as a
+  wall, it is the authored prose doing it, not the five-row grid. Full
+  reasoning in [[Known Issues]].
+
+## Contrast rows replace the old five-feature pros/cons list
+
+`src/explain/contrastRows.ts` is new. `measureLine` reads a walked line's end
+position into a `LineValues` (centre pawns on d4/e4/d5/e5, developed minors,
+castled, development differential, and a coarse open/closed band from pawns
+traded), and `buildContrastRows` turns a pair of `LineValues` into the five
+`ContrastRow`s the drawer renders. `src/explain/compare.ts`'s `summarise` now
+returns a `LineSummary` carrying `values` and `moves` (the walked SANs)
+instead of deriving pros/cons; `buildVerdict` reads `ContrastRow.equal` rather
+than a centipawn gap.
 
 ## The breadcrumb is gone; a moves table replaced it (Plan 7)
 
@@ -147,7 +217,7 @@ Run `npm run dev`, open the local URL, and you can:
 | Read the right-hand rail | Top 3 engine moves at depth 20, each with score, eval bar, a quality badge (Best/Good/Inaccuracy/Mistake/Blunder relative to the top line), the **top two** explainer sentences, and the first 6 plies of its line |
 | Watch the rail mid-search | Scores and eval bars stream; **badges and ideas are withheld until the search settles**, because comparing two lines only means something at equal depth |
 | Click a candidate | Plays it — identical result to dragging the same move |
-| Click "Compare X and Y" | Opens a drawer with two mini-boards (each captioned with the plies actually walked, at most 8), eval bars, pros/cons, and a verdict — mate distances when either line mates, "practically equal" under a 30cp gap, otherwise "X is stronger by N pawns" |
+| Click "Compare X and Y" | Opens a drawer with two mini-boards (each captioned with the moves actually walked, at most 8 plies, numbered like a scoresheet), eval bars, and five fixed contrast rows (Centre, Development, King safety, Tempo, Open or closed) shared between the pair, each glossed and marked when it differs. A footer names which rows differ, or "Practically equal" when none do; a mate in either line outranks that entirely. Authored pros/cons, where a lesson supplies them, render inside each line's panel |
 | Click a move in the moves table | Jumps to that position; the rest of the line stays listed, even the moves ahead of where you land |
 | Click first / previous / next / last below the table | Steps through the current line one position at a time |
 | Play a different move from an earlier position | **Branches the tree.** The original line survives and is one click away. |
@@ -302,6 +372,13 @@ See [[Roadmap]] for ordering.
 
 ## Recent history
 
+- **2026-08-21** — The compare drawer's contrast vocabulary finished on
+  `feat/compare-contrast-vocabulary`: five tasks — engine measurements against
+  real principal variations, the `contrastRows.ts` module, `compare.ts`
+  rewired to rows instead of independent prose, the drawer's rendering, and a
+  browser pass plus this vault update. Suite 574 → 575 (one regression test
+  added for a previously-untested Black-to-move branch in `formatMoveList`).
+  **Not yet merged, no PR opened.**
 - **2026-08-15** — Plan 7 (the moves table) finished on `feat/moves-table`: six
   tasks — the autoplay-owed-reply fix, the pure derivation
   (`buildMovesTable`), the component and its four controls, mounting it in

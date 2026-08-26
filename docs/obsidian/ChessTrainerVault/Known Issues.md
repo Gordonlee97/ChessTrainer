@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-17
+updated: 2026-08-25
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -159,25 +159,6 @@ was plan-specified, but the inconsistency is a trap.
 
 Each of these was seen, weighed, and left. They are here so the next session
 does not rediscover them and assume they were missed.
-
-### The comparison has only one axis of contrast
-
-**Where:** `src/explain/compare.ts` — `summarise`, `buildVerdict`
-**Severity:** medium. This is the ceiling on how useful compare can be.
-
-`summarise` can say five things about a line: minors developed, centre control,
-castled, doubled pawn, passed pawn, plus a hanging piece. Over a realistic 8-ply
-opening two strong candidates usually score identically on all of them, so both
-lines produce the *same whole pros list*. The verdict now detects that collision
-and says so honestly rather than asserting a difference it cannot name — which
-is correct, but it means the common case is "these are the same, choose on feel."
-
-What would actually separate two openings is vocabulary the feature set does not
-have: pawn structure beyond doubled/passed, open versus closed, which minor came
-out and to where, space, king-side versus queen-side play. That is design work,
-not a patch, and it is **deliberately deferred to the next plan**. Do not bolt
-another ad-hoc feature onto `summarise` — the shape of the vocabulary is the
-decision to make first.
 
 ### The compare drawer still has no focus trap
 

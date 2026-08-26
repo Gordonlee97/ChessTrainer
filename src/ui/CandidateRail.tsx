@@ -33,8 +33,10 @@ function noCandidatesMessage(fen: string): string {
 
 /**
  * The authored pros and cons for a pair of moves, or undefined when the
- * lesson has nothing to say about either — in which case `compareLines`
- * falls back to its own heuristic summary.
+ * lesson has nothing to say about either — in which case the drawer renders
+ * its five contrast rows with no authored prose alongside them. Pros/cons
+ * are authored-only since the compare-contrast-vocabulary change;
+ * `compareLines` no longer derives a heuristic fallback for them.
  */
 function authoredContrastFor(
   alternatives: Alternative[] | undefined,
@@ -103,7 +105,8 @@ export function CandidateRail() {
 
   // Only fires when the lesson's current move carries `alternatives` and
   // those alternatives' SANs match the two lines actually being compared —
-  // an off-book candidate pair falls back to the heuristic in compareLines.
+  // an off-book candidate pair gets no authored contrast, and compareLines
+  // then has nothing to append pros/cons from for either line.
   const authoredContrast = useMemo(() => {
     if (!result || result.lines.length < 2) return undefined;
     return authoredContrastFor(alternatives, result.lines[0].san, result.lines[1].san);

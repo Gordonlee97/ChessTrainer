@@ -1,14 +1,7 @@
 import { Chess, type Color } from 'chess.js';
-import { extractFeatures, type PositionFeatures } from '../chess/features';
 import type { PvLine } from '../engine/types';
+import { buildContrastRows, measureLine, type ContrastRow, type LineValues } from './contrastRows';
 import { toCentipawns } from './quality';
-
-/**
- * Below this gap the two lines are treated as equal and the verdict leads with
- * structure instead of numbers. Telling a beginner that +0.31 beats +0.28 would
- * teach them something false — the spec calls this out explicitly.
- */
-export const PRACTICALLY_EQUAL_CP = 30;
 
 const DEFAULT_PLIES = 8;
 
@@ -22,6 +15,8 @@ export interface LineSummary {
    * the count that was played rather than the PV's length.
    */
   plies: number;
+  /** The SANs actually walked, so the drawer can show how the position arose. */
+  moves: string[];
   scoreCp: number;
   /**
    * The line's mate distance, White-relative, or null. Carried through so the
@@ -29,6 +24,9 @@ export interface LineSummary {
    * centipawn gap.
    */
   mate: number | null;
+  /** How this line measures on the five fixed rows, from the mover's side. */
+  values: LineValues;
+  /** Authored prose only. Empty unless a lesson supplied it. */
   pros: string[];
   cons: string[];
 }
@@ -36,7 +34,15 @@ export interface LineSummary {
 export interface Comparison {
   a: LineSummary;
   b: LineSummary;
+  rows: ContrastRow[];
+  /**
+   * True when no row differs — or, on the mate path, when `mateVerdict`
+   * says so independently of the rows (e.g. both lines force mate in the
+   * same number of moves). The rows are not consulted at all once a mate
+   * verdict applies.
+   */
   practicallyEqual: boolean;
+  /** The footer sentence. */
   verdict: string;
 }
 
@@ -50,71 +56,53 @@ export interface AuthoredContrastPair {
   b?: AuthoredContrast;
 }
 
-/** Authored content wins over the heuristic — a human wrote it for this exact line. */
+/**
+ * Authored content is a human's account of the line, appended beneath the
+ * five rows rather than replacing anything — there is no derived prose left
+ * to replace. See docs/superpowers/specs/2026-08-20-compare-contrast-vocabulary-design.md
+ * section 3.6.
+ */
 function applyAuthored(summary: LineSummary, authored?: AuthoredContrast): LineSummary {
   if (!authored) return summary;
-  return { ...summary, pros: authored.pros, cons: authored.cons };
+  return {
+    ...summary,
+    pros: [...summary.pros, ...authored.pros],
+    cons: [...summary.cons, ...authored.cons],
+  };
 }
 
 /**
  * Plays a principal variation out, stopping at the ply limit or the first
- * illegal move. Reports how many plies it managed, which can be below the cap.
+ * illegal move. Reports how many plies it managed, which can be below the
+ * cap, and the SANs it actually played.
  */
-function walk(baseFen: string, pv: string[], plies: number): { fen: string; played: number } {
+function walk(baseFen: string, pv: string[], plies: number): { fen: string; moves: string[] } {
   const chess = new Chess(baseFen);
-  let played = 0;
+  const moves: string[] = [];
   for (const san of pv.slice(0, plies)) {
     try {
       chess.move(san);
     } catch {
       break;
     }
-    played += 1;
+    moves.push(san);
   }
-  return { fen: chess.fen(), played };
+  return { fen: chess.fen(), moves };
 }
 
-function summarise(
-  line: PvLine,
-  baseFen: string,
-  baseFeatures: PositionFeatures,
-  mover: Color,
-  plies: number,
-): LineSummary {
-  const { fen: endFen, played } = walk(baseFen, line.pv, plies);
-  const end = extractFeatures(endFen);
-  const pros: string[] = [];
-  const cons: string[] = [];
-
-  const developed = end.developedMinors[mover] - baseFeatures.developedMinors[mover];
-  if (developed > 0) pros.push(`Develops ${developed} more piece${developed === 1 ? '' : 's'}`);
-
-  const centre = end.centerControl[mover] - baseFeatures.centerControl[mover];
-  if (centre > 0) pros.push('Holds more of the centre');
-  if (centre < 0) cons.push('Concedes centre control');
-
-  if (end.castled[mover] && !baseFeatures.castled[mover]) pros.push('Gets the king castled');
-
-  const doubled = end.pawnStructure.doubled[mover] - baseFeatures.pawnStructure.doubled[mover];
-  if (doubled > 0) cons.push('Leaves a doubled pawn');
-
-  if (end.pawnStructure.passed[mover].length > baseFeatures.pawnStructure.passed[mover].length) {
-    pros.push('Creates a passed pawn');
-  }
-
-  if (end.hanging[mover].length > 0) cons.push('Leaves a piece loose at the end of the line');
-
-  // Every line needs something said about it, even a quiet one.
-  if (pros.length === 0 && cons.length === 0) pros.push('Keeps the position balanced and flexible');
+function summarise(line: PvLine, baseFen: string, mover: Color, plies: number): LineSummary {
+  const { fen: endFen, moves } = walk(baseFen, line.pv, plies);
 
   return {
     san: line.san,
     endFen,
-    plies: played,
+    plies: moves.length,
+    moves,
     scoreCp: toCentipawns(line),
     mate: line.mate,
-    pros,
-    cons,
+    values: measureLine(endFen, mover),
+    pros: [],
+    cons: [],
   };
 }
 
@@ -144,12 +132,9 @@ function mateFor(
  * The verdict for a comparison where at least one line ends in mate, or null
  * when neither does.
  *
- * This runs *before* the centipawn logic, not inside its decisive branch,
- * because both paths through that logic get mate wrong. `toCentipawns` returns
- * roughly ±100000 for a mate, so the decisive branch renders "about 998.00
- * better than" — and two mating lines are only `|mateA| - |mateB|` centipawns
- * apart, so the equality threshold swallows them and calls a mate in 1 and a
- * mate in 12 practically equal.
+ * This runs *before* the row-based footer, not inside it, because a mate
+ * outranks structure: a line forcing mate in 3 must be described as mating,
+ * not as "one real difference: development."
  */
 function mateVerdict(a: LineSummary, b: LineSummary, mover: Color): Verdict | null {
   const mateA = mateFor(a, mover);
@@ -228,60 +213,47 @@ function mateVerdict(a: LineSummary, b: LineSummary, mover: Color): Verdict | nu
   };
 }
 
-function buildVerdict(a: LineSummary, b: LineSummary, mover: Color): Verdict {
+const DIFFERENCE_COUNT_WORDS: Record<number, string> = { 2: 'Two', 3: 'Three', 4: 'Four', 5: 'Five' };
+
+/** "development", "development and tempo", "centre, development and tempo". */
+function listRowLabels(rows: ContrastRow[]): string {
+  const names = rows.map((row) => row.label.toLowerCase());
+  if (names.length === 1) return names[0];
+  return `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+}
+
+/**
+ * The footer. Replaces the old centipawn-gap verdict — see
+ * docs/superpowers/specs/2026-08-20-compare-contrast-vocabulary-design.md
+ * section 3.3 for why: two strong candidates routinely score alike, and
+ * comparing scores told the reader nothing a good line doesn't already do.
+ * The footer instead names whichever of the five fixed rows actually differ.
+ */
+function buildVerdict(a: LineSummary, b: LineSummary, mover: Color, rows: ContrastRow[]): Verdict {
   const decidedByMate = mateVerdict(a, b, mover);
   if (decidedByMate) return decidedByMate;
 
-  const gap = Math.abs(a.scoreCp - b.scoreCp);
+  const differing = rows.filter((row) => !row.equal);
 
-  if (gap < PRACTICALLY_EQUAL_CP) {
-    const contrast = a.pros[0] ?? a.cons[0] ?? 'a different structure';
-    const otherContrast = b.pros[0] ?? b.cons[0] ?? 'a different structure';
-
-    // Over a realistic 8-ply opening the two lines routinely produce the same
-    // leading pro — both develop two pieces, both take centre ground — and
-    // the sentence below then claimed a difference of character while stating
-    // none: "e4 develops 1 more piece; d4 develops 1 more piece." Picking the
-    // first pro the other line lacks does not help either, because the whole
-    // pros list is often identical. Saying so plainly is the honest answer.
-    //
-    // A richer contrast vocabulary — pawn structure, open versus closed,
-    // which minor came out — is what would actually separate these lines. It
-    // is real design work and belongs to a later plan; see the vault's
-    // Known Issues.
-    if (contrast === otherContrast) {
-      return {
-        practicallyEqual: true,
-        verdict:
-          `Practically equal — and both lines lead with the same idea: ` +
-          `${contrast.toLowerCase()}. There is nothing to separate them here, ` +
-          `so choose on feel and play the one you understand better.`,
-      };
-    }
-
+  if (differing.length === 0) {
     return {
       practicallyEqual: true,
       verdict:
-        `Practically equal — the real difference is character, not evaluation. ` +
-        `${a.san} ${contrast.toLowerCase()}; ${b.san} ${otherContrast.toLowerCase()}. ` +
-        `Pick the one whose plan you would rather play.`,
+        'Practically equal — these do the same five things, equally well. ' +
+        'Pick the one you would rather play.',
     };
   }
 
-  // scoreCp is always White-relative (positive favors White), regardless of
-  // whose turn it is. So "better" flips with the mover: White wants the
-  // higher score, Black wants the lower one. Collapsing this to a plain
-  // `a.scoreCp > b.scoreCp` would silently recommend Black's worse line
-  // whenever it is Black to move.
-  const aIsBetter = mover === 'w' ? a.scoreCp > b.scoreCp : a.scoreCp < b.scoreCp;
-  const better = aIsBetter ? a : b;
-  const worse = aIsBetter ? b : a;
+  if (differing.length === 1) {
+    return {
+      practicallyEqual: false,
+      verdict: `One real difference: ${differing[0].label.toLowerCase()}.`,
+    };
+  }
 
   return {
     practicallyEqual: false,
-    verdict:
-      `${better.san} is clearly stronger here — about ${(gap / 100).toFixed(2)} pawns ` +
-      `better than ${worse.san}. That gap is real, not noise.`,
+    verdict: `${DIFFERENCE_COUNT_WORDS[differing.length]} real differences: ${listRowLabels(differing)}.`,
   };
 }
 
@@ -293,11 +265,11 @@ export function compareLines(
   authored?: AuthoredContrastPair,
 ): Comparison {
   const mover = new Chess(baseFen).turn();
-  const baseFeatures = extractFeatures(baseFen);
 
-  const summaryA = applyAuthored(summarise(a, baseFen, baseFeatures, mover, plies), authored?.a);
-  const summaryB = applyAuthored(summarise(b, baseFen, baseFeatures, mover, plies), authored?.b);
-  const { practicallyEqual, verdict } = buildVerdict(summaryA, summaryB, mover);
+  const summaryA = applyAuthored(summarise(a, baseFen, mover, plies), authored?.a);
+  const summaryB = applyAuthored(summarise(b, baseFen, mover, plies), authored?.b);
+  const rows = buildContrastRows(summaryA.values, summaryB.values);
+  const { practicallyEqual, verdict } = buildVerdict(summaryA, summaryB, mover, rows);
 
-  return { a: summaryA, b: summaryB, practicallyEqual, verdict };
+  return { a: summaryA, b: summaryB, rows, practicallyEqual, verdict };
 }

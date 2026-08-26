@@ -189,6 +189,74 @@ body {
   .compare-drawer { animation: none; }
 }
 
+/* ---- Contrast rows ------------------------------------------------------
+   The five rows shared between the two lines in a comparison. A differing
+   row is never colour-only: `--differs` adds font-weight, and the "≠" mark
+   in CompareDrawer.tsx adds visible text — colour is a third signal on top
+   of those two, not the only one. */
+.contrast-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.contrast-row {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) 1fr 1fr;
+  column-gap: 8px;
+  row-gap: 2px;
+  padding: 6px 10px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 12px;
+}
+
+/* Same column template as .contrast-row, so the two SANs sit directly above
+   the values they head. Not colour-dependent — the attribution is the text
+   itself, which is the whole point of this row. */
+.contrast-row-header {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) 1fr 1fr;
+  column-gap: 8px;
+  padding: 0 10px;
+}
+
+.contrast-row-header-value {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.contrast-row-label {
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.contrast-row-value {
+  color: var(--ink);
+}
+
+.contrast-row--differs {
+  border-color: var(--secondary);
+}
+
+.contrast-row--differs .contrast-row-value {
+  font-weight: 800;
+  color: var(--secondary-shadow);
+}
+
+.contrast-row-mark {
+  color: var(--secondary);
+}
+
+.contrast-row-gloss {
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--ink-soft);
+}
+
 .lesson-progress {
   font-size: 12px;
   font-weight: 700;

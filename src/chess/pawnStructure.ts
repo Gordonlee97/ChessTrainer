@@ -56,6 +56,15 @@ function isPassed(pawn: PawnPos, color: Color, enemyPawns: PawnPos[]): boolean {
   });
 }
 
+/** Pawns of both colours currently on the board. A chessboard starts with 16. */
+export function pawnsRemaining(fen: string): number {
+  const chess = new Chess(fen);
+  return chess
+    .board()
+    .flat()
+    .filter((cell) => cell !== null && cell.type === 'p').length;
+}
+
 export function extractPawnStructure(fen: string): PawnStructure {
   const chess = new Chess(fen);
   const byColor = { w: pawnsOf(chess, 'w'), b: pawnsOf(chess, 'b') };

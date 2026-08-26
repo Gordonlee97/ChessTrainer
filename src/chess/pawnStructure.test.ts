@@ -1,5 +1,6 @@
+import { Chess } from 'chess.js';
 import { describe, expect, it } from 'vitest';
-import { extractPawnStructure } from './pawnStructure';
+import { extractPawnStructure, pawnsRemaining } from './pawnStructure';
 
 const START = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 // White pawns a2 b2 g2 h2 — two groups, no black pawns
@@ -46,5 +47,18 @@ describe('extractPawnStructure', () => {
 
   it('treats a position with no pawns as zero islands', () => {
     expect(extractPawnStructure('4k3/8/8/8/8/8/8/4K3 w - - 0 1').islands).toEqual({ w: 0, b: 0 });
+  });
+});
+
+describe('pawnsRemaining', () => {
+  it('counts sixteen pawns at the start position', () => {
+    expect(pawnsRemaining(new Chess().fen())).toBe(16);
+  });
+
+  it('counts fifteen pawns after one is captured', () => {
+    // e4 d5 exd5 captures Black's d-pawn only, so one pawn leaves the board.
+    const chess = new Chess();
+    for (const san of ['e4', 'd5', 'exd5']) chess.move(san);
+    expect(pawnsRemaining(chess.fen())).toBe(15);
   });
 });
