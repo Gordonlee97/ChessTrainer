@@ -1,0 +1,59 @@
+# The project's only automated gate.
+#
+# Until this existed, every merge was gated on somebody remembering to run
+# `npm test` and `npm run typecheck` by hand — which held, but only because
+# the same person did both every time. This runs the same three commands the
+# repo already documents, in the same order, on every push and every PR.
+#
+# It deliberately adds no checks of its own. A CI file that enforces rules the
+# repo does not enforce locally means green locally and red here, which trains
+# people to ignore it.
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+# A second push to the same branch makes the first run irrelevant. Cancel it
+# rather than queueing behind it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    # Generous against the default 360, tight enough that a hung Vitest worker
+    # fails in minutes instead of burning an hour. The suite takes ~10s.
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # No `engines` field in package.json, so this pin is the only
+          # statement of which Node the project is built against. 22 is the
+          # active LTS; local development is on 24 and both are fine for Vite 5.
+          node-version: '22'
+          cache: npm
+
+      # `ci` rather than `install`: it honours the committed lockfile exactly
+      # and fails if package.json and the lock disagree, which is the check
+      # that catches a dependency edit that never made it into the lock.
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      # Catches what the other two cannot: `tsc --noEmit` type-checks without
+      # emitting, and the tests never exercise the production bundle. A build
+      # that fails while both pass is usually an import that only resolves in
+      # dev.
+      - name: Build
+        run: npm run build

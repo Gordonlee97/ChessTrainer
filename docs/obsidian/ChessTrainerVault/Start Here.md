@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-26
+updated: 2026-09-02
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -19,7 +19,7 @@ can be reconstructed from the code, and this cannot.
 | Working tree | Clean |
 | Suite | **577 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
 | Last work finished | The compare-contrast-vocabulary plan — five tasks, a whole-branch review and its fix wave, merged |
-| CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
+| CI | GitHub Actions runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`) |
 
 Re-checked immediately before writing this note (per [[Lessons]] §10): PR #15 is
 `MERGED`, its commits are ancestors of `origin/master`, `gh pr list --state open`
