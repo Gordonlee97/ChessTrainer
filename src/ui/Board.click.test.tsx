@@ -3,12 +3,6 @@ import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mirrors Board.keyboard.test.tsx: no sound files are committed, and real
-// Howler hitting jsdom's unimplemented HTMLMediaElement logs errors unrelated
-// to the behaviour under test.
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 
 // react-chessboard owns the actual squares, and jsdom cannot click them
 // meaningfully — so capture the `options` object Board hands it and drive
@@ -53,7 +47,6 @@ describe('Board click-to-move', () => {
       useLessonStore.getState().stopLesson();
       useTreeStore.getState().reset();
     });
-    mocks.play.mockClear();
   });
 
   it('shows nothing until a piece is selected', () => {

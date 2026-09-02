@@ -1,16 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
+import { beforeEach, describe, expect, it } from 'vitest';
 
 // AppControls uses the real `sounds` singleton (its toggle asserts on
 // sounds.muted), but Button's own click sound must not reach a real Howl —
 // jsdom has no audio backend and logs "not implemented" for every play/load
 // call, which is exactly the warning noise this suite must stay free of.
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 
 import { useLessonStore } from '../lesson/store';
 import { useProgressStore } from '../progress/store';

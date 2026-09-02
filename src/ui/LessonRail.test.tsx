@@ -7,14 +7,10 @@ import { useProgressStore } from '../progress/store';
 import { useTreeStore } from '../tree/store';
 import { LessonRail } from './LessonRail';
 
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn(), soundPlay: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
-// The shared sound manager is spied on by name rather than by counting Howl
-// plays: the point of the "play the next move" assertion below is *which*
-// sound fires, and the manager caches one Howl per name for the life of the
-// process, so a call count cannot tell them apart.
+// The shared sound manager is mocked by name rather than counted: the point
+// of the "play the next move" assertion below is *which* sound fires, and a
+// bare call count cannot tell one from another.
+const mocks = vi.hoisted(() => ({ soundPlay: vi.fn() }));
 vi.mock('../sound', () => ({
   sounds: { play: mocks.soundPlay, setMuted: vi.fn(), muted: false },
 }));
@@ -62,7 +58,6 @@ describe('LessonRail', () => {
   beforeEach(() => {
     useLessonStore.getState().stopLesson();
     useTreeStore.getState().reset();
-    mocks.play.mockClear();
     mocks.soundPlay.mockClear();
     // The recording effect now writes real localStorage on every render, and
     // node ids are deterministic (`root/d4`), so without this, an attempt

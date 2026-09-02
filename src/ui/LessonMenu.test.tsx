@@ -1,17 +1,9 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 // Clicking a lesson plays the shared buttonPress sound; without this mock,
-// jsdom logs real HTMLMediaElement "not implemented" errors from howler on
-// every click, which is exactly the kind of noise the project's "test
-// output must be pristine" rule treats as a failure. Same pattern as
-// Button.test.tsx, CandidateRail.test.tsx and CompareDrawer.test.tsx.
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 
 import { useLessonStore } from '../lesson/store';
 import { useProgressStore } from '../progress/store';

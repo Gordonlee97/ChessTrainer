@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-25
+updated: 2026-09-02
 status: current
 tags: [chesstrainer, state]
 ---
@@ -15,7 +15,7 @@ contrast vocabulary (below) is complete in code on
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **577 passing, 1 skipped**, 56 test files, **zero warnings**.
+Suite: **591 passing, 1 skipped**, 57 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 
@@ -338,11 +338,17 @@ whole-branch view could see:
 
 ## What is scaffolding, not feature
 
-- **Sound is wired but silent.** Every call site exists — pickup, move, capture,
-  check — and `public/sounds/README.md` lists the ten filenames the app looks
-  for. No audio files are committed. A missing file plays nothing and logs
-  nothing, so this is a working degraded state, not a bug. Drop MP3s in and they
-  light up with no code change.
+- ~~Sound is wired but silent~~ — **the app makes sound as of 2026-09-02.** All
+  ten are synthesised from oscillators and filtered noise at runtime
+  (`src/sound/synth.ts`), so nothing is fetched and nothing is licensed. Verified
+  in a browser against the real Web Audio API rather than a stub: a move
+  schedules 180 Hz plus a noise transient, a correct answer plays C5–E5–G5, a
+  wrong one a descending 340 Hz, and repeated button presses came out at 908,
+  834, 972 and 826 Hz — the pitch variation that stops repeats sounding
+  mechanical.
+
+  What is *not* verified is whether they sound **good**. That needs ears, and is
+  the one judgement no automated check here can make.
 - **`src/App.tsx` is a placeholder shell** — an inline-styled flex layout that
   now hosts the picker, the lesson rail, saved lines, and the app controls.
   Still not the designed layout; that is Plan 5.

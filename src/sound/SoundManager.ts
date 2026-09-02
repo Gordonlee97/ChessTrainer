@@ -1,5 +1,5 @@
-import { Howl } from 'howler';
-import { PITCH_RANGE_SEMITONES, PITCH_VARIED, SOUND_FILES, type SoundName } from './sounds';
+import { PITCH_RANGE_SEMITONES, PITCH_VARIED, type SoundName } from './sounds';
+import { RECIPES, playVoices } from './synth';
 
 const MUTE_KEY = 'chesstrainer.muted';
 
@@ -11,9 +11,24 @@ function readStoredMute(): boolean {
   }
 }
 
+/**
+ * Plays the app's sounds by synthesising them, rather than by loading files.
+ *
+ * The project ships no audio assets — see `CLAUDE.md` — because the files
+ * were never this project's to ship. Generating the sounds sidesteps that
+ * entirely: nothing is licensed, nothing is downloaded, and the whole sound
+ * design is a few dozen numbers in `synth.ts` that can be tuned by editing
+ * them rather than by re-recording anything.
+ *
+ * Every failure path is silent by construction. No Web Audio, a context the
+ * browser refuses to create, a suspended context that will not resume — each
+ * one leaves the app fully usable and quiet. Sound is a garnish here, and it
+ * must never be the reason something breaks.
+ */
 export class SoundManager {
-  private readonly cache = new Map<SoundName, Howl>();
-  private readonly failed = new Set<SoundName>();
+  private context: AudioContext | null = null;
+  /** Set once creating a context has failed, so it is attempted exactly once. */
+  private unavailable = false;
   private isMuted = readStoredMute();
 
   get muted(): boolean {
@@ -32,29 +47,56 @@ export class SoundManager {
 
   play(name: SoundName): void {
     if (this.isMuted) return;
-    // Howler never drains its internal call queue for a Howl that failed to
-    // load, so once we know a sound is missing we must stop touching it —
-    // otherwise every play() call leaks two queued closures forever.
-    if (this.failed.has(name)) return;
 
-    let howl = this.cache.get(name);
-    if (!howl) {
-      // A missing file must never break the app — the sound simply does not play.
-      howl = new Howl({
-        src: [SOUND_FILES[name]],
-        preload: true,
-        onloaderror: () => {
-          this.failed.add(name);
-        },
-      });
-      this.cache.set(name, howl);
+    const ctx = this.acquireContext();
+    if (!ctx) return;
+
+    try {
+      playVoices(ctx, RECIPES[name], this.pitchFor(name));
+    } catch {
+      // A scheduling failure on one sound must not take the click with it.
+    }
+  }
+
+  /**
+   * The context is created on first play rather than in the constructor, for
+   * two reasons: a page that never makes a sound never pays for an audio
+   * graph, and browsers refuse to start one outside a user gesture — the
+   * first `play()` is always inside a click or a keypress, which the module's
+   * construction is not.
+   */
+  private acquireContext(): AudioContext | null {
+    if (this.unavailable) return null;
+
+    if (!this.context) {
+      const Ctor = typeof AudioContext !== 'undefined' ? AudioContext : undefined;
+      if (!Ctor) {
+        this.unavailable = true;
+        return null;
+      }
+      try {
+        this.context = new Ctor();
+      } catch {
+        this.unavailable = true;
+        return null;
+      }
     }
 
-    if (PITCH_VARIED.has(name)) {
-      const semitones = (Math.random() * 2 - 1) * PITCH_RANGE_SEMITONES;
-      howl.rate(2 ** (semitones / 12));
-    }
+    // Autoplay policy parks a fresh context in 'suspended' until a gesture.
+    // Resuming is fire-and-forget: this sound may be lost, the next will not.
+    if (this.context.state === 'suspended') void this.context.resume().catch(() => undefined);
 
-    howl.play();
+    return this.context;
+  }
+
+  /**
+   * A multiplier on every frequency in the recipe. Only the button press is
+   * varied — it fires far more often than anything else, and identical
+   * repeats are what make an interface feel mechanical.
+   */
+  private pitchFor(name: SoundName): number {
+    if (!PITCH_VARIED.has(name)) return 1;
+    const semitones = (Math.random() * 2 - 1) * PITCH_RANGE_SEMITONES;
+    return 2 ** (semitones / 12);
   }
 }
