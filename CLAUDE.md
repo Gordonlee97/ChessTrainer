@@ -160,8 +160,13 @@ production.
   border or padding on `:active` reflows the page on every click.
 - **`prefers-reduced-motion` is honoured everywhere**, and it must still leave a
   visible press signal — the spec calls this out explicitly.
-- **Sound is optional by construction.** No audio files are committed. A missing
-  or unloadable sound must play nothing and log nothing, and never throw.
+- **Sound is synthesised, not loaded.** No audio files are committed and none
+  ever will be — `src/sound/synth.ts` builds every sound from oscillators and
+  noise at runtime, which is why there is nothing to license and nothing to
+  fetch. Tune a sound by editing numbers in `RECIPES`.
+- **Sound is optional by construction.** No Web Audio, a context the browser
+  refuses to open, a scheduling failure — each one must leave the app fully
+  usable and silent. It must play nothing, log nothing, and never throw.
 - **Stockfish is GPL-3.0** and vendored at `public/engine/`. It stays a
   devDependency and is never imported by application code. See
   `public/engine/README.md` before changing anything there.

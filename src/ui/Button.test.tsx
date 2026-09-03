@@ -2,23 +2,28 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
-
 import { Button } from './Button';
+import { sounds } from '../sound';
+import { installAudioStub } from '../test/audioStub';
+
+// The real shared sound manager, not a mock: two tests below assert that the
+// mute toggle actually silences things, which a mocked module cannot show.
+// `playSpy` records what the component asked for; `audio` records whether any
+// sound actually came out, which is the only way muted and unmuted differ.
+const audio = installAudioStub();
+const playSpy = vi.spyOn(sounds, 'play');
 
 describe('Button', () => {
   beforeEach(() => {
-    mocks.play.mockClear();
+    playSpy.mockClear();
+    audio.reset();
+    sounds.setMuted(false);
   });
 
   it('plays a click sound when pressed', async () => {
     render(<Button>Compare lines</Button>);
     await userEvent.click(screen.getByRole('button', { name: 'Compare lines' }));
-    expect(mocks.play).toHaveBeenCalledTimes(1);
+    expect(playSpy).toHaveBeenCalledTimes(1);
   });
 
   it('renders its label and fires onClick', async () => {
@@ -62,7 +67,7 @@ describe('Button', () => {
       </Button>,
     );
     await userEvent.click(screen.getByRole('button', { name: 'Candidate move' }));
-    expect(mocks.play).not.toHaveBeenCalled();
+    expect(playSpy).not.toHaveBeenCalled();
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 });

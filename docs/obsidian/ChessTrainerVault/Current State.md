@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-25
+updated: 2026-09-02
 status: current
 tags: [chesstrainer, state]
 ---
@@ -15,7 +15,7 @@ contrast vocabulary (below) is complete in code on
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **577 passing, 1 skipped**, 56 test files, **zero warnings**.
+Suite: **591 passing, 1 skipped**, 57 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 
@@ -338,11 +338,45 @@ whole-branch view could see:
 
 ## What is scaffolding, not feature
 
-- **Sound is wired but silent.** Every call site exists — pickup, move, capture,
-  check — and `public/sounds/README.md` lists the ten filenames the app looks
-  for. No audio files are committed. A missing file plays nothing and logs
-  nothing, so this is a working degraded state, not a bug. Drop MP3s in and they
-  light up with no code change.
+- ~~Sound is wired but silent~~ — **the app makes sound as of 2026-09-02.** All
+  ten are synthesised at runtime from oscillators and filtered noise
+  (`src/sound/synth.ts`), so nothing is fetched and nothing is licensed.
+
+  **The first version was rejected by ear and rebuilt the same day.** It built
+  the board sounds from oscillators — a 180 Hz sine for a piece landing — and
+  the author's verdict was immediate: it read as a beep, not a board. A
+  sustained pitch is the one thing a wooden knock never has. `pickup`, `move`
+  and `capture` are now **noise alone**, shaped by a resonant bandpass, so the
+  pitch heard is the filter ringing rather than a tone. Two layers each, which
+  is what an impact is: a broadband tick for the contact and a body for the
+  wood. `move` is 390 Hz at Q 7 plus a 2600 Hz tick; `capture` is the same event
+  with more force at 250 Hz, ringing longer and with a mid crack. The envelope
+  attack also dropped from 8 ms to 1.5 ms — at 8 ms the transient the ear reads
+  as *struck* was smoothed away before it arrived.
+
+  Notifications keep a pitch, because they are not impacts: `check` and
+  `correct` are two short notes rather than three long ones. `buttonPress` is a
+  dry 16 ms tick with no pitch, varied by a multiplier so repeats do not sound
+  mechanical.
+
+  **Checkmate is its own sound as of 2026-09-02**, and was not before — it
+  played `check`, because `classifySound` in `src/chess/resolveDrop.ts` tested
+  `isCheck()` first and chess.js reports a mating move as a check too. So the
+  most consequential move on a board sounded exactly like the most routine one.
+  Mate is now tested ahead of both check and capture, which matters because a
+  mating move is often all three at once (Scholar's mate ends `Qxf7#`). The
+  sound falls rather than rises — D5–A4–D4 — and ends on a note held four times
+  longer than anything else in the set, since nothing follows it. It carries its
+  own impact, because checkmate is the one board event where no `move` or
+  `capture` sound plays alongside it.
+
+  Verified in a browser against the real Web Audio API rather than a stub: a
+  move schedules two noise sources and **zero oscillators**, with the bandpass
+  at 390 Hz / Q 7 and the tick at 2600 Hz.
+
+  What is *still* not verified is whether the second version sounds **right**.
+  That needs ears, and is the one judgement no automated check here can make —
+  as the first version proved by passing every check and being wrong anyway.
 - **`src/App.tsx` is a placeholder shell** — an inline-styled flex layout that
   now hosts the picker, the lesson rail, saved lines, and the app controls.
   Still not the designed layout; that is Plan 5.

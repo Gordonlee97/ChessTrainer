@@ -1,17 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { act } from 'react';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 // Rendering <App /> in the last test pulls in Board, which plays the shared
 // buttonPress/move sounds; without this mock jsdom logs real
-// HTMLMediaElement "not implemented" errors from howler, which the project's
-// "test output must be pristine" rule treats as a failure. Same pattern as
-// LessonPicker.test.tsx and SavedLines.test.tsx.
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 
 import { App } from '../App';
 import { useLessonStore } from '../lesson/store';

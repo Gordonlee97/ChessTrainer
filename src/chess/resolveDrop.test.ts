@@ -11,6 +11,10 @@ const BEFORE_CHECK = '4k3/8/8/8/8/8/8/R3K3 w - - 0 1';
 const BEFORE_PROMOTION = '8/4P3/8/8/8/8/1k6/4K3 w - - 0 1';
 // 1.e4 e6 2.e5 d5 — white's e5 pawn can capture d5 en passant on d6.
 const BEFORE_EN_PASSANT = 'rnbqkbnr/ppp2ppp/4p3/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3';
+// Scholar's mate, one move short: 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6, so Qxf7 mates.
+// Deliberately a mate that is ALSO a check and ALSO a capture — the three
+// categories overlap here, which is what pins the order they are tested in.
+const BEFORE_CHECKMATE = 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4';
 
 describe('resolveDrop', () => {
   it('resolves a quiet move', () => {
@@ -26,6 +30,17 @@ describe('resolveDrop', () => {
   it('resolves a move that gives check', () => {
     const result = resolveDrop(BEFORE_CHECK, 'a1', 'a8');
     expect(result).toEqual({ san: 'Ra8+', sound: 'check' });
+  });
+
+  /**
+   * Checkmate used to classify as 'check', because chess.js reports a mating
+   * move as `isCheck()` and that branch was tested first. The move chosen here
+   * is simultaneously mate, check and a capture, so it fails against *any*
+   * ordering that does not put checkmate ahead of both.
+   */
+  it('resolves checkmate as its own category, not as check or capture', () => {
+    const result = resolveDrop(BEFORE_CHECKMATE, 'h5', 'f7');
+    expect(result).toEqual({ san: 'Qxf7#', sound: 'checkmate' });
   });
 
   it('returns null for an illegal move', () => {

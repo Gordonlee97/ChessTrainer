@@ -5,14 +5,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mirrors Board.test.tsx: react-chessboard renders a full drag-and-drop
 // board that jsdom cannot usefully exercise (no real layout, so its own
-// move-animation code throws), and Howler logs noise onto a missing
-// HTMLMediaElement. Neither is relevant to whether an arrow key reaches the
-// tree, so both are stubbed here the same way, only for the one test below
-// that renders the full `<App />`.
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 vi.mock('react-chessboard', () => ({
   Chessboard: () => null,
 }));

@@ -3,12 +3,6 @@ import { act } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mirrors Board.keyboard.test.tsx: no sound files are committed, and real
-// Howler hitting jsdom's unimplemented HTMLMediaElement logs errors unrelated
-// to the rejection behaviour under test.
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 
 // react-chessboard renders a full drag-and-drop board that jsdom cannot
 // usefully exercise. Capture the `options` object Board hands it instead —

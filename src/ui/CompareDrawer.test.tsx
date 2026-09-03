@@ -4,14 +4,6 @@ import { describe, expect, it, vi } from 'vitest';
 import type { PvLine } from '../engine/types';
 
 // The Close button plays the shared buttonPress sound; without this mock,
-// jsdom logs real HTMLMediaElement "not implemented" errors from howler on
-// every click, which is exactly the kind of noise the project's "test
-// output must be pristine" rule treats as a failure. Same pattern as
-// Button.test.tsx and CandidateRail.test.tsx.
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 
 import { CompareDrawer } from './CompareDrawer';
 

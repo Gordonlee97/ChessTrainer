@@ -2,14 +2,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mirrors Board.test.tsx: no sound files are committed, and real Howler
-// hitting jsdom's unimplemented HTMLMediaElement logs errors unrelated to
-// the keyboard behaviour under test.
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
-
 // react-chessboard renders a full drag-and-drop board (including its own
 // aria-live "status" region, which collides with this file's own status
 // region) that jsdom cannot usefully exercise. Capture the `options` object

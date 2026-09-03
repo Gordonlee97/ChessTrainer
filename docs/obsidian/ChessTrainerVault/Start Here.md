@@ -10,20 +10,36 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-26
+## Repo state as of 2026-09-02
 
 | | |
 |---|---|
-| Branch | `master`. Nothing in flight; no open PRs, no stale branches |
-| Merged to `master` | Plans 1–7, the UI wave from playing the app (PR #13), and the compare drawer's contrast vocabulary (PR #15, merged 2026-08-26 as `bca65c1`) |
-| Working tree | Clean |
-| Suite | **577 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
-| Last work finished | The compare-contrast-vocabulary plan — five tasks, a whole-branch review and its fix wave, merged |
-| CI | GitHub Actions runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`) |
+| `master` | `af1b59a` (merge of PR #17, CI). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), and CI |
+| **One branch in flight** | `feat/synthesised-sound` — PR #18, sound. See below |
+| Working tree | Clean on `feat/synthesised-sound` |
+| Suite | **595 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
+| CI | **Live on `master` as of 2026-09-02.** GitHub Actions runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). PR #18 predates the merge, so its first checks appear only once it is rebuilt on the new `master` |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10): PR #15 is
-`MERGED`, its commits are ancestors of `origin/master`, `gh pr list --state open`
-is empty, and the suite was re-run on the merged result. Nothing is in flight.
+Re-checked immediately before writing this note (per [[Lessons]] §10), and the
+check earned its keep twice in one session: an earlier version of this table
+claimed "nothing in flight, no CI" while two branches were open, and then the
+*corrected* version went stale within hours when PR #17 merged underneath it —
+producing a genuine merge conflict in this very note, where neither side was
+true. §10 is usually described as a rule about finishing a branch. It is really
+a rule about this table having a shelf life measured in hours.
+
+### The one open branch
+
+**`feat/synthesised-sound`** (PR #18). The ten wired sounds went from silent to
+synthesised, then were **retuned the same day after the author rejected them by
+ear**: board sounds built from oscillators read as beeps, and are now noise
+shaped by a resonant bandpass. Checkmate then got its own sound, having until
+then been indistinguishable from check. Detail in [[Current State]].
+
+The retune is browser-verified as *correct* (a move schedules two noise sources
+and zero oscillators) but **not yet judged as good** — that verdict is still
+outstanding, and it is the only kind of verdict that has ever caught a problem
+with these sounds.
 
 ## The compare drawer's contrast vocabulary (PR #15)
 
@@ -207,6 +223,20 @@ It also caught that a python index-slice had silently deleted two whole
 are still open.
 
 ## Do this next
+
+**0. Get a verdict on the sound, then land PR #18.** CI (#17) is merged; the
+sound branch is the only thing still out.
+
+It has one thing no reviewer can settle: **does it sound right?**
+The first version passed every automated check and was still wrong, which is the
+whole lesson of that branch. If the retune is also wrong, the two dials are `q`
+on the bandpass (higher reads as harder/more wooden, lower as duller) and the
+body frequency (390 Hz is roughly a medium piece; lower is heavier). They are
+numbers in `RECIPES` in `src/sound/synth.ts` and nothing else has to change.
+
+When sound merges, [[Project Overview]]'s third success criterion still says
+sound is half-built. That is correct for `master` today and becomes wrong the
+moment the PR lands.
 
 **1. A design pass by eye.** This is now the only item on the roadmap that no
 automation here can close, and it has been deferred through four plans. The

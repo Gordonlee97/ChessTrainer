@@ -1,13 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 // Clicking a Button plays the shared buttonPress sound; without this mock,
-// jsdom logs real HTMLMediaElement "not implemented" errors from howler.
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 
 import { GLOSSARY, GLOSSARY_TIERS } from '../content/glossary';
 import { GlossaryMenu } from './GlossaryMenu';

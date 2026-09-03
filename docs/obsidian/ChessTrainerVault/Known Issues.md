@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-25
+updated: 2026-09-02
 status: current
 tags: [chesstrainer, issues]
 ---
@@ -482,13 +482,3 @@ All in the dev toolchain (the Vitest UI dependency tree). **None reach the
 production bundle.** Re-check before any public deployment, but this does not
 block development.
 
-### A missing sound file returns HTML, not a 404
-
-Observed 2026-08-04 on the Vite dev server: requesting `/sounds/move.mp3` with no
-file present returns `index.html` with a 200, via SPA fallback — so Howler
-receives an HTML body and fails to *decode* rather than failing to *fetch*.
-
-`SoundManager`'s failed-load path handles this correctly and the app degrades as
-designed, so there is nothing to fix. Worth knowing because it means the
-"missing file" case is actually exercised as "corrupt file", and a future change
-to load-failure handling must keep covering both.

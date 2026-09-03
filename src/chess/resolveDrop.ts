@@ -1,6 +1,6 @@
 import { Chess, type Move } from 'chess.js';
 
-export type SoundCategory = 'quiet' | 'capture' | 'check';
+export type SoundCategory = 'quiet' | 'capture' | 'check' | 'checkmate';
 
 export interface DropResolution {
   /** Standard Algebraic Notation of the resolved move. */
@@ -23,8 +23,16 @@ export interface DropResolution {
  * correctly shows an 'x'. `captured` is set in both cases, so it is the
  * reliable signal. Check is tested on the *resulting* position via
  * `chess.isCheck()` after the move has been applied.
+ *
+ * Order matters, and checkmate is why. chess.js reports a mating move as
+ * `isCheck()` too — mate *is* a check the opponent cannot answer — so testing
+ * check first swallows every checkmate into the check sound, which is exactly
+ * what this function did until 2026-09-02. A mating move is also frequently a
+ * capture (Scholar's mate ends `Qxf7#`, which is all three at once), so
+ * checkmate has to be tested ahead of both, not just ahead of check.
  */
 function classifySound(chess: Chess, move: Move): SoundCategory {
+  if (chess.isCheckmate()) return 'checkmate';
   return chess.isCheck() ? 'check' : move.captured ? 'capture' : 'quiet';
 }
 

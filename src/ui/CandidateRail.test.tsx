@@ -6,13 +6,17 @@ import { useProgressStore } from '../progress/store';
 import { useTreeStore } from '../tree/store';
 import { createTree } from '../tree/tree';
 import { sounds } from '../sound';
+import { installAudioStub } from '../test/audioStub';
+
+// The real shared sound manager, not a mock: two tests below assert that the
+// mute toggle actually silences things, which a mocked module cannot show.
+// `playSpy` records what the component asked for; `audio` records whether any
+// sound actually came out, which is the only way muted and unmuted differ.
+const audio = installAudioStub();
+const playSpy = vi.spyOn(sounds, 'play');
+
 import { CandidateRail } from './CandidateRail';
 import { LessonRail } from './LessonRail';
-
-const mocks = vi.hoisted(() => ({ play: vi.fn(), rate: vi.fn() }));
-vi.mock('howler', () => ({
-  Howl: vi.fn(() => ({ play: mocks.play, rate: mocks.rate })),
-}));
 
 // `calls` counts subscriptions to the analysis, which is the only way to see
 // a duplicate search from jsdom — see the "one search" test below.
@@ -77,7 +81,9 @@ describe('CandidateRail', () => {
     useTreeStore.getState().reset();
     analysis.value = { result: null, status: 'idle', retry: () => {} } as never;
     analysis.calls = 0;
-    mocks.play.mockClear();
+    playSpy.mockClear();
+    audio.reset();
+    sounds.setMuted(false);
     sounds.setMuted(false);
     // The composed tests below mount LessonRail, whose recording effect
     // writes real localStorage; node ids are deterministic, so an attempt
@@ -126,7 +132,7 @@ describe('CandidateRail', () => {
 
     render(<CandidateRail />);
     await userEvent.click(screen.getByRole('button', { name: /e4/ }));
-    expect(mocks.play).toHaveBeenCalledTimes(1);
+    expect(playSpy).toHaveBeenCalledTimes(1);
   });
 
   it('honors the shared sound manager mute flag when a candidate is clicked', async () => {
@@ -138,7 +144,10 @@ describe('CandidateRail', () => {
 
     render(<CandidateRail />);
     await userEvent.click(screen.getByRole('button', { name: /e4/ }));
-    expect(mocks.play).not.toHaveBeenCalled();
+    // The rail still asks for the move sound; muting is the manager's job, so
+    // the observable is that no audio node was built for it.
+    expect(playSpy).toHaveBeenCalled();
+    expect(audio.gains).toBe(0);
   });
 
   it('does not warn about duplicate React keys when two lines share the same first move', () => {
