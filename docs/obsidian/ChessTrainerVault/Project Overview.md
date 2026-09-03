@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-04
+updated: 2026-09-02
 status: current
 tags: [chesstrainer, overview]
 ---
@@ -42,8 +42,25 @@ From the design spec, unchanged:
   gets a comparison phrased in **ideas rather than centipawns**.
 - Interacting with the app is physically satisfying.
 
-The second one is the load-bearing one, and it is the part not yet built — see
-[[Roadmap]].
+**Two of the three are built** — which was true of neither for most of this
+project's life, and is worth stating plainly, because these criteria are what
+the design spec is measured against:
+
+- The first shipped with the lesson quiz loop — 24 checkpoints, 72 hints and
+  110 authored near-miss replies across the three openings.
+- The second was the load-bearing one and the last to land: the compare drawer
+  contrasts two candidate lines on five fixed rows in the same words every
+  time, in ideas rather than centipawns. See [[Current State]].
+- The third is **half-built, and knowingly so.** The tactile side is there —
+  press feedback, reduced-motion handling, keyboard and click paths — but the
+  app is silent: ten sounds are wired to call sites and every one plays
+  nothing. That is a deliberate licensing decision recorded in `CLAUDE.md`,
+  not an oversight, and it means "sound on every meaningful action" from the
+  design goals is unmet in `master`.
+
+Built is not the same as good, and the third criterion is not even built.
+Whether the app is *satisfying* is a human judgement that no test here can
+make — see [[Roadmap]]'s design pass.
 
 ## Guiding principles
 

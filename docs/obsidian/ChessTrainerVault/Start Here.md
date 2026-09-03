@@ -14,31 +14,32 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| `master` | `faea813` (merge of PR #16). Last merged work: the compare-vocabulary close-out |
-| **Two branches in flight** | `feat/synthesised-sound` (sound, PR open) and `chore/ci` (PR #17, CI) — see below |
+| `master` | `af1b59a` (merge of PR #17, CI). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), and CI |
+| **One branch in flight** | `feat/synthesised-sound` — PR #18, sound. See below |
 | Working tree | Clean on `feat/synthesised-sound` |
-| Suite | **593 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
-| CI | **Exists but is not yet on `master`** — `.github/workflows/ci.yml` is PR #17, green, unmerged. Until it lands, local `npm test` + `npm run typecheck` remain the only gate |
+| Suite | **595 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
+| CI | **Live on `master` as of 2026-09-02.** GitHub Actions runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). PR #18 predates the merge, so its first checks appear only once it is rebuilt on the new `master` |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10):
-`gh pr list --state open` returns PR #17 only, `origin/master` is `faea813`, and
-`git branch -vv` shows the two branches above. The previous version of this table
-claimed "nothing in flight, no CI" and was three sessions stale — exactly the
-failure §10 exists to prevent, this time caught by re-reading rather than by a
-broken `master`.
+Re-checked immediately before writing this note (per [[Lessons]] §10), and the
+check earned its keep twice in one session: an earlier version of this table
+claimed "nothing in flight, no CI" while two branches were open, and then the
+*corrected* version went stale within hours when PR #17 merged underneath it —
+producing a genuine merge conflict in this very note, where neither side was
+true. §10 is usually described as a rule about finishing a branch. It is really
+a rule about this table having a shelf life measured in hours.
 
-### The two open branches
+### The one open branch
 
-- **`feat/synthesised-sound`** — two commits. The ten wired sounds went from
-  silent to synthesised, then were **retuned the same day after the author
-  rejected them by ear**. Detail in [[Current State]]; the short version is that
-  board sounds built from oscillators read as beeps, and are now noise shaped by
-  a resonant bandpass. The retune is browser-verified as *correct* (a move
-  schedules two noise sources and zero oscillators) but **not yet judged as
-  good** — that verdict is still outstanding.
-- **`chore/ci`** (PR #17) — runs `npm ci`, typecheck, test and build on every
-  push and PR. Green. It deliberately adds no checks the repo does not already
-  enforce locally, so green-locally cannot mean red-there.
+**`feat/synthesised-sound`** (PR #18). The ten wired sounds went from silent to
+synthesised, then were **retuned the same day after the author rejected them by
+ear**: board sounds built from oscillators read as beeps, and are now noise
+shaped by a resonant bandpass. Checkmate then got its own sound, having until
+then been indistinguishable from check. Detail in [[Current State]].
+
+The retune is browser-verified as *correct* (a move schedules two noise sources
+and zero oscillators) but **not yet judged as good** — that verdict is still
+outstanding, and it is the only kind of verdict that has ever caught a problem
+with these sounds.
 
 ## The compare drawer's contrast vocabulary (PR #15)
 
@@ -223,12 +224,10 @@ are still open.
 
 ## Do this next
 
-**0. Land the two open branches, and get a verdict on the sound.** Both are
-finished work sitting in PRs: `feat/synthesised-sound` and `chore/ci` (#17).
-Merge #17 first — it is independent, and once it is on `master` the sound PR
-gets checked by CI rather than by trust.
+**0. Get a verdict on the sound, then land PR #18.** CI (#17) is merged; the
+sound branch is the only thing still out.
 
-The sound branch has one thing no reviewer can settle: **does it sound right?**
+It has one thing no reviewer can settle: **does it sound right?**
 The first version passed every automated check and was still wrong, which is the
 whole lesson of that branch. If the retune is also wrong, the two dials are `q`
 on the bandpass (higher reads as harder/more wooden, lower as duller) and the
