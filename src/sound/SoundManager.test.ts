@@ -41,7 +41,7 @@ function installAudioContext(state: AudioContextState = 'running'): Ctx {
       };
     }
     createBiquadFilter() {
-      return { type: 'lowpass', frequency: audioParam(), connect: () => undefined };
+      return { type: 'lowpass', frequency: audioParam(), Q: audioParam(), connect: () => undefined };
     }
     createBuffer(_c: number, length: number) {
       return { getChannelData: () => new Float32Array(length) };

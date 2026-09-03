@@ -25,8 +25,16 @@ export interface NoiseVoice {
   start: number;
   duration: number;
   gain: number;
-  /** Optional band shaping; `to` sweeps the cutoff across the voice. */
-  filter?: { type: BiquadFilterType; from: number; to?: number };
+  /**
+   * Optional band shaping; `to` sweeps the cutoff across the voice.
+   *
+   * `q` is what makes noise sound like a *struck object* rather than a hiss.
+   * At the browser default (~1) a bandpass is broad and airy; at 6-10 it rings
+   * around its centre frequency, which is how a wooden body reads. It is the
+   * single most important parameter in this file for the move and capture
+   * sounds.
+   */
+  filter?: { type: BiquadFilterType; from: number; to?: number; q?: number };
 }
 
 export type Voice = ToneVoice | NoiseVoice;
@@ -49,68 +57,84 @@ const SILENT = 0.0001;
  * repetition — which is roughly ten seconds into using the app.
  */
 export const RECIPES: Record<SoundName, Voice[]> = {
-  // Soft pop — a small upward blip, like lifting something off a board.
+  // A piece lifted: the lightest possible tap. Higher body than a placed
+  // piece and half the length, because nothing is being struck against the
+  // board — the piece is leaving it.
   pickup: [
-    { kind: 'tone', type: 'sine', from: 320, to: 440, start: 0, duration: 0.07, gain: 0.18 },
+    { kind: 'noise', start: 0, duration: 0.035, gain: 0.3, filter: { type: 'bandpass', from: 760, q: 7 } },
+    { kind: 'noise', start: 0, duration: 0.005, gain: 0.1, filter: { type: 'highpass', from: 3200 } },
   ],
 
-  // Rounded thunk — a low body with a tiny transient so it reads as contact
-  // rather than as a tone.
+  // A piece placed. Two layers, which is what a real impact is: a broadband
+  // tick for the contact, and a resonant body for the wood.
+  //
+  // Note there is no oscillator here at all. The first version of this file
+  // used a 180 Hz sine and it read as a beep — a sustained pitch is the one
+  // thing a wooden knock never has. The pitch you hear is the bandpass
+  // ringing, not a tone.
   move: [
-    { kind: 'tone', type: 'sine', from: 180, to: 120, start: 0, duration: 0.1, gain: 0.28 },
-    { kind: 'noise', start: 0, duration: 0.03, gain: 0.1, filter: { type: 'lowpass', from: 1400 } },
+    { kind: 'noise', start: 0, duration: 0.07, gain: 0.5, filter: { type: 'bandpass', from: 390, q: 7 } },
+    { kind: 'noise', start: 0, duration: 0.006, gain: 0.16, filter: { type: 'highpass', from: 2600 } },
   ],
 
-  // Heavier thunk with a crunch — lower body, longer and brighter noise.
+  // A capture is the same event with more force: a deeper body that rings
+  // longer, plus a mid crack the quiet move does not have.
   capture: [
-    { kind: 'tone', type: 'sine', from: 130, to: 70, start: 0, duration: 0.16, gain: 0.34 },
-    { kind: 'noise', start: 0, duration: 0.09, gain: 0.22, filter: { type: 'bandpass', from: 2200, to: 700 } },
+    { kind: 'noise', start: 0, duration: 0.11, gain: 0.55, filter: { type: 'bandpass', from: 250, q: 6 } },
+    { kind: 'noise', start: 0, duration: 0.035, gain: 0.28, filter: { type: 'bandpass', from: 1500, q: 2.5 } },
+    { kind: 'noise', start: 0, duration: 0.008, gain: 0.2, filter: { type: 'highpass', from: 3000 } },
   ],
 
-  // Rising two-note — an alert, not an alarm.
+  // Check is a notification, not an impact, so it is allowed a pitch — but a
+  // short one that decays like a struck bar rather than a held beep.
   check: [
-    { kind: 'tone', type: 'triangle', from: 520, start: 0, duration: 0.1, gain: 0.2 },
-    { kind: 'tone', type: 'triangle', from: 780, start: 0.09, duration: 0.14, gain: 0.2 },
+    { kind: 'tone', type: 'triangle', from: 660, start: 0, duration: 0.07, gain: 0.16 },
+    { kind: 'tone', type: 'triangle', from: 990, start: 0.06, duration: 0.1, gain: 0.14 },
   ],
 
-  // Three-note rising chime — the reward, so it gets the cleanest waveform.
+  // Solved. Two notes rather than three, and short: the old version held each
+  // note for 0.12-0.22s, which is long enough to read as a melody demanding
+  // attention rather than a confirmation you hear and move past.
   correct: [
-    { kind: 'tone', type: 'sine', from: 523.25, start: 0, duration: 0.12, gain: 0.22 }, // C5
-    { kind: 'tone', type: 'sine', from: 659.25, start: 0.1, duration: 0.12, gain: 0.22 }, // E5
-    { kind: 'tone', type: 'sine', from: 783.99, start: 0.2, duration: 0.22, gain: 0.24 }, // G5
+    { kind: 'tone', type: 'sine', from: 659.25, start: 0, duration: 0.07, gain: 0.16 }, // E5
+    { kind: 'tone', type: 'sine', from: 987.77, start: 0.065, duration: 0.13, gain: 0.15 }, // B5
   ],
 
-  // Soft descending tone, deliberately not punishing — one note, gentle
-  // waveform, no dissonance. A beginner hears this often and it must not
-  // feel like a buzzer.
+  // Missed. A beginner hears this constantly, so it is the quietest sound in
+  // the set and barely a pitch at all — a soft low thud with a hint of fall,
+  // deliberately closer to a dropped piece than to a buzzer.
   incorrect: [
-    { kind: 'tone', type: 'sine', from: 340, to: 240, start: 0, duration: 0.24, gain: 0.2 },
+    { kind: 'tone', type: 'sine', from: 260, to: 200, start: 0, duration: 0.12, gain: 0.13 },
+    { kind: 'noise', start: 0, duration: 0.05, gain: 0.12, filter: { type: 'bandpass', from: 300, q: 4 } },
   ],
 
-  // Paper slide — filtered noise sweeping down, no pitched content.
+  // Paper slide.
   hint: [
-    { kind: 'noise', start: 0, duration: 0.18, gain: 0.12, filter: { type: 'bandpass', from: 3200, to: 900 } },
+    { kind: 'noise', start: 0, duration: 0.13, gain: 0.09, filter: { type: 'bandpass', from: 2600, to: 900, q: 1.4 } },
   ],
 
-  // Whoosh — the same idea, longer and sweeping the other way.
+  // Whoosh, quieter than before — it fires alongside a panel appearing, and
+  // was competing with the thing it was meant to accompany.
   drawerOpen: [
-    { kind: 'noise', start: 0, duration: 0.26, gain: 0.1, filter: { type: 'lowpass', from: 500, to: 4200 } },
+    { kind: 'noise', start: 0, duration: 0.2, gain: 0.07, filter: { type: 'lowpass', from: 600, to: 3600 } },
   ],
 
-  // Short fanfare — a major arpeggio, the only sound allowed to feel like an
-  // event rather than a response.
+  // The one sound allowed to feel like an event. Still shortened: four notes
+  // at 0.14s each ran over half a second, which is a long time to wait after
+  // clicking something.
   lessonComplete: [
-    { kind: 'tone', type: 'triangle', from: 523.25, start: 0, duration: 0.14, gain: 0.2 }, // C5
-    { kind: 'tone', type: 'triangle', from: 659.25, start: 0.12, duration: 0.14, gain: 0.2 }, // E5
-    { kind: 'tone', type: 'triangle', from: 783.99, start: 0.24, duration: 0.14, gain: 0.2 }, // G5
-    { kind: 'tone', type: 'triangle', from: 1046.5, start: 0.36, duration: 0.34, gain: 0.22 }, // C6
+    { kind: 'tone', type: 'triangle', from: 523.25, start: 0, duration: 0.09, gain: 0.16 }, // C5
+    { kind: 'tone', type: 'triangle', from: 659.25, start: 0.08, duration: 0.09, gain: 0.16 }, // E5
+    { kind: 'tone', type: 'triangle', from: 783.99, start: 0.16, duration: 0.09, gain: 0.16 }, // G5
+    { kind: 'tone', type: 'triangle', from: 1046.5, start: 0.24, duration: 0.22, gain: 0.17 }, // C6
   ],
 
-  // Short click — the most-fired sound in the app by a wide margin, so it is
-  // the quietest and the shortest. Pitch variation is applied on top.
+  // The most-fired sound in the app by a wide margin. A dry UI tick with no
+  // pitch to get tired of — the old 900 Hz sine was a chirp, and a chirp
+  // repeated forty times a minute is the fastest way to make someone mute an
+  // app. Pitch variation still applies on top.
   buttonPress: [
-    { kind: 'tone', type: 'sine', from: 900, to: 600, start: 0, duration: 0.035, gain: 0.1 },
-    { kind: 'noise', start: 0, duration: 0.012, gain: 0.05, filter: { type: 'highpass', from: 2000 } },
+    { kind: 'noise', start: 0, duration: 0.016, gain: 0.13, filter: { type: 'bandpass', from: 1900, q: 2 } },
   ],
 };
 
@@ -124,8 +148,12 @@ export const RECIPES: Record<SoundName, Voice[]> = {
  * catch.
  */
 function envelope(gain: GainNode, at: number, duration: number, peak: number): void {
+  // 1.5ms, not 8ms. On a 40ms click an 8ms ramp is a sixth of the whole sound
+  // spent fading in, which robs it of its transient and leaves something that
+  // reads as a soft beep rather than an impact.
+  const attack = Math.min(0.0015, duration / 6);
   gain.gain.setValueAtTime(SILENT, at);
-  gain.gain.linearRampToValueAtTime(peak, at + Math.min(0.008, duration / 4));
+  gain.gain.linearRampToValueAtTime(peak, at + attack);
   gain.gain.exponentialRampToValueAtTime(SILENT, at + duration);
 }
 
@@ -173,6 +201,7 @@ export function playVoices(ctx: AudioContext, voices: Voice[], pitch: number): v
     if (voice.filter) {
       const filter = ctx.createBiquadFilter();
       filter.type = voice.filter.type;
+      if (voice.filter.q !== undefined) filter.Q.setValueAtTime(voice.filter.q, at);
       filter.frequency.setValueAtTime(voice.filter.from * pitch, at);
       if (voice.filter.to !== undefined) {
         filter.frequency.exponentialRampToValueAtTime(voice.filter.to * pitch, at + voice.duration);

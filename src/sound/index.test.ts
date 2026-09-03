@@ -41,7 +41,7 @@ function installAudioContext(): { created: number } {
         };
       }
       createBiquadFilter() {
-        return { type: 'lowpass', frequency: param(), connect: () => undefined };
+        return { type: 'lowpass', frequency: param(), Q: param(), connect: () => undefined };
       }
       createBuffer(_c: number, length: number) {
         return { getChannelData: () => new Float32Array(length) };

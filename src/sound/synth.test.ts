@@ -57,7 +57,15 @@ function fakeContext() {
     },
     createBiquadFilter() {
       created.filters += 1;
-      return { type: 'lowpass' as BiquadFilterType, frequency: param(), connect: () => undefined };
+      // Filter frequencies are recorded alongside oscillator ones: the board
+      // sounds carry their pitch in a resonant filter, not a tone, so a check
+      // that watched oscillators alone would see nothing at all for them.
+      return {
+        type: 'lowpass' as BiquadFilterType,
+        frequency: param((value, at) => scheduled.push({ freq: value, at })),
+        Q: param(),
+        connect: () => undefined,
+      };
     },
     createBuffer(_channels: number, length: number, _rate: number) {
       created.buffers += 1;
@@ -137,9 +145,42 @@ describe('RECIPES', () => {
     expect(first.to!).toBeLessThan(first.from);
   });
 
+  /**
+   * A capture must read as more forceful than a quiet placement, and the
+   * pitch of both now lives in a resonant filter rather than an oscillator —
+   * so the comparison has to look at whichever the recipe actually uses.
+   * Reading only `tones` here returned Infinity for both once these became
+   * pure noise, and quietly compared nothing at all.
+   */
+  const bodyHz = (name: SoundName) =>
+    Math.min(
+      ...RECIPES[name].map((v) => (v.kind === 'tone' ? v.from : (v.filter?.from ?? Infinity))),
+    );
+
   it('makes a capture heavier than a quiet move', () => {
-    const lowest = (name: SoundName) => Math.min(...tones(RECIPES[name]).map((v) => v.from));
-    expect(lowest('capture')).toBeLessThan(lowest('move'));
+    expect(bodyHz('capture')).toBeLessThan(bodyHz('move'));
+    expect(bodyHz('move')).toBeLessThan(bodyHz('pickup'));
+  });
+
+  /**
+   * The move and capture sounds are impacts, not notes. An oscillator would
+   * give them a sustained pitch, which is the single thing a piece landing on
+   * a board never has — and was why the first version of this file read as a
+   * beep rather than a knock.
+   */
+  it('builds the board sounds from noise alone, with no sustained pitch', () => {
+    for (const name of ['pickup', 'move', 'capture'] as SoundName[]) {
+      expect(tones(RECIPES[name]), `${name} should have no tone voices`).toEqual([]);
+    }
+  });
+
+  it('rings the impact bodies rather than hissing', () => {
+    // Q is what separates a struck object from broadband noise.
+    for (const name of ['pickup', 'move', 'capture'] as SoundName[]) {
+      const body = RECIPES[name].find((v) => v.kind === 'noise' && v.filter?.type === 'bandpass');
+      expect(body, `${name} needs a resonant body`).toBeDefined();
+      expect((body as { filter?: { q?: number } }).filter?.q ?? 1).toBeGreaterThanOrEqual(4);
+    }
   });
 });
 
@@ -168,6 +209,9 @@ describe('playVoices', () => {
    * It has to reach the frequencies, not merely be accepted.
    */
   it('applies the pitch multiplier to every scheduled frequency', () => {
+    // buttonPress is noise through a resonant filter, so the pitch it varies
+    // is the filter's centre frequency — the multiplier has to reach that too,
+    // or a pitched-up click just sounds identical.
     const plain = fakeContext();
     playVoices(plain.ctx, RECIPES.buttonPress, 1);
     const raised = fakeContext();
