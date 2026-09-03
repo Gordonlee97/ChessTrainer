@@ -474,6 +474,50 @@ state underneath is still stale.
   constraint — but it is undocumented, unlike the `castled` approximation, which
   has a comment explaining itself.
 
+## Design pass — found 2026-09-03, left unfixed
+
+The first pass that actually *looked* at the app rather than measuring it. Four
+things surfaced; two were fixed on the spot (the triple "Best move" badge and
+the over-wide move highlight, both on `fix/badge-and-highlight`). These two were
+judged and deliberately left.
+
+### The lesson's question is the quietest element on screen
+
+**Where:** the checkpoint prompt in the right rail, rendered by
+`src/ui/CheckpointPanel.tsx`
+**Severity:** medium. Nothing is broken; it is a hierarchy problem.
+
+Measured, not eyeballed: the question is a bare `<p>` at 14px with no border, no
+background and no padding, while every sibling on screen — the moves table, the
+engine-hidden notice — is a card with a 2px border, white background and 12px
+padding. The one sentence the player has to read and act on has less visual
+weight than the notice telling them the engine is hidden.
+
+Left unfixed because the remedy is a design choice with more than one defensible
+answer (make it a card like its siblings, or raise its type and keep it plain so
+it reads as *the app speaking* rather than another panel), and picking one is
+exactly the judgement this pass exists to hand to a human.
+
+### On a large monitor the app sits in the upper-left
+
+**Where:** the grid shell in `src/ui/theme.css`
+**Severity:** low. Cosmetic, and only at large viewports.
+
+At 2552×1308 the board caps out and roughly the bottom third of the viewport is
+empty, with everything top-aligned. The shell itself does span the viewport —
+this is a capped board leaving space, not a layout failure — but the result is a
+screen whose content clusters in one corner. Worth a decision rather than a
+default: centre the grid vertically, let the board grow further, or accept it.
+
+### Unresolved: the sub-1100×640 layout still cannot be rendered
+
+Listed as never-observed since Plan 4, and now **known to be unreachable by this
+automation** rather than merely skipped. `resize_window` reports success and
+Chrome ignores it, because the browser window is maximized (`outer` stayed
+2560×1392 across three attempts at 1060×700 and 980×660). No future browser pass
+will close this by trying harder; it needs a non-maximized window, a second
+display profile, or a human dragging the window edge.
+
 ## Environment
 
 ### `npm audit` reports 5 vulnerabilities, 1 critical

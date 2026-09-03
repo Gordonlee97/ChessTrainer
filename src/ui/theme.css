@@ -543,6 +543,14 @@ body {
 
 .moves-table-move {
   min-width: 0;
+  /* Shrink to the move, not to the column. The grid above already stopped the
+     selected-move fill from spanning an empty Black column; this stops it
+     spanning a *full* one. Each column is 1fr — 184px at a wide viewport — so a
+     stretched button gave a two-character move a highlight thirteen times
+     wider than its text, which reads as a filled bar rather than a marked move.
+     Left edges still line up: the columns are unchanged, only the buttons
+     inside them stop stretching. */
+  justify-self: start;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 13px;
   font-weight: 700;

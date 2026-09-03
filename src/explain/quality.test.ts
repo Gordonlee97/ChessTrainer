@@ -83,4 +83,30 @@ describe('classifyMove', () => {
   it('gives a human label alongside the band', () => {
     expect(classifyMove(line(0), line(0), 'w').label).toBe('Best move');
   });
+
+  /**
+   * The rail classifies every candidate against the same best line, so at the
+   * start position d4, e4 and Nf3 all landed inside the 20cp `best` band and
+   * all three rendered "Best move" — three different moves each captioned as
+   * the single best one. Only an exact tie keeps that caption now.
+   */
+  it('reserves "Best move" for a move that actually is the best', () => {
+    // 10cp worse: still the `best` band, so still a fine move to play.
+    const nearly = classifyMove(line(0), line(-10), 'w');
+    expect(nearly.band).toBe('best');
+    expect(nearly.label).toBe('Just as good');
+  });
+
+  it('still calls a genuine tie the best move', () => {
+    // Two lines with identical scores are both best, and both may say so.
+    expect(classifyMove(line(0), line(0), 'w').label).toBe('Best move');
+    expect(classifyMove(line(50), line(50), 'w').label).toBe('Best move');
+  });
+
+  it('leaves every other band\'s label alone', () => {
+    expect(classifyMove(line(0), line(-30), 'w').label).toBe('Good move');
+    expect(classifyMove(line(0), line(-70), 'w').label).toBe('Inaccuracy');
+    expect(classifyMove(line(0), line(-150), 'w').label).toBe('Mistake');
+    expect(classifyMove(line(0), line(-300), 'w').label).toBe('Blunder');
+  });
 });
