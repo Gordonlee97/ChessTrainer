@@ -359,6 +359,17 @@ whole-branch view could see:
   dry 16 ms tick with no pitch, varied by a multiplier so repeats do not sound
   mechanical.
 
+  **Checkmate is its own sound as of 2026-09-02**, and was not before — it
+  played `check`, because `classifySound` in `src/chess/resolveDrop.ts` tested
+  `isCheck()` first and chess.js reports a mating move as a check too. So the
+  most consequential move on a board sounded exactly like the most routine one.
+  Mate is now tested ahead of both check and capture, which matters because a
+  mating move is often all three at once (Scholar's mate ends `Qxf7#`). The
+  sound falls rather than rises — D5–A4–D4 — and ends on a note held four times
+  longer than anything else in the set, since nothing follows it. It carries its
+  own impact, because checkmate is the one board event where no `move` or
+  `capture` sound plays alongside it.
+
   Verified in a browser against the real Web Audio API rather than a stub: a
   move schedules two noise sources and **zero oscillators**, with the bandpass
   at 390 Hz / Q 7 and the tick at 2600 Hz.

@@ -92,6 +92,26 @@ export const RECIPES: Record<SoundName, Voice[]> = {
     { kind: 'tone', type: 'triangle', from: 990, start: 0.06, duration: 0.1, gain: 0.14 },
   ],
 
+  // Mate. Until this existed, checkmate played `check` — the same two rising
+  // notes as any other check, which is the wrong message twice over: it says
+  // "look out" for a game that is already over, and it makes the most
+  // consequential move on a board indistinguishable from the most routine one.
+  //
+  // Three things separate it from `check`. It *falls* rather than rises, which
+  // is what closes a phrase instead of opening one. It ends on a note held four
+  // times longer than anything else in this file — mate is the one moment where
+  // a sound is allowed to take its time, because nothing follows it. And it
+  // opens with an impact, because `check`'s pure tones sit oddly on a move that
+  // just landed a piece: this is the only board event where no `move` or
+  // `capture` sound plays alongside, so the thud has to come from here or not
+  // at all.
+  checkmate: [
+    { kind: 'noise', start: 0, duration: 0.09, gain: 0.45, filter: { type: 'bandpass', from: 320, q: 6 } },
+    { kind: 'tone', type: 'triangle', from: 587.33, start: 0.04, duration: 0.13, gain: 0.15 }, // D5
+    { kind: 'tone', type: 'triangle', from: 440, start: 0.15, duration: 0.15, gain: 0.15 }, // A4
+    { kind: 'tone', type: 'triangle', from: 293.66, start: 0.28, duration: 0.34, gain: 0.16 }, // D4
+  ],
+
   // Solved. Two notes rather than three, and short: the old version held each
   // note for 0.12-0.22s, which is long enough to read as a melody demanding
   // attention rather than a confirmation you hear and move past.

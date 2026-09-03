@@ -139,6 +139,30 @@ describe('RECIPES', () => {
     }
   });
 
+  /**
+   * Checkmate was `check` for the whole life of the sound system — the same
+   * recipe, because `classifySound` never had a checkmate branch. "Unique"
+   * is the requirement, so it is what gets asserted: not merely that a
+   * `checkmate` recipe exists (it could exist and be a copy), but that it
+   * differs from `check` in the two ways a listener would actually notice.
+   */
+  it('makes checkmate distinct from check', () => {
+    expect(RECIPES.checkmate).not.toEqual(RECIPES.check);
+
+    // Check rises to alert; mate falls to conclude. Same notes in the same
+    // order would be a different sound on paper and the same one to an ear.
+    const matePitches = tones(RECIPES.checkmate).map((v) => v.to ?? v.from);
+    expect(matePitches.length).toBeGreaterThan(1);
+    const falls = matePitches.slice(1).every((p, i) => p < matePitches[i]);
+    expect(falls, `checkmate should fall: ${matePitches.join(' -> ')}`).toBe(true);
+
+    // And it ends on a held note. Every other sound here is over in well under
+    // a fifth of a second; mate is the one event nothing follows.
+    const longest = Math.max(...RECIPES.checkmate.map((v) => v.duration));
+    const checkLongest = Math.max(...RECIPES.check.map((v) => v.duration));
+    expect(longest).toBeGreaterThan(checkLongest * 2);
+  });
+
   it('descends for the sound the brief calls descending', () => {
     const [first] = tones(RECIPES.incorrect);
     expect(first.to).toBeDefined();

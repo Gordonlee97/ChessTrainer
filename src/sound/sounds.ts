@@ -10,6 +10,7 @@ export const SOUND_NAMES = [
   'move',
   'capture',
   'check',
+  'checkmate',
   'correct',
   'incorrect',
   'hint',
