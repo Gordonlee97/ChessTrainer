@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-02
+updated: 2026-09-03
 status: current
 tags: [chesstrainer, overview]
 ---
@@ -42,7 +42,7 @@ From the design spec, unchanged:
   gets a comparison phrased in **ideas rather than centipawns**.
 - Interacting with the app is physically satisfying.
 
-**Two of the three are built** — which was true of neither for most of this
+**All three are now built** — which was true of none of them for most of this
 project's life, and is worth stating plainly, because these criteria are what
 the design spec is measured against:
 
@@ -51,16 +51,20 @@ the design spec is measured against:
 - The second was the load-bearing one and the last to land: the compare drawer
   contrasts two candidate lines on five fixed rows in the same words every
   time, in ideas rather than centipawns. See [[Current State]].
-- The third is **half-built, and knowingly so.** The tactile side is there —
-  press feedback, reduced-motion handling, keyboard and click paths — but the
-  app is silent: ten sounds are wired to call sites and every one plays
-  nothing. That is a deliberate licensing decision recorded in `CLAUDE.md`,
-  not an oversight, and it means "sound on every meaningful action" from the
-  design goals is unmet in `master`.
+- The third was the last to land, on 2026-09-03. The tactile side had been
+  there for a long time — press feedback, reduced-motion handling, keyboard and
+  click paths — but the app was **silent**: ten sounds wired to call sites, and
+  every one played nothing. It now makes all eleven, synthesised at runtime, so
+  "sound on every meaningful action" is finally met rather than merely wired.
+  The licensing decision that caused the silence is unchanged and is why they
+  are synthesised instead of loaded — see `CLAUDE.md` and [[Current State]].
 
-Built is not the same as good, and the third criterion is not even built.
-Whether the app is *satisfying* is a human judgement that no test here can
-make — see [[Roadmap]]'s design pass.
+Built is not the same as good, and the sound criterion is the sharpest example
+this project has produced: the first version of the sounds passed every
+automated check in the repo and was rejected on the first listen, because
+"physically satisfying" is not a property any test here can evaluate. Whether
+the app is *satisfying* remains a human judgement — see [[Roadmap]]'s design
+pass.
 
 ## Guiding principles
 

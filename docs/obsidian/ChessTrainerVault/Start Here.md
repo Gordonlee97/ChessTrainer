@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-02
+updated: 2026-09-03
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,36 +10,43 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-09-02
+## Repo state as of 2026-09-03
 
 | | |
 |---|---|
-| `master` | `af1b59a` (merge of PR #17, CI). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), and CI |
-| **One branch in flight** | `feat/synthesised-sound` — PR #18, sound. See below |
-| Working tree | Clean on `feat/synthesised-sound` |
-| Suite | **595 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
-| CI | **Live on `master` as of 2026-09-02.** GitHub Actions runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). PR #18 predates the merge, so its first checks appear only once it is rebuilt on the new `master` |
+| `master` | `26bf87e` (merge of PR #18, sound). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), CI (#17), and sound (#18) |
+| Branches | **Nothing in flight.** No open PRs; the merged branches and the CI worktree were pruned on 2026-09-03 |
+| Working tree | Clean on `master` |
+| Suite | **595 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean — re-run on the merged result, not inherited from the branch |
+| CI | Live. GitHub Actions runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). PR #18 was its first green run on a real change |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10), and the
-check earned its keep twice in one session: an earlier version of this table
-claimed "nothing in flight, no CI" while two branches were open, and then the
-*corrected* version went stale within hours when PR #17 merged underneath it —
-producing a genuine merge conflict in this very note, where neither side was
-true. §10 is usually described as a rule about finishing a branch. It is really
-a rule about this table having a shelf life measured in hours.
+Re-checked immediately before writing this note (per [[Lessons]] §10): PR #18 is
+`MERGED`, `a1c7a70` is an ancestor of `origin/master`, `gh pr list --state open`
+is empty, and the suite was re-run on the merged result.
 
-### The one open branch
+§10 earned its keep twice in a single session this time. An earlier version of
+this table claimed "nothing in flight, no CI" while two branches were open; the
+*corrected* version then went stale within hours when PR #17 merged underneath
+it, producing a genuine merge conflict in this very note where **neither side
+was true**. §10 is usually described as a rule about finishing a branch. It is
+really a rule about this table having a shelf life measured in hours.
 
-**`feat/synthesised-sound`** (PR #18). The ten wired sounds went from silent to
-synthesised, then were **retuned the same day after the author rejected them by
-ear**: board sounds built from oscillators read as beeps, and are now noise
-shaped by a resonant bandpass. Checkmate then got its own sound, having until
-then been indistinguishable from check. Detail in [[Current State]].
+## The app has sound (PR #18, merged 2026-09-03)
 
-The retune is browser-verified as *correct* (a move schedules two noise sources
-and zero oscillators) but **not yet judged as good** — that verdict is still
-outstanding, and it is the only kind of verdict that has ever caught a problem
-with these sounds.
+Ten sounds had been wired to call sites since Plan 2 and every one played
+silence. They are now synthesised at runtime — nothing fetched, nothing
+licensed — and an eleventh was added for checkmate.
+
+**The first version was rejected on the first listen**, and that is the part
+worth carrying forward. It built the board sounds from oscillators, and a
+sustained pitch is the one thing a wooden knock never has, so a move read as a
+beep. `pickup`, `move` and `capture` are now noise alone, shaped by a resonant
+bandpass; the pitch you hear is the filter ringing. It passed every automated
+check in the repo in both versions — see [[Lessons]] §11.
+
+**Checkmate had no sound of its own at all.** `classifySound` tested
+`isCheck()` first and chess.js reports a mating move as a check, so mate played
+the check sound. Full detail in [[Current State]].
 
 ## The compare drawer's contrast vocabulary (PR #15)
 
@@ -224,19 +231,23 @@ are still open.
 
 ## Do this next
 
-**0. Get a verdict on the sound, then land PR #18.** CI (#17) is merged; the
-sound branch is the only thing still out.
+**Nothing is in flight and nothing is queued.** [[Roadmap]]'s "Next" section is
+empty of planned work, and every branch is merged. The next plan starts from a
+decision rather than a backlog — so the two items below are judgements to make,
+not tasks to pick up.
 
-It has one thing no reviewer can settle: **does it sound right?**
-The first version passed every automated check and was still wrong, which is the
-whole lesson of that branch. If the retune is also wrong, the two dials are `q`
-on the bandpass (higher reads as harder/more wooden, lower as duller) and the
-body frequency (390 Hz is roughly a medium piece; lower is heavier). They are
-numbers in `RECIPES` in `src/sound/synth.ts` and nothing else has to change.
+**0. Listen to the sounds in normal use, and to checkmate deliberately.** The
+retune landed on the author's approval of the *design*, not on extended use. If
+anything grates after twenty minutes of clicking, the two dials are `q` on the
+bandpass (higher reads harder and more wooden, lower duller) and the body
+frequency (390 Hz is roughly a medium piece; lower is heavier). Both are numbers
+in `RECIPES` in `src/sound/synth.ts`; nothing else has to change.
 
-When sound merges, [[Project Overview]]'s third success criterion still says
-sound is half-built. That is correct for `master` today and becomes wrong the
-moment the PR lands.
+**Checkmate is close to unreachable in ordinary use** and has therefore never
+been heard in situ. The app has no opponent to mate — lessons are scripted and
+the explorer walks engine lines — so hearing it means loading a mate-in-one into
+the explorer and playing it. Worth doing once: it is the only sound in the set
+that carries its own impact, and the only one nobody has heard fire naturally.
 
 **1. A design pass by eye.** This is now the only item on the roadmap that no
 automation here can close, and it has been deferred through four plans. The

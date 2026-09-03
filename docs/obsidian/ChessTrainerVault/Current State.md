@@ -1,23 +1,23 @@
 ---
-updated: 2026-09-02
+updated: 2026-09-03
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-08-21.** Plans 1 through 7 are merged to `master`, plus a wave of
-UI work driven by playing the app (PR #13, merged 2026-08-17) — see
-[[Start Here]] for the session-by-session detail. The compare drawer's
-contrast vocabulary (below) is complete in code on
-`feat/compare-contrast-vocabulary`, **not yet merged, no PR opened**.
+**As of 2026-09-03.** Everything described in this note is on `master`. Plans 1
+through 7, the UI wave driven by playing the app (PR #13), the compare drawer's
+contrast vocabulary (PR #15), CI (PR #17) and sound (PR #18) are all merged —
+see [[Start Here]] for the session-by-session detail. Nothing is in flight.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **591 passing, 1 skipped**, 57 test files, **zero warnings**.
+Suite: **595 passing, 1 skipped**, 57 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
+CI runs the same commands plus a production build on every push and PR.
 
 ## The compare drawer contrasts two lines on five fixed rows, not independent prose (2026-08-21)
 

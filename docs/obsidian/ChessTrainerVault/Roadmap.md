@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-25
+updated: 2026-09-03
 status: current
 tags: [chesstrainer, roadmap]
 ---
@@ -181,6 +181,17 @@ roadmap that no amount of automation will close:
 Segment-level board orientation after "Next part" was listed here as never
 observed from Plan 4 until 2026-08-13, when the second browser pass finally
 watched it. It is no longer outstanding — see [[Start Here]].
+
+**Two things landed on 2026-09-02/03 that were never on this roadmap**, both
+from asking what would most improve the app rather than from a plan: CI
+(PR #17) and sound (PR #18). Sound closes the last of [[Project Overview]]'s
+three success criteria; CI replaces "somebody remembers to run `npm test`" with
+a gate. Neither needed a spec, and neither is listed above because the roadmap
+had genuinely run out of planned work before they were proposed.
+
+That is worth noticing rather than tidying away: the backlog being empty is the
+normal state here now, and the next item is more likely to come from using the
+app than from this file.
 
 ## Also queued
 

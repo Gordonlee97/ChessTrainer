@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-14
+updated: 2026-09-03
 status: current
 tags: [chesstrainer, process, lessons]
 ---
@@ -379,6 +379,47 @@ Specifically:
 - **Concurrent sessions are the normal case here, not the exception** — see the
   banner in [[Start Here]]. Any statement of the form "nothing else has changed"
   is a guess unless a fetch backs it.
+
+### 11. Green suite, wrong on the first human look
+
+**Five occurrences, and the fifth is the clearest.** A whole class of defect
+here is invisible to every check the repo can run, because the property being
+violated is a *sensory* one. The suite can prove a sound is wired, scheduled,
+and correctly shaped. It cannot prove it sounds good.
+
+| What | What the tests said | Who actually caught it |
+|---|---|---|
+| The synthesised sounds, v1 (2026-09-02) | 593 passing, zero warnings, browser-verified as scheduling the right frequencies | The author, on the **first listen**: "I definitely don't like these sounds" |
+| A persistent purple focus ring on e2 | Nothing — jsdom tests call `onSquareClick` directly and never dispatch focus | The author, **twice**; the first fix gated on focus and was wrong, because dragging focuses the board |
+| The feedback check mark 210.5px below the board's centre | Passing, with a CSS comment asserting the two boxes matched | A browser pass, by measurement |
+| The compare drawer's authored-prose case | All five rows render, verified by DOM query | A human scrolling: three scroll ticks to reach the verdict |
+| Faded back/forward controls | Nothing — contrast is not asserted anywhere | The author, from a screenshot |
+
+The sound case is the sharpest because *both* versions passed everything. The
+tests were not weak; the first version genuinely was correctly wired, correctly
+scheduled, and inside every bound the suite checks. It was still a beep, and no
+amount of test-writing would have said so. What actually diagnosed it was a
+one-line description of the physics: a sustained pitch is the one thing a wooden
+knock never has.
+
+**Countermeasure — when the acceptance criterion is a human sense, say so out
+loud and get the human's verdict before treating the work as done.** Three
+specifics:
+
+- **Name what the tests could not evaluate**, in the report and in the PR. "593
+  passing; whether it sounds good is not something any check here can make" is
+  the sentence that sets up the right next step. Silence on that point reads as
+  a claim of completeness.
+- **Get it in front of them early and cheaply.** A dev server and "have a
+  listen" cost minutes. The v1 sounds were built, tested, documented and
+  committed before anyone heard them.
+- **A second report of the same visual bug means the first fix was aimed at the
+  wrong cause** — do not re-fix the symptom. The e2 ring was "fixed" once by
+  gating on focus, which was a guess about *why* it persisted.
+
+This is the mirror of §8. There, a check could not distinguish its subject from
+a look-alike. Here, there is no check at all — and the failure mode is believing
+a green suite answered a question it was never asked.
 
 ---
 
