@@ -1,5 +1,5 @@
 ---
-updated: 2026-08-26
+updated: 2026-09-02
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -10,20 +10,35 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-08-26
+## Repo state as of 2026-09-02
 
 | | |
 |---|---|
-| Branch | `master`. Nothing in flight; no open PRs, no stale branches |
-| Merged to `master` | Plans 1–7, the UI wave from playing the app (PR #13), and the compare drawer's contrast vocabulary (PR #15, merged 2026-08-26 as `bca65c1`) |
-| Working tree | Clean |
-| Suite | **577 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
-| Last work finished | The compare-contrast-vocabulary plan — five tasks, a whole-branch review and its fix wave, merged |
-| CI | **There is none.** No `.github/workflows`; `npm test` and `npm run typecheck` locally are the only gate |
+| `master` | `faea813` (merge of PR #16). Last merged work: the compare-vocabulary close-out |
+| **Two branches in flight** | `feat/synthesised-sound` (sound, PR open) and `chore/ci` (PR #17, CI) — see below |
+| Working tree | Clean on `feat/synthesised-sound` |
+| Suite | **593 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean |
+| CI | **Exists but is not yet on `master`** — `.github/workflows/ci.yml` is PR #17, green, unmerged. Until it lands, local `npm test` + `npm run typecheck` remain the only gate |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10): PR #15 is
-`MERGED`, its commits are ancestors of `origin/master`, `gh pr list --state open`
-is empty, and the suite was re-run on the merged result. Nothing is in flight.
+Re-checked immediately before writing this note (per [[Lessons]] §10):
+`gh pr list --state open` returns PR #17 only, `origin/master` is `faea813`, and
+`git branch -vv` shows the two branches above. The previous version of this table
+claimed "nothing in flight, no CI" and was three sessions stale — exactly the
+failure §10 exists to prevent, this time caught by re-reading rather than by a
+broken `master`.
+
+### The two open branches
+
+- **`feat/synthesised-sound`** — two commits. The ten wired sounds went from
+  silent to synthesised, then were **retuned the same day after the author
+  rejected them by ear**. Detail in [[Current State]]; the short version is that
+  board sounds built from oscillators read as beeps, and are now noise shaped by
+  a resonant bandpass. The retune is browser-verified as *correct* (a move
+  schedules two noise sources and zero oscillators) but **not yet judged as
+  good** — that verdict is still outstanding.
+- **`chore/ci`** (PR #17) — runs `npm ci`, typecheck, test and build on every
+  push and PR. Green. It deliberately adds no checks the repo does not already
+  enforce locally, so green-locally cannot mean red-there.
 
 ## The compare drawer's contrast vocabulary (PR #15)
 
@@ -207,6 +222,22 @@ It also caught that a python index-slice had silently deleted two whole
 are still open.
 
 ## Do this next
+
+**0. Land the two open branches, and get a verdict on the sound.** Both are
+finished work sitting in PRs: `feat/synthesised-sound` and `chore/ci` (#17).
+Merge #17 first — it is independent, and once it is on `master` the sound PR
+gets checked by CI rather than by trust.
+
+The sound branch has one thing no reviewer can settle: **does it sound right?**
+The first version passed every automated check and was still wrong, which is the
+whole lesson of that branch. If the retune is also wrong, the two dials are `q`
+on the bandpass (higher reads as harder/more wooden, lower as duller) and the
+body frequency (390 Hz is roughly a medium piece; lower is heavier). They are
+numbers in `RECIPES` in `src/sound/synth.ts` and nothing else has to change.
+
+When sound merges, [[Project Overview]]'s third success criterion still says
+sound is half-built. That is correct for `master` today and becomes wrong the
+moment the PR lands.
 
 **1. A design pass by eye.** This is now the only item on the roadmap that no
 automation here can close, and it has been deferred through four plans. The

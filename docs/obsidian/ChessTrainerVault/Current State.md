@@ -339,16 +339,33 @@ whole-branch view could see:
 ## What is scaffolding, not feature
 
 - ~~Sound is wired but silent~~ — **the app makes sound as of 2026-09-02.** All
-  ten are synthesised from oscillators and filtered noise at runtime
-  (`src/sound/synth.ts`), so nothing is fetched and nothing is licensed. Verified
-  in a browser against the real Web Audio API rather than a stub: a move
-  schedules 180 Hz plus a noise transient, a correct answer plays C5–E5–G5, a
-  wrong one a descending 340 Hz, and repeated button presses came out at 908,
-  834, 972 and 826 Hz — the pitch variation that stops repeats sounding
+  ten are synthesised at runtime from oscillators and filtered noise
+  (`src/sound/synth.ts`), so nothing is fetched and nothing is licensed.
+
+  **The first version was rejected by ear and rebuilt the same day.** It built
+  the board sounds from oscillators — a 180 Hz sine for a piece landing — and
+  the author's verdict was immediate: it read as a beep, not a board. A
+  sustained pitch is the one thing a wooden knock never has. `pickup`, `move`
+  and `capture` are now **noise alone**, shaped by a resonant bandpass, so the
+  pitch heard is the filter ringing rather than a tone. Two layers each, which
+  is what an impact is: a broadband tick for the contact and a body for the
+  wood. `move` is 390 Hz at Q 7 plus a 2600 Hz tick; `capture` is the same event
+  with more force at 250 Hz, ringing longer and with a mid crack. The envelope
+  attack also dropped from 8 ms to 1.5 ms — at 8 ms the transient the ear reads
+  as *struck* was smoothed away before it arrived.
+
+  Notifications keep a pitch, because they are not impacts: `check` and
+  `correct` are two short notes rather than three long ones. `buttonPress` is a
+  dry 16 ms tick with no pitch, varied by a multiplier so repeats do not sound
   mechanical.
 
-  What is *not* verified is whether they sound **good**. That needs ears, and is
-  the one judgement no automated check here can make.
+  Verified in a browser against the real Web Audio API rather than a stub: a
+  move schedules two noise sources and **zero oscillators**, with the bandpass
+  at 390 Hz / Q 7 and the tick at 2600 Hz.
+
+  What is *still* not verified is whether the second version sounds **right**.
+  That needs ears, and is the one judgement no automated check here can make —
+  as the first version proved by passing every check and being wrong anyway.
 - **`src/App.tsx` is a placeholder shell** — an inline-styled flex layout that
   now hosts the picker, the lesson rail, saved lines, and the app controls.
   Still not the designed layout; that is Plan 5.
