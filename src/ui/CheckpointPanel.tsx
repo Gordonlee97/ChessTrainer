@@ -140,16 +140,7 @@ export function CheckpointPanel({ result, status, onRetry }: CheckpointPanelProp
       {status === 'unavailable' ? (
         <EngineUnavailableNotice onRetry={onRetry} />
       ) : (
-        <p
-          role="status"
-          style={{
-            padding: 12,
-            margin: 0,
-            borderRadius: 'var(--radius)',
-            border: '2px solid var(--border)',
-            fontSize: 13,
-          }}
-        >
+        <p className="card" role="status" style={{ margin: 0, fontSize: 13 }}>
           Engine suggestions are hidden while the lesson is asking you for a move.
           {rejectionHere && (
             <>
@@ -160,27 +151,21 @@ export function CheckpointPanel({ result, status, onRetry }: CheckpointPanelProp
         </p>
       )}
       {/*
-        A card, matching `.moves-table`'s recipe. The question used to be a
-        bare paragraph while every sibling on screen — this panel's own engine
-        notice, the moves table — was a bordered box, which left the one
-        sentence the player has to act on with the least visual weight of
-        anything in the rail. The fill is what carries the hierarchy: the
-        notice above is bordered but transparent, so a surface-filled card
-        reads as the thing to look at without needing bigger type.
+        The question used to be a bare paragraph while every sibling on
+        screen — this panel's own engine notice, the moves table — was a
+        bordered box, which left the one sentence the player has to act on
+        with the least visual weight of anything in the rail.
+
+        `card--filled` is what carries the hierarchy, and it is why the fill
+        is a modifier rather than part of `.card`: the notice directly above
+        is the same card *unfilled*, so the contrast between them does the
+        work that bigger type would otherwise have to.
 
         The hints and the Hint button come inside it deliberately. They are
         not separate features; they are help with *this* question, and a card
         that stopped at the prompt would cut the group in half.
       */}
-      <div
-        style={{
-          marginTop: 8,
-          padding: 12,
-          borderRadius: 'var(--radius)',
-          border: '2px solid var(--border)',
-          background: 'var(--surface)',
-        }}
-      >
+      <div className="card card--filled" style={{ marginTop: 8 }}>
         <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{asking.prompt}</p>
 
         {/*

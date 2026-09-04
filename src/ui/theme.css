@@ -127,6 +127,37 @@ body {
   margin-bottom: 12px;
 }
 
+/* The bordered box this app is mostly made of.
+ *
+ * Nine places had grown their own copy of it — five CSS rules and four inline
+ * style objects — and the inline ones repeated the literal string
+ * `2px solid var(--border)` verbatim. `border` is the only declaration all
+ * nine agreed on; `--radius` and 12px padding are the majority, so they are
+ * the default here.
+ *
+ * The fill is a modifier rather than part of the base, because the difference
+ * between a filled card and a transparent one is doing real work: in the
+ * checkpoint rail the engine notice is transparent and the question is filled,
+ * and that contrast is what makes the question read as the thing to act on
+ * without giving it bigger type. Folding a background into `.card` would have
+ * flattened that distinction into an accident.
+ *
+ * Three boxes deliberately do NOT use this and keep their own rules:
+ * `.compare-drawer` (16px, `--bg`, and a lift shadow — it is an overlay, not a
+ * panel), `.progress-notice` (`--radius-sm` and tighter padding, being a
+ * strip rather than a card) and `.lesson-rail` (14px). Pulling those in would
+ * mean a modifier per exception, which is more machinery than nine boxes
+ * justify. */
+.card {
+  border: 2px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+}
+
+.card--filled {
+  background: var(--surface);
+}
+
 /* The outer section: the bordered explanation box, then "Leave lesson"
    below it, not inside it. */
 .lesson-rail-wrap {
@@ -276,10 +307,9 @@ body {
    the list (or the empty-state paragraph) are always separated. They used to
    rely on the heading's own bottom margin alone, which left the button and
    the paragraph below it touching. */
+/* Border, radius and padding come from `.card` on the element. Unfilled, as
+   it was before — the rail's own background shows through. */
 .saved-lines {
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  padding: 12px;
   margin-top: 16px;
   display: flex;
   flex-direction: column;
@@ -478,11 +508,9 @@ body {
    above); a second scrolling mechanism here would be two definitions of one
    idea. A long line simply grows this section and the rail scrolls it. */
 
+/* Border, radius, padding and fill come from `.card card--filled` on the
+   element; what is left here is only what makes this box a moves table. */
 .moves-table {
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface);
-  padding: 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;

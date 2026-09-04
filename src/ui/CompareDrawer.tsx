@@ -49,15 +49,7 @@ function LinePanel({
   const movesLater = Math.ceil(summary.plies / 2);
 
   return (
-    <section
-      style={{
-        flex: '1 1 240px',
-        border: '2px solid var(--border)',
-        borderRadius: 'var(--radius)',
-        padding: 12,
-        background: 'var(--surface)',
-      }}
-    >
+    <section className="card card--filled" style={{ flex: '1 1 240px' }}>
       <h3 style={{ margin: '0 0 8px', fontSize: 15 }}>{summary.san}</h3>
       {summary.moves.length > 0 && (
         <p

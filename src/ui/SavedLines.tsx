@@ -111,7 +111,7 @@ export function SavedLines() {
   }
 
   return (
-    <section aria-label="My lines" className="saved-lines">
+    <section aria-label="My lines" className="card saved-lines">
       <h3 className="saved-lines-heading">MY LINES</h3>
 
       <div className="saved-lines-actions">
