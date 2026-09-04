@@ -58,6 +58,27 @@ describe('checkpoint panel', () => {
     expect(screen.getByText(/which pawn move claims the centre/i)).toBeInTheDocument();
   });
 
+  /**
+   * The hint list is not rendered at all until a hint exists to put in it.
+   * An empty `ol` keeps its default block margins, which was invisible while
+   * the question was a bare paragraph and became a gap between the question
+   * and the Hint button once the question became a card.
+   */
+  it('renders no hint list before a hint is revealed', () => {
+    startAtCheckpoint();
+    render(<CheckpointPanel {...noAnalysis} />);
+    expect(screen.queryByRole('list')).toBeNull();
+  });
+
+  it('renders the hint list once a hint is revealed', async () => {
+    const user = userEvent.setup();
+    startAtCheckpoint();
+    render(<CheckpointPanel {...noAnalysis} />);
+    await user.click(screen.getByRole('button', { name: /hint/i }));
+    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')).toHaveLength(1);
+  });
+
   it('reveals hints one at a time', async () => {
     const user = userEvent.setup();
     startAtCheckpoint();

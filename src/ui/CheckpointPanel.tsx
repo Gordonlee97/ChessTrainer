@@ -159,14 +159,43 @@ export function CheckpointPanel({ result, status, onRetry }: CheckpointPanelProp
           )}
         </p>
       )}
-      <div>
-        <p style={{ fontSize: 14, fontWeight: 700 }}>{asking.prompt}</p>
+      {/*
+        A card, matching `.moves-table`'s recipe. The question used to be a
+        bare paragraph while every sibling on screen — this panel's own engine
+        notice, the moves table — was a bordered box, which left the one
+        sentence the player has to act on with the least visual weight of
+        anything in the rail. The fill is what carries the hierarchy: the
+        notice above is bordered but transparent, so a surface-filled card
+        reads as the thing to look at without needing bigger type.
 
-        <ol style={{ fontSize: 13, paddingLeft: 18 }}>
-          {asking.hints.slice(0, revealed).map((hint) => (
-            <li key={hint}>{hint}</li>
-          ))}
-        </ol>
+        The hints and the Hint button come inside it deliberately. They are
+        not separate features; they are help with *this* question, and a card
+        that stopped at the prompt would cut the group in half.
+      */}
+      <div
+        style={{
+          marginTop: 8,
+          padding: 12,
+          borderRadius: 'var(--radius)',
+          border: '2px solid var(--border)',
+          background: 'var(--surface)',
+        }}
+      >
+        <p style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{asking.prompt}</p>
+
+        {/*
+          Rendered only when there is something in it. An empty `ol` still
+          carries its default block margins, which outside a card merely
+          padded the rail and inside one is a visible gap between the question
+          and the Hint button.
+        */}
+        {revealed > 0 && (
+          <ol style={{ fontSize: 13, paddingLeft: 18, marginBottom: 0 }}>
+            {asking.hints.slice(0, revealed).map((hint) => (
+              <li key={hint}>{hint}</li>
+            ))}
+          </ol>
+        )}
 
         {revealed < asking.hints.length && (
           <Button
