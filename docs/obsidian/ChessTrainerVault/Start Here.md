@@ -15,9 +15,9 @@ can be reconstructed from the code, and this cannot.
 | | |
 |---|---|
 | `master` | `b419772` (merge of PR #19, design-pass fixes). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), CI (#17), sound (#18), and the first design-pass fixes (#19) |
-| Branches | **Nothing in flight.** No open PRs; all merged branches and the CI worktree pruned |
-| Working tree | Clean on `master` |
-| Suite | **598 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean — re-run on the merged result, not inherited from the branch |
+| Branches | **One in flight:** `fix/lesson-question-card` — the lesson question becomes a card. All earlier branches and the CI worktree are pruned |
+| Working tree | Clean on `fix/lesson-question-card` |
+| Suite | **600 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean. (598 on `master`; the two new ones guard the hint list.) |
 | CI | Live, green. Runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). **Watch the duration:** #18 took 50s and #19 took 7m47s for a comparably small change, against a 10-minute timeout. Cause unknown — plausibly a cold npm cache or a slow runner. If it stays there, the timeout needs raising or the cause finding |
 
 Re-checked immediately before writing this note (per [[Lessons]] §10): PR #19 is
@@ -38,22 +38,31 @@ here can close, deferred through four plans on the grounds that the layout had
 been measured exhaustively and judged never. **Its first thirty seconds found a
 screen that contradicted itself three times.**
 
-Two fixed: the triple "Best move" badge, and a selected-move highlight 13× wider
-than its text. Both in [[Current State]]; both invisible to every test in the
-repo, which is [[Lessons]] §11 in its purest form.
+Three fixed. Two in PR #19 — the triple "Best move" badge, and a selected-move
+highlight 13× wider than its text. A third on `fix/lesson-question-card`: the
+lesson's question was a bare paragraph among bordered siblings, so the sentence
+the player must act on carried the least weight on screen; it is a card now. All
+three are in [[Current State]], and none was catchable by any test in the repo,
+which is [[Lessons]] §11 in its purest form.
 
-Three left, in [[Known Issues]] under the 2026-09-03 heading. The one that
-changes how future sessions should behave: **the sub-1100×640 layout cannot be
-rendered by this automation.** `resize_window` reports success and Chrome
-ignores it, because the window is maximized — measured across three attempts.
-Four passes have now failed to render this layout and every one of them recorded
-it as "not yet checked". It is not a gap in diligence; it needs a non-maximized
-window or a human dragging the edge.
+Two left, in [[Known Issues]] under the 2026-09-03 heading. The one that changes
+how future sessions should behave: **the sub-1100×640 layout cannot be rendered
+by this automation.** `resize_window` reports success and Chrome ignores it,
+because the window is maximized — measured across three attempts. Four passes
+have now failed to render this layout and every one of them recorded it as "not
+yet checked". It is not a gap in diligence; it needs a non-maximized window or a
+human dragging the edge.
 
 **The pass is not finished.** Two questions raised by the compare-vocabulary
 work are still unanswered, and both need eyes: whether the King-safety row earns
 its place (it reads the same in nearly every comparison by design), and whether
 the compare drawer reads as a wall when a lesson supplies authored prose.
+
+**A tooling note for the next browser pass**, which cost twenty minutes here:
+two tabs became permanently unresponsive to script injection while each ran its
+own Stockfish worker. The dev server was fine throughout (HTTP 200 in 2ms,
+serving the current edit), so the symptom is the extension, not the app — but
+the cure is to keep exactly one ChessTrainer tab open and close the rest.
 
 ## The app has sound (PR #18, merged 2026-09-03)
 
@@ -270,11 +279,9 @@ nothing else has to change.
 
 **1. Keep going with the design pass — it is started, not done.** PR #19 took
 the two findings that were outright *wrong*; what remains is the judgement half,
-which is the part that was always the point. Four things want an opinion:
+which is the part that was always the point. The question's visual weight was
+settled on 2026-09-04 — it is a card now. Three things still want an opinion:
 
-- **The lesson's question is the quietest element on screen** — a bare 14px `<p>`
-  where every sibling is a bordered card. Card, or bigger type and stay plain?
-  See [[Known Issues]].
 - **Does the King-safety row earn its place** in the compare drawer? It reads the
   same in nearly every comparison by design (castling lands past the window), so
   it either teaches *when* castling happens or trains the reader to skip the grid.

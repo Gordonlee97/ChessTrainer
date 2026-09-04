@@ -110,7 +110,22 @@ shipped, and neither was catchable by any test here. Both are fixed (PR #19).
   column — and the descendant of a bug reported twice during PR #13, where the
   fix moved the highlight from row to cell without making the cell any smaller.
 
-Three further findings were judged and left, in [[Known Issues]] — including
+**The lesson's question is now a card** (2026-09-04). It had been a bare
+paragraph while every sibling in the rail was a bordered box, so the one
+sentence the player must act on carried the least visual weight on screen. It
+now uses `.moves-table`'s recipe — 2px border, `--surface` fill, 12px padding —
+and the fill is what does the work: the engine notice above it is bordered but
+transparent, so a filled card reads as the thing to look at without needing
+larger type. The hint ladder and the Hint button live inside it, because they
+are help with *this* question rather than separate features.
+
+The card also surfaced a latent detail worth its own guard: the hint list was an
+`ol` rendered unconditionally, and an empty `ol` keeps its default block
+margins. Outside a card that merely padded the rail; inside one it was a visible
+gap between question and button. The list is now rendered only when a hint has
+been revealed.
+
+Two further findings were judged and left, in [[Known Issues]] — including
 that the sub-1100px layout is **unreachable by this automation** rather than
 merely unchecked, which is why four passes have failed to render it.
 
