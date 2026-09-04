@@ -8,8 +8,9 @@ tags: [chesstrainer, state]
 
 **As of 2026-09-04.** Everything described in this note is on `master`. Plans 1
 through 7, the UI wave driven by playing the app (PR #13), the compare drawer's
-contrast vocabulary (PR #15), CI (PR #17) and sound (PR #18) are all merged —
-see [[Start Here]] for the session-by-session detail. Nothing is in flight.
+contrast vocabulary (PR #15), CI (PR #17), sound (PR #18) and the first
+design-pass fixes (PR #19) are all merged — see [[Start Here]] for the
+session-by-session detail. Nothing is in flight.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.

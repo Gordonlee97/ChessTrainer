@@ -10,7 +10,7 @@ tags: [chesstrainer, handoff]
 in this vault before finishing a session, make it this note — everything else
 can be reconstructed from the code, and this cannot.
 
-## Repo state as of 2026-09-03
+## Repo state as of 2026-09-04
 
 | | |
 |---|---|
@@ -20,8 +20,8 @@ can be reconstructed from the code, and this cannot.
 | Suite | **598 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean — re-run on the merged result, not inherited from the branch |
 | CI | Live, green. Runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). **Watch the duration:** #18 took 50s and #19 took 7m47s for a comparably small change, against a 10-minute timeout. Cause unknown — plausibly a cold npm cache or a slow runner. If it stays there, the timeout needs raising or the cause finding |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10): PR #18 is
-`MERGED`, `a1c7a70` is an ancestor of `origin/master`, `gh pr list --state open`
+Re-checked immediately before writing this note (per [[Lessons]] §10): PR #19 is
+`MERGED`, `a2af2d2` is an ancestor of `origin/master`, `gh pr list --state open`
 is empty, and the suite was re-run on the merged result.
 
 §10 earned its keep twice in a single session this time. An earlier version of
