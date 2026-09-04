@@ -1,12 +1,12 @@
 ---
-updated: 2026-09-03
+updated: 2026-09-04
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-09-03.** Everything described in this note is on `master`. Plans 1
+**As of 2026-09-04.** Everything described in this note is on `master`. Plans 1
 through 7, the UI wave driven by playing the app (PR #13), the compare drawer's
 contrast vocabulary (PR #15), CI (PR #17) and sound (PR #18) are all merged —
 see [[Start Here]] for the session-by-session detail. Nothing is in flight.
@@ -14,7 +14,7 @@ see [[Start Here]] for the session-by-session detail. Nothing is in flight.
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **595 passing, 1 skipped**, 57 test files, **zero warnings**.
+Suite: **598 passing, 1 skipped**, 57 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 CI runs the same commands plus a production build on every push and PR.
@@ -86,6 +86,32 @@ traded), and `buildContrastRows` turns a pair of `LineValues` into the five
 returns a `LineSummary` carrying `values` and `moves` (the walked SANs)
 instead of deriving pros/cons; `buildVerdict` reads `ContrastRow.equal` rather
 than a centipawn gap.
+
+## The first design pass found two things on the default screen (2026-09-03)
+
+The roadmap's last item was a pass *by eye* — deferred through four plans,
+because everything about the layout had been measured and none of it judged.
+Its first outing found two defects that had been visible since their features
+shipped, and neither was catchable by any test here. Both are fixed (PR #19).
+
+- **Three different moves were all captioned "Best move."** The `best` band is
+  20 centipawns wide, and at the start position d4, e4 and Nf3 sit within 10cp
+  of each other, so the rail claimed primacy three times on one screen. The band
+  is unchanged — calling any of those three a mistake would be the false
+  precision this project refuses to teach — but only an exact tie with the top
+  line keeps the caption now; the rest read "Just as good". `labelFor` in
+  `src/explain/quality.ts`.
+- **The selected-move highlight was 13× wider than its text** — a 184px filled
+  bar around a two-character move, because each column is `1fr` and the button
+  stretched to fill it. Now 34px, which is the move plus its own padding and
+  border. This is the same defect one level down from the one the grid comment
+  in `theme.css` already records fixing, when the fill spanned an *empty* Black
+  column — and the descendant of a bug reported twice during PR #13, where the
+  fix moved the highlight from row to cell without making the cell any smaller.
+
+Three further findings were judged and left, in [[Known Issues]] — including
+that the sub-1100px layout is **unreachable by this automation** rather than
+merely unchecked, which is why four passes have failed to render it.
 
 ## The breadcrumb is gone; a moves table replaced it (Plan 7)
 
@@ -214,7 +240,7 @@ Run `npm run dev`, open the local URL, and you can:
 | Open the Glossary | A scrollable header disclosure, 30 chess terms grouped simplest-first: the board and the rules, ideas and tactics, then deeper water — including the engine words the app itself displays (evaluation, line, ply). Content in `src/content/glossary.ts`; distinct from the vault's own `Glossary.md`, which is internal vocabulary for people reading the code |
 | Click a piece | Its legal destinations are marked — a dot on an empty square, a tinted ring around a piece that can be taken. Clicking one plays the move; clicking the piece again puts it down; clicking another of your own movable pieces switches to it |
 | Drag a piece | Legal moves land, illegal ones snap back. From/to squares stay highlighted. |
-| Read the right-hand rail | Top 3 engine moves at depth 20, each with score, eval bar, a quality badge (Best/Good/Inaccuracy/Mistake/Blunder relative to the top line), the **top two** explainer sentences, and the first 6 plies of its line |
+| Read the right-hand rail | Top 3 engine moves at depth 20, each with score, eval bar, a quality badge (Best move/Just as good/Good/Inaccuracy/Mistake/Blunder relative to the top line), the **top two** explainer sentences, and the first 6 plies of its line |
 | Watch the rail mid-search | Scores and eval bars stream; **badges and ideas are withheld until the search settles**, because comparing two lines only means something at equal depth |
 | Click a candidate | Plays it — identical result to dragging the same move |
 | Click "Compare X and Y" | Opens a drawer with two mini-boards (each captioned with the moves actually walked, at most 8 plies, numbered like a scoresheet), eval bars, and five fixed contrast rows (Centre, Development, King safety, Tempo, Open or closed) shared between the pair, each glossed and marked when it differs. A footer names which rows differ, or "Practically equal" when none do; a mate in either line outranks that entirely. Authored pros/cons, where a lesson supplies them, render inside each line's panel |

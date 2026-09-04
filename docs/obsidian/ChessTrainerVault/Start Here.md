@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-03
+updated: 2026-09-04
 status: current
 tags: [chesstrainer, handoff]
 ---
@@ -14,11 +14,11 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| `master` | `26bf87e` (merge of PR #18, sound). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), CI (#17), and sound (#18) |
-| Branches | **Nothing in flight.** No open PRs; the merged branches and the CI worktree were pruned on 2026-09-03 |
+| `master` | `b419772` (merge of PR #19, design-pass fixes). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), CI (#17), sound (#18), and the first design-pass fixes (#19) |
+| Branches | **Nothing in flight.** No open PRs; all merged branches and the CI worktree pruned |
 | Working tree | Clean on `master` |
-| Suite | **595 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean — re-run on the merged result, not inherited from the branch |
-| CI | Live. GitHub Actions runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). PR #18 was its first green run on a real change |
+| Suite | **598 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean — re-run on the merged result, not inherited from the branch |
+| CI | Live, green. Runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). **Watch the duration:** #18 took 50s and #19 took 7m47s for a comparably small change, against a 10-minute timeout. Cause unknown — plausibly a cold npm cache or a slow runner. If it stays there, the timeout needs raising or the cause finding |
 
 Re-checked immediately before writing this note (per [[Lessons]] §10): PR #18 is
 `MERGED`, `a1c7a70` is an ancestor of `origin/master`, `gh pr list --state open`
@@ -30,6 +30,30 @@ this table claimed "nothing in flight, no CI" while two branches were open; the
 it, producing a genuine merge conflict in this very note where **neither side
 was true**. §10 is usually described as a rule about finishing a branch. It is
 really a rule about this table having a shelf life measured in hours.
+
+## The design pass has started, and it paid immediately (PR #19, merged 2026-09-04)
+
+The last item on the roadmap was a pass *by eye* — the one thing no automation
+here can close, deferred through four plans on the grounds that the layout had
+been measured exhaustively and judged never. **Its first thirty seconds found a
+screen that contradicted itself three times.**
+
+Two fixed: the triple "Best move" badge, and a selected-move highlight 13× wider
+than its text. Both in [[Current State]]; both invisible to every test in the
+repo, which is [[Lessons]] §11 in its purest form.
+
+Three left, in [[Known Issues]] under the 2026-09-03 heading. The one that
+changes how future sessions should behave: **the sub-1100×640 layout cannot be
+rendered by this automation.** `resize_window` reports success and Chrome
+ignores it, because the window is maximized — measured across three attempts.
+Four passes have now failed to render this layout and every one of them recorded
+it as "not yet checked". It is not a gap in diligence; it needs a non-maximized
+window or a human dragging the edge.
+
+**The pass is not finished.** Two questions raised by the compare-vocabulary
+work are still unanswered, and both need eyes: whether the King-safety row earns
+its place (it reads the same in nearly every comparison by design), and whether
+the compare drawer reads as a wall when a lesson supplies authored prose.
 
 ## The app has sound (PR #18, merged 2026-09-03)
 
@@ -233,40 +257,40 @@ are still open.
 
 **Nothing is in flight and nothing is queued.** [[Roadmap]]'s "Next" section is
 empty of planned work, and every branch is merged. The next plan starts from a
-decision rather than a backlog — so the two items below are judgements to make,
-not tasks to pick up.
+decision rather than a backlog — so most of what follows is a judgement to make,
+not a task to pick up.
 
-**0. Listen to the sounds in normal use, and to checkmate deliberately.** The
-retune landed on the author's approval of the *design*, not on extended use. If
-anything grates after twenty minutes of clicking, the two dials are `q` on the
-bandpass (higher reads harder and more wooden, lower duller) and the body
-frequency (390 Hz is roughly a medium piece; lower is heavier). Both are numbers
-in `RECIPES` in `src/sound/synth.ts`; nothing else has to change.
+**0. Sound is settled enough to leave alone.** The retune was approved by ear and
+the checkmate sound was confirmed working in the app on 2026-09-03. What has
+*not* happened is extended use — if anything grates after twenty minutes of
+clicking, the two dials are `q` on the bandpass (higher reads harder and more
+wooden, lower duller) and the body frequency (390 Hz is roughly a medium piece;
+lower is heavier). Both are plain numbers in `RECIPES` in `src/sound/synth.ts`;
+nothing else has to change.
 
-**Checkmate is close to unreachable in ordinary use** and has therefore never
-been heard in situ. The app has no opponent to mate — lessons are scripted and
-the explorer walks engine lines — so hearing it means loading a mate-in-one into
-the explorer and playing it. Worth doing once: it is the only sound in the set
-that carries its own impact, and the only one nobody has heard fire naturally.
+**1. Keep going with the design pass — it is started, not done.** PR #19 took
+the two findings that were outright *wrong*; what remains is the judgement half,
+which is the part that was always the point. Four things want an opinion:
 
-**1. A design pass by eye.** This is now the only item on the roadmap that no
-automation here can close, and it has been deferred through four plans. The
-layout has been measured exhaustively — regions aligned, board square, rails
-bounded, the contrast grid's columns attributed — and never *judged*. Nobody has
-looked at the app and said whether it feels right.
+- **The lesson's question is the quietest element on screen** — a bare 14px `<p>`
+  where every sibling is a bordered card. Card, or bigger type and stay plain?
+  See [[Known Issues]].
+- **Does the King-safety row earn its place** in the compare drawer? It reads the
+  same in nearly every comparison by design (castling lands past the window), so
+  it either teaches *when* castling happens or trains the reader to skip the grid.
+- **Is the compare drawer a wall** when a lesson supplies authored prose? The one
+  browser check that said "yes, three scroll ticks" was run by the person who had
+  just changed it, looking for the thing they had just fixed.
+- **The app clusters in the upper-left on a large monitor.** Centre it, let the
+  board grow, or accept it.
 
-Two specific questions worth answering while looking, both raised by the
-compare-vocabulary work and neither settled:
-
-- **Does the King-safety row earn its place?** It reads the same in nearly every
-  comparison by design — castling lands around ply 9–11, past the 8-ply window —
-  so it exists to teach *when* castling happens. Measured differing in 1 of 6
-  real comparisons. Either that repetition teaches, or it trains the reader to
-  skip the grid. Only a human can say which.
-- **Is the drawer readable now?** The browser pass called the authored-prose
-  case a wall at three scroll ticks. Moving the prose after the verdict was
-  meant to fix that, and did in a browser check — but that check was run by the
-  person who made the change, looking for the thing they had just fixed.
+Why this sat undone for four plans is worth keeping in view: the layout had been
+measured exhaustively — regions aligned, board square, rails bounded, the
+contrast grid's columns attributed — and never *judged*. Measurement kept
+producing green results about a screen nobody had looked at. On the King-safety
+question specifically, the row was measured differing in 1 of 6 real
+comparisons; whether that repetition teaches or trains the reader to skip the
+grid is not a thing a number can answer.
 
 **2. The compare drawer's remaining minors**, six of them, in [[Known Issues]]
 under the 2026-08-25 heading. The one most likely to be seen by a player: the
