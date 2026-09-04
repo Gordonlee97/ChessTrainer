@@ -55,5 +55,23 @@ export function classifyMove(
   const loss = centipawnLoss(best, played, mover);
   // Non-null assertion is safe: loss is finite and non-negative, so it will always match a band.
   const match = BANDS.find((entry) => loss <= entry.maxLoss)!;
-  return { band: match.band, loss, label: match.label };
+  return { band: match.band, loss, label: labelFor(match.band, loss, match.label) };
+}
+
+/**
+ * The `best` band is 20 centipawns wide, which is deliberate — at the start
+ * position d4, e4 and Nf3 sit within 10cp of each other and calling any of them
+ * a mistake would be false precision. But labelling all three "Best move"
+ * is false in the other direction, and it is what the candidate rail rendered:
+ * three different moves, each captioned as the single best one.
+ *
+ * Only an exact tie with the top line keeps that caption. Everything else in
+ * the band is genuinely as good *to play* without being the best move, which is
+ * the distinction the label now carries. The band itself is unchanged, so these
+ * moves keep the same badge colour and the same "this is a fine move" reading —
+ * the only thing that changes is the claim of primacy.
+ */
+function labelFor(band: QualityBand, loss: number, bandLabel: string): string {
+  if (band === 'best' && loss > 0) return 'Just as good';
+  return bandLabel;
 }
