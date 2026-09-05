@@ -14,14 +14,14 @@ can be reconstructed from the code, and this cannot.
 
 | | |
 |---|---|
-| `master` | `14616c2` (merge of PR #20, the question card). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), CI (#17), sound (#18), and the design-pass fixes (#19, #20) |
-| Branches | **Nothing in flight.** No open PRs; all merged branches and the CI worktree pruned |
-| Working tree | Clean on `master` |
-| Suite | **600 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean — re-run on the merged result, not inherited from the branch |
-| CI | Live, green. Runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). **The duration is wildly variable:** 50s (#18), 7m47s (#19), 2m31s (#20), on comparably small changes against a 10-minute timeout. So 7m47s was an outlier rather than a new baseline, but the spread is wide enough that a slow run is not evidence of anything. Cause unknown — plausibly runner variance or a cold npm cache. Worth watching, not yet worth acting on |
+| `master` | `90b69f5` (merge of PR #21, the card primitive). Merged to date: Plans 1–7, the UI wave from playing the app (PR #13), the compare drawer's contrast vocabulary (PR #15), CI (#17), sound (#18), and the design-pass work (#19, #20, #21) |
+| Branches | **One in flight:** `fix/progress-salvage` — corrupt storage loses only the damaged item, not everything |
+| Working tree | Clean on `fix/progress-salvage` |
+| Suite | **605 passing, 1 skipped (expected), zero warnings**; `tsc --noEmit` clean. (601 on `master`; the four new ones guard per-item salvage.) |
+| CI | Live, green. Runs `npm ci`, typecheck, the suite and a production build on every push and PR to `master` (`.github/workflows/ci.yml`). **The duration is wildly variable:** 50s (#18), 7m47s (#19), 2m31s (#20), 5m50s (#21), on comparably small changes against a 10-minute timeout. So 7m47s was an outlier rather than a new baseline, but the spread is wide enough that a slow run is not evidence of anything. Cause unknown — plausibly runner variance or a cold npm cache. Worth watching, not yet worth acting on |
 
-Re-checked immediately before writing this note (per [[Lessons]] §10): PR #20 is
-`MERGED`, `151a372` is an ancestor of `origin/master`, `gh pr list --state open`
+Re-checked immediately before writing this note (per [[Lessons]] §10): PR #21 is
+`MERGED`, `be72acc` is an ancestor of `origin/master`, `gh pr list --state open`
 is empty, and the suite was re-run on the merged result.
 
 §10 earned its keep twice in a single session this time. An earlier version of

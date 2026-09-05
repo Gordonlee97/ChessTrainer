@@ -16,8 +16,15 @@ export function ProgressNotice() {
 
   return (
     <p role="status" className="progress-notice">
+      {/*
+        "starting fresh" was true when a single bad item discarded the whole
+        saved blob. `loadProgress` now salvages per item, so the common case is
+        that most progress survived and only the damaged part is gone — telling
+        a player who still has eight solved checkpoints that they are starting
+        fresh is worse than saying nothing.
+      */}
       {recovered
-        ? 'Your saved progress could not be read, so it is starting fresh.'
+        ? 'Part of your saved progress could not be read and was skipped. Everything still readable has been kept.'
         : 'Progress is not being saved — your browser storage is full or unavailable.'}
       <Button variant="ghost" onClick={dismissNotice} aria-label="Dismiss this notice">
         Dismiss
