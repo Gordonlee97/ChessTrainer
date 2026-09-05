@@ -39,7 +39,7 @@ export function MovesTable() {
   }
 
   return (
-    <section className="moves-table" aria-label="Moves" tabIndex={0} onKeyDown={onKeyDown}>
+    <section className="card card--filled moves-table" aria-label="Moves" tabIndex={0} onKeyDown={onKeyDown}>
       <div className="moves-table-controls">
         <Button
           type="button"

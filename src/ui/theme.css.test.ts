@@ -110,3 +110,31 @@ describe('theme.css moves-table row columns', () => {
     expect(columns!.endsWith('1fr 1fr')).toBe(true);
   });
 });
+
+describe('theme.css card primitive', () => {
+  /**
+   * `.card` and `.card--filled` are separate on purpose, and the separation is
+   * load-bearing rather than stylistic: in the checkpoint rail the engine
+   * notice is an unfilled card and the question directly below it is a filled
+   * one, and that contrast is the whole reason the question reads as the thing
+   * to act on without being given bigger type.
+   *
+   * Folding `background` into `.card` would leave every box still looking like
+   * a box, every test still passing, and the hierarchy silently gone — the
+   * exact shape of failure Lessons.md §11 records. Same weak text-level check
+   * as the tests above: it cannot prove anything renders, only that the two
+   * rules have not been merged.
+   */
+  it('keeps the fill in a modifier rather than the base card', () => {
+    const css = readFileSync(THEME_CSS_PATH, 'utf8');
+
+    const base = css.match(/\n\.card \{([^}]*)\}/);
+    expect(base, '.card rule missing').not.toBeNull();
+    expect(base![1]).toMatch(/border:\s*2px solid var\(--border\)/);
+    expect(base![1]).not.toMatch(/background/);
+
+    const filled = css.match(/\n\.card--filled \{([^}]*)\}/);
+    expect(filled, '.card--filled rule missing').not.toBeNull();
+    expect(filled![1]).toMatch(/background:\s*var\(--surface\)/);
+  });
+});

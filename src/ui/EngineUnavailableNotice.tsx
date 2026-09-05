@@ -12,15 +12,7 @@ import { Button } from './Button';
  */
 export function EngineUnavailableNotice({ onRetry }: { onRetry: () => void }) {
   return (
-    <div
-      role="status"
-      style={{
-        padding: 12,
-        borderRadius: 'var(--radius)',
-        border: '2px solid var(--border)',
-        fontSize: 13,
-      }}
-    >
+    <div className="card" role="status" style={{ fontSize: 13 }}>
       <p style={{ margin: '0 0 8px' }}>
         Engine unavailable — lesson content still works, but live evaluation is off.
       </p>
