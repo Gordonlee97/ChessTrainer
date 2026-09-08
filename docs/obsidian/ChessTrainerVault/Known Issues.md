@@ -71,18 +71,6 @@ never listens for the `storage` event. Two tabs each finishing a different
 lesson will have the second tab's save clobber the first's, silently — no
 merge, no conflict notice.
 
-### `loadProgress` discards everything on any single validation failure
-
-**Where:** `src/progress/storage.ts` — `loadProgress`
-**Severity:** medium. Matches spec §10 (degrade, never blank) at the level of
-"the app still works," but the blast radius is the whole progress object.
-
-`progressSchema.safeParse` validates `Progress` as one unit, so one malformed
-`SavedLine` — say, a future field that fails a tightened schema, or storage
-truncated mid-write — resets *every lesson's progress* along with the saved
-lines, not just the broken part. A per-collection or per-item recovery would
-be more forgiving, at the cost of a more complex loader.
-
 ### Storage key conventions have drifted
 
 **Where:** `src/progress/storage.ts`, `src/sound/SoundManager.ts`

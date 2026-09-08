@@ -34,7 +34,14 @@ describe('ProgressNotice', () => {
   it('tells the player when stored progress could not be read', () => {
     act(() => useProgressStore.setState({ recovered: true }));
     render(<ProgressNotice />);
-    expect(screen.getByRole('status')).toHaveTextContent(/could not be read|starting fresh/i);
+    expect(screen.getByRole('status')).toHaveTextContent(/could not be read/i);
+
+    // `loadProgress` salvages per item, so `recovered` no longer means the
+    // progress was thrown away — usually most of it survived. The notice must
+    // not tell a player with eight solved checkpoints that they are starting
+    // over; that is a false claim, not just unfortunate wording.
+    expect(screen.getByRole('status')).not.toHaveTextContent(/starting fresh|starting over/i);
+
     act(() => useProgressStore.getState().dismissNotice());
   });
 

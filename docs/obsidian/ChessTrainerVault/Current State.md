@@ -348,9 +348,28 @@ deleted, not tombstoned.
 `src/progress/` is a versioned object (`{ version: 1, lessons, savedLines }`)
 reduced by pure functions in `progress.ts`, read and written through a Zustand
 store (`store.ts`) at the UI edge — nothing in `src/lesson/` or `src/tree/`
-knows persistence exists. Storage itself (`storage.ts`) follows spec §10:
-corrupt or unreadable JSON resets to empty progress with a `recovered` flag; a
-failed write (quota or otherwise) reports `saveFailed` rather than throwing.
+knows persistence exists. Storage itself (`storage.ts`) follows spec §10: a
+failed write (quota or otherwise) reports `saveFailed` rather than throwing, and
+a read that fails validation degrades rather than blanking.
+
+**Corrupt storage is now salvaged per item, not discarded whole (2026-09-04).**
+`loadProgress` used to run one `progressSchema.safeParse` over the entire blob,
+so a single malformed saved line — a field tightened by a later build, a write
+truncated by a full disk — reset *every lesson the player had ever completed*
+along with it. It now validates each lesson record and each saved line
+independently and keeps whatever survives. Verified in the browser against a
+deliberately corrupted blob: with one bad saved line among two, the Italian
+Game still read "2 of 9 checkpoints".
+
+Salvage stops at the item level and deliberately does **not** reach inside a
+lesson to rescue individual checkpoints, because `LessonRecord.completedAt`
+asserts that every checkpoint is solved — keeping a subset alongside that
+timestamp would manufacture a completion the record can no longer evidence.
+
+The recovery notice's copy changed with it. It used to say the progress "could
+not be read, so it is starting fresh", which is now false in the common case;
+telling a player with eight solved checkpoints that they are starting over is a
+wrong claim rather than clumsy wording. A test pins that it never says so again.
 
 | Action | Behaviour |
 |---|---|
