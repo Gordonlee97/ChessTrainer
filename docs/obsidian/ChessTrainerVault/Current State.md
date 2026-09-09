@@ -1,21 +1,21 @@
 ---
-updated: 2026-09-04
+updated: 2026-09-09
 status: current
 tags: [chesstrainer, state]
 ---
 
 # Current State
 
-**As of 2026-09-04.** Everything described in this note is on `master`. Plans 1
+**As of 2026-09-09.** Everything described in this note is on `master`. Plans 1
 through 7, the UI wave driven by playing the app (PR #13), the compare drawer's
 contrast vocabulary (PR #15), CI (PR #17), sound (PR #18) and the design-pass
-fixes (PRs #19 and #20) are all merged — see [[Start Here]] for the
+fixes (PRs #19, #20 and #21) and per-item progress salvage (PR #22) are all merged — see [[Start Here]] for the
 session-by-session detail. Nothing is in flight.
 
 > Picking the work up rather than reading about it? [[Start Here]] has the repo
 > state and the next action. This note is what *exists*; that one is what to *do*.
 
-Suite: **600 passing, 1 skipped**, 57 test files, **zero warnings**.
+Suite: **605 passing, 1 skipped**, 57 test files, **zero warnings**.
 `tsc --noEmit` clean. The skip is `src/engine/engine.smoke.test.ts`, which
 needs a real `Worker`; jsdom has none, so the engine is verified in a browser.
 CI runs the same commands plus a production build on every push and PR.

@@ -1,5 +1,5 @@
 ---
-updated: 2026-09-04
+updated: 2026-09-09
 status: current
 tags: [chesstrainer, issues]
 ---
